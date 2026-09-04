@@ -1,0 +1,8 @@
+# 작업용 로컬 노트 (설계 초안, 계획). 리포에는 코드와 README만 남긴다.
+docs/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.env
