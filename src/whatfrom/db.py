@@ -1,5 +1,5 @@
 # src/whatfrom/db.py
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 
 from sqlalchemy import Engine, create_engine
@@ -11,7 +11,7 @@ def make_engine(url: str) -> Engine:
 
 
 @contextmanager
-def session_scope(engine: Engine) -> Iterator[Session]:
+def session_scope(engine: Engine) -> Generator[Session]:
     factory = sessionmaker(bind=engine, expire_on_commit=False)
     session = factory()
     try:
