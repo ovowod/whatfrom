@@ -60,7 +60,11 @@ class ImageVariant(Base):
     __tablename__ = "image_variants"
     __table_args__ = (
         UniqueConstraint(
-            "tag_id", "os", "architecture", "arch_variant", name="uq_image_variants_identity"
+            "tag_id",
+            "os",
+            "architecture",
+            "arch_variant",
+            name="uq_image_variants_identity",
         ),
     )
 

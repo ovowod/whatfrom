@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.141.1",
-    "httpx>=0.28.1",
+    "httpx2>=2.12.0",
     "pgvector>=0.5.0",
     "psycopg[binary]>=3.3.5",
     "pydantic-settings>=2.15.0",
@@ -28,6 +28,13 @@ packages = ["src/whatfrom"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+filterwarnings = [
+    # 경고는 전부 실패로 취급한다. 새로 생긴 경고가 조용히 쌓이지 않게 한다.
+    "error",
+    # starlette 1.6.0이 자기 모듈 최상단에서 anyio의 폐기된 별칭을 참조한다.
+    # 최신 버전이 이미 그러므로 업그레이드로 해결되지 않고, 우리 쪽에서 고칠 수 없다.
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
 
 [tool.ruff]
 line-length = 100
