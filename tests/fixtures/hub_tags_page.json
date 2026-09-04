@@ -1,0 +1,57 @@
+{
+  "count": 3923,
+  "next": "https://hub.docker.com/v2/repositories/library/python/tags?page=2&page_size=2",
+  "previous": null,
+  "results": [
+    {
+      "name": "3.13-slim",
+      "digest": "sha256:5a2a26a2439c981f3fc53c6372f08bc1ba1e21d7e48e966cd83af9f829fa8882",
+      "tag_last_pushed": "2026-09-03T02:09:16.561972444Z",
+      "tag_status": "active",
+      "full_size": 46992930,
+      "images": [
+        {
+          "architecture": "amd64",
+          "variant": null,
+          "digest": "sha256:7c5f3d0e926bf44786e99d30d8687c31a05c966e6069ebfc7c15866a97519edc",
+          "os": "linux",
+          "size": 46992930,
+          "status": "active"
+        },
+        {
+          "architecture": "arm64",
+          "variant": "v8",
+          "digest": "sha256:aa11bb22cc33dd44ee55ff66007788990011223344556677889900aabbccddee",
+          "os": "linux",
+          "size": 47609438,
+          "status": "active"
+        },
+        {
+          "architecture": "unknown",
+          "variant": null,
+          "digest": "sha256:deadbeef0000111122223333444455556666777788889999aaaabbbbccccdddd",
+          "os": "unknown",
+          "size": 2186268,
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "name": "3.13-alpine",
+      "digest": "sha256:1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff",
+      "tag_last_pushed": "2026-09-01T23:10:18.679612996Z",
+      "tag_status": "active",
+      "full_size": 18500000,
+      "images": [
+        {
+          "architecture": "amd64",
+          "variant": null,
+          "digest": "sha256:99998888777766665555444433332222111100009999888877776666555544",
+          "os": "linux",
+          "size": 18500000,
+          "status": "active"
+        }
+      ]
+    }
+  ]
+}
