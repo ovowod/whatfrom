@@ -1,13 +1,20 @@
 # tests/test_store.py
+import json
 from datetime import UTC, datetime
+from pathlib import Path
 
-from sqlalchemy import select
+import httpx2
+import pytest
+from sqlalchemy import delete, select
 
-from whatfrom.collect.hub import RepositoryRow, TagRow, VariantRow
+from whatfrom.cli import collect_repository
+from whatfrom.collect.hub import HubClient, RepositoryRow, TagRow, VariantRow
 from whatfrom.collect.store import upsert_repository, upsert_tags
+from whatfrom.db import session_scope
 from whatfrom.models import ImageTag, ImageVariant, Repository
 
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def _repo_row() -> RepositoryRow:
@@ -124,3 +131,52 @@ def test_upsert_tags_is_idempotent_and_replaces_variants(session):
     variants = session.execute(select(ImageVariant)).scalars().all()
     assert len(variants) == 1
     assert variants[0].size_bytes == 1
+
+
+def test_collect_repository_commits_completed_pages_before_a_later_page_fails(engine):
+    """네트워크가 두 번째 페이지에서 끊겨도 첫 페이지는 이미 커밋되어 남아 있어야 한다.
+
+    collect_repository는 페이지마다 독립된 트랜잭션으로 커밋한다. 이 테스트가
+    실물 회귀로 지키는 성질: 도중에 실패해도 그때까지 받은 결과는 유실되지
+    않는다 (재실행으로 이어서 채우는 전제).
+    """
+    repo_name = "collecttest"
+    repo_payload = json.loads((FIXTURES / "hub_repository.json").read_text())
+    repo_payload["name"] = repo_name
+    tags_payload = json.loads((FIXTURES / "hub_tags_page.json").read_text())
+    next_url = f"https://hub.docker.com/v2/repositories/library/{repo_name}/tags?page=2"
+    tags_payload["next"] = next_url
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        url = str(request.url)
+        if url.endswith(f"/repositories/library/{repo_name}/"):
+            return httpx2.Response(200, json=repo_payload)
+        if url == next_url:
+            raise httpx2.ConnectError("boom", request=request)
+        return httpx2.Response(200, json=tags_payload)
+
+    transport = httpx2.MockTransport(handler)
+    try:
+        with httpx2.Client(transport=transport) as http:
+            client = HubClient(http)
+            with pytest.raises(httpx2.ConnectError):
+                collect_repository(engine, client, repo_name, None, NOW)
+
+        with session_scope(engine) as session:
+            tags = (
+                session.execute(select(ImageTag).where(ImageTag.repository == repo_name))
+                .scalars()
+                .all()
+            )
+            assert sorted(t.tag for t in tags) == ["3.13-alpine", "3.13-slim"]
+    finally:
+        with session_scope(engine) as session:
+            session.execute(
+                delete(ImageVariant).where(
+                    ImageVariant.tag_id.in_(
+                        select(ImageTag.id).where(ImageTag.repository == repo_name)
+                    )
+                )
+            )
+            session.execute(delete(ImageTag).where(ImageTag.repository == repo_name))
+            session.execute(delete(Repository).where(Repository.name == repo_name))
