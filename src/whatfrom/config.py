@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     test_database_url: str = "postgresql+psycopg://whatfrom:whatfrom@localhost:5432/whatfrom_test"
     embedder: str = "fake"
 
+    # 임베딩도 OpenAI 호환 /v1/embeddings 사용 (ollama pull bge-m3 등 로컬 포함)
+    embedding_base_url: str = "http://localhost:11434/v1"
+    embedding_model: str = "bge-m3"
+    embedding_api_key: str = ""
+
     # LLM은 OpenAI 호환 /v1 엔드포인트 사용 (openai, ollama, moonshot)
     llm_provider: str = "fake"
     llm_base_url: str = "https://api.moonshot.ai/v1"

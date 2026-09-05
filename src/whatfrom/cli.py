@@ -9,6 +9,8 @@ from whatfrom.collect.hub import HubClient, parse_repository, parse_tag_page
 from whatfrom.collect.store import upsert_repository, upsert_tags
 from whatfrom.config import settings
 from whatfrom.db import make_engine, session_scope
+from whatfrom.embed import get_embedder
+from whatfrom.indexer import index_readme
 from whatfrom.models import Base
 
 
@@ -59,6 +61,20 @@ def cmd_collect(args: argparse.Namespace) -> None:
     print(f"collected {total} tags for {args.repository}")
 
 
+def cmd_index(args: argparse.Namespace) -> None:
+    engine = make_engine(args.database_url)
+    now = datetime.now(UTC)
+    embedder = get_embedder(args.embedder)
+    with httpx2.Client(timeout=30.0) as http:
+        repo_row = parse_repository(HubClient(http).fetch_repository(args.repository))
+    with session_scope(engine) as session:
+        upsert_repository(session, repo_row, now)
+        created = index_readme(
+            session, args.repository, repo_row.readme, repo_row.source_url, embedder, now
+        )
+    print(f"indexed {created} chunks for {args.repository}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="whatfrom")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -72,6 +88,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_collect.add_argument("--max-pages", type=int, default=3)
     p_collect.add_argument("--database-url", default=settings.database_url)
     p_collect.set_defaults(func=cmd_collect)
+
+    p_index = sub.add_parser("index", help="fetch README, chunk it, embed it")
+    p_index.add_argument("repository")
+    p_index.add_argument("--embedder", default=settings.embedder)
+    p_index.add_argument("--database-url", default=settings.database_url)
+    p_index.set_defaults(func=cmd_index)
 
     return parser
 
