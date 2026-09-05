@@ -35,7 +35,7 @@ def test_parse_tag_page_drops_unknown_os_attestation_manifests(tags_payload):
     rows = parse_tag_page(tags_payload)
 
     assert all(v.os != "unknown" for r in rows for v in r.variants)
-    assert len(rows[0].variants) == 2
+    assert len(rows[0].variants) == 4  # linux/amd64, linux/arm64, windows x2
 
 
 def test_parse_tag_page_keeps_arch_variant_and_size(tags_payload):
@@ -45,6 +45,25 @@ def test_parse_tag_page_keeps_arch_variant_and_size(tags_payload):
     assert arm.arch_variant == "v8"
     assert arm.size_bytes == 47609438
     assert arm.os == "linux"
+
+
+def test_parse_tag_page_keeps_windows_manifests_that_differ_only_by_os_version(tags_payload):
+    """Windows는 호스트 커널 버전마다 별개 매니페스트를 낸다 — digest도 크기도 다르다."""
+    rows = parse_tag_page(tags_payload)
+    windows = [v for v in rows[0].variants if v.os == "windows"]
+
+    assert len(windows) == 2
+    assert {v.os_version for v in windows} == {"10.0.20348.5499", "10.0.26100.33296"}
+    assert len({v.digest for v in windows}) == 2
+
+
+def test_parse_tag_page_normalizes_null_os_version_to_empty_string(tags_payload):
+    """Linux는 os_version이 null로 온다. UNIQUE가 NULL을 구분값으로 보므로 ""로 정규화한다."""
+    rows = parse_tag_page(tags_payload)
+    linux = [v for v in rows[0].variants if v.os == "linux"]
+
+    assert linux
+    assert all(v.os_version == "" for v in linux)
 
 
 def test_parse_tag_page_normalizes_null_variant_to_empty_string(tags_payload):

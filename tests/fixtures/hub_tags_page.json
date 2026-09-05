@@ -27,6 +27,24 @@
           "status": "active"
         },
         {
+          "architecture": "amd64",
+          "variant": null,
+          "os_version": "10.0.20348.5499",
+          "digest": "sha256:cccc111122223333444455556666777788889999aaaabbbbccccddddeeee0000",
+          "os": "windows",
+          "size": 2256084111,
+          "status": "active"
+        },
+        {
+          "architecture": "amd64",
+          "variant": null,
+          "os_version": "10.0.26100.33296",
+          "digest": "sha256:dddd222233334444555566667777888899990000aaaabbbbccccddddeeee1111",
+          "os": "windows",
+          "size": 2513037866,
+          "status": "active"
+        },
+        {
           "architecture": "unknown",
           "variant": null,
           "digest": "sha256:deadbeef0000111122223333444455556666777788889999aaaabbbbccccdddd",

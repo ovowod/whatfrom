@@ -12,6 +12,7 @@ class VariantRow:
     os: str
     architecture: str
     arch_variant: str
+    os_version: str
     digest: str
     size_bytes: int
 
@@ -48,6 +49,8 @@ def parse_tag_page(payload: dict) -> list[TagRow]:
                 os=image["os"],
                 architecture=image["architecture"],
                 arch_variant=image.get("variant") or "",
+                # Linux는 null로 온다. UNIQUE 제약이 NULL을 구분값으로 보므로 ""로 정규화
+                os_version=image.get("os_version") or "",
                 digest=image["digest"],
                 size_bytes=image["size"],
             )

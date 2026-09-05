@@ -64,6 +64,7 @@ class ImageVariant(Base):
             "os",
             "architecture",
             "arch_variant",
+            "os_version",
             name="uq_image_variants_identity",
         ),
     )
@@ -72,7 +73,13 @@ class ImageVariant(Base):
     tag_id: Mapped[int] = mapped_column(ForeignKey("image_tags.id", ondelete="CASCADE"))
     os: Mapped[str] = mapped_column(String(30))
     architecture: Mapped[str] = mapped_column(String(30))
+    # nullable로 두면 Postgres가 UNIQUE에서 NULL을 서로 다른 값으로 취급해 항상 통과
     arch_variant: Mapped[str] = mapped_column(String(30), default="")
+    # Windows는 같은 (os, arch)에 호스트 커널 버전별 매니페스트를 따로 낸다
+    # (예: Server 2022용 10.0.20348, Server 2025용 10.0.26100).
+    # 이 둘은 digest도 크기도 다른 별개의 이미지이므로 식별자에 포함해야 한다. Linux는 항상 "".
+    os_version: Mapped[str] = mapped_column(String(50), default="")
+
     digest: Mapped[str] = mapped_column(String(120))
     size_bytes: Mapped[int] = mapped_column(BigInteger)
 
