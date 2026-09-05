@@ -12,6 +12,7 @@ from whatfrom.db import make_engine, session_scope
 from whatfrom.embed import get_embedder
 from whatfrom.indexer import index_readme
 from whatfrom.models import Base
+from whatfrom.retrieval import search_chunks
 
 
 def cmd_init_db(args: argparse.Namespace) -> None:
@@ -75,6 +76,15 @@ def cmd_index(args: argparse.Namespace) -> None:
     print(f"indexed {created} chunks for {args.repository}")
 
 
+def cmd_search(args: argparse.Namespace) -> None:
+    engine = make_engine(args.database_url)
+    embedder = get_embedder(args.embedder)
+    with session_scope(engine) as session:
+        for chunk, distance in search_chunks(session, embedder, args.question, limit=args.limit):
+            print(f"[{distance:.4f}] {chunk.document.section_title}")
+            print(f"    {chunk.content[:160].replace(chr(10), ' ')}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="whatfrom")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -94,6 +104,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_index.add_argument("--embedder", default=settings.embedder)
     p_index.add_argument("--database-url", default=settings.database_url)
     p_index.set_defaults(func=cmd_index)
+
+    p_search = sub.add_parser("search", help="similarity search over README chunks")
+    p_search.add_argument("question")
+    p_search.add_argument("--limit", type=int, default=5)
+    p_search.add_argument("--embedder", default=settings.embedder)
+    p_search.add_argument("--database-url", default=settings.database_url)
+    p_search.set_defaults(func=cmd_search)
 
     return parser
 
