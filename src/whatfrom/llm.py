@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from whatfrom.config import settings
 from whatfrom.contracts import Recommendation
-from whatfrom.httpclient import DEFAULT_TIMEOUT, RemoteCallError, post_json
+from whatfrom.httpclient import RemoteCallError, post_json
 
 
 class LLMProvider(Protocol):
@@ -43,6 +43,10 @@ class OpenAICompatibleProvider:
     vLLM·Ollama·Kimi·대부분의 호스팅 API가 이 규약을 쓴다. base_url만 바꾸면
     구현을 그대로 두고 백엔드를 갈아끼울 수 있다 (스펙 §12).
 
+    temperature는 보내지 않는다. 공급자마다 허용값이 달라서 — kimi-k3는 1만
+    받고 0을 400으로 거부한다 — 하나를 박아두면 base_url만 바꾸면 된다는
+    전제가 깨진다. 결정성이 필요해지면 그때 설정으로 노출한다.
+
     타임아웃·재시도 정책은 httpclient.post_json이 갖는다 — 임베딩과 같은 정책이라
     같은 루프를 두 번 적지 않는다.
     """
@@ -59,7 +63,14 @@ class OpenAICompatibleProvider:
         self._base_url = (base_url or settings.llm_base_url).rstrip("/")
         self._model = model or settings.llm_model
         self._api_key = settings.llm_api_key if api_key is None else api_key
-        self._client = client or httpx2.Client(timeout=DEFAULT_TIMEOUT)
+        self._client = client or httpx2.Client(
+            timeout=httpx2.Timeout(
+                settings.llm_timeout_seconds,
+                connect=3.0,
+                read=settings.llm_timeout_seconds,
+                write=10.0,
+            )
+        )
         self._max_retries = max_retries
         self._sleep = sleep
 
@@ -73,7 +84,6 @@ class OpenAICompatibleProvider:
                     {"role": "system", "content": system},
                     {"role": "user", "content": prompt},
                 ],
-                "temperature": 0,
                 "response_format": {
                     "type": "json_schema",
                     "json_schema": {

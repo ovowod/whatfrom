@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     llm_provider: str = "fake"
     llm_base_url: str = "https://api.moonshot.ai/v1"
     llm_model: str = "kimi-k3"
+    # 추론 모델은 느리다. kimi-k3로 실측하니 이 작업에 59초 걸렸다.
+    # 임베딩(1초 미만)과 같은 값을 쓸 수 없어 분리한다.
+    llm_timeout_seconds: float = 120.0
     llm_api_key: str = Field(
         default="",
         validation_alias=AliasChoices("WHATFROM_LLM_API_KEY", "MOONSHOT_API_KEY"),

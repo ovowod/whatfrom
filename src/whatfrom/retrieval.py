@@ -10,8 +10,18 @@ from whatfrom.models import Document, DocumentChunk, ImageTag, Repository
 def search_chunks(
     session: Session, embedder: Embedder, question: str, limit: int = 5
 ) -> list[tuple[DocumentChunk, float]]:
+    """질문을 임베딩한 뒤 최근접 청크를 찾는다. CLI처럼 두 단계를 한 번에 할 때 쓴다.
+
+    요청 경로는 이걸 쓰지 않는다 — 임베딩이 HTTP 호출이라 DB 트랜잭션 밖에서
+    끝내야 하기 때문이다. 그쪽은 search_chunks_by_vector를 직접 부른다.
+    """
+    return search_chunks_by_vector(session, embedder.embed([question])[0], limit)
+
+
+def search_chunks_by_vector(
+    session: Session, vector: list[float], limit: int = 5
+) -> list[tuple[DocumentChunk, float]]:
     """코사인 거리 기준 최근접 청크. 거리는 0(동일)~2(정반대)."""
-    vector = embedder.embed([question])[0]
     distance = DocumentChunk.embedding.cosine_distance(vector).label("distance")
     rows = session.execute(
         select(DocumentChunk, distance)
@@ -30,12 +40,24 @@ def search_candidates(
     chunk_k: int = 5,
     tags_per_repo: int = 5,
 ) -> list[Candidate]:
+    """질문을 임베딩한 뒤 후보를 만든다. 요청 경로는 search_candidates_by_vector를 쓴다."""
+    return search_candidates_by_vector(
+        session, embedder.embed([question])[0], chunk_k, tags_per_repo
+    )
+
+
+def search_candidates_by_vector(
+    session: Session,
+    vector: list[float],
+    chunk_k: int = 5,
+    tags_per_repo: int = 5,
+) -> list[Candidate]:
     """벡터 검색으로 리포와 근거를 찾고, 그 리포의 최근 태그를 후보로 세운다.
 
     Phase 0에는 구조화 필터가 없다. 요구사항 조건으로 태그를 좁히는 일은
     SearchPlan이 도착하는 F7의 몫이다 (스펙 §11).
     """
-    hits = search_chunks(session, embedder, question, limit=chunk_k)
+    hits = search_chunks_by_vector(session, vector, limit=chunk_k)
     if not hits:
         return []
 
@@ -69,6 +91,8 @@ def search_candidates(
         )
 
         for tag in tags:
+            # image_variants 행을 그대로 옮긴다. 아키텍처 이름으로 접으면
+            # python:3.13의 amd64 세 행(linux 하나, windows 둘)이 서로를 덮는다.
             platforms = sorted(
                 (
                     Platform(
