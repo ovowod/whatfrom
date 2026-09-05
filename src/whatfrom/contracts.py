@@ -10,13 +10,28 @@ class Evidence(BaseModel):
     source_url: str
 
 
+class Platform(BaseModel):
+    """image_variants 한 행. 뭉개지 않는다.
+
+    아키텍처 이름만으로는 식별되지 않는다 — python:3.13의 amd64는 linux 하나와
+    커널 버전이 다른 windows 둘, 합쳐 세 번 나온다. 크기도 400MB와 2.4GB로
+    갈린다. 하나로 접으면 어느 쪽이 살아남는지가 순서에 달리게 된다.
+    """
+
+    os: str
+    architecture: str
+    arch_variant: str
+    os_version: str
+    size_bytes: int
+    digest: str
+
+
 class Candidate(BaseModel):
     image: str  # "repository:tag"
     repository: str
     tag: str
     digest: str | None = None
-    architectures: list[str] = Field(default_factory=list)
-    size_bytes: int | None = None
+    platforms: list[Platform] = Field(default_factory=list)
     last_pushed_at: datetime | None = None
     source_url: str
     collected_at: datetime

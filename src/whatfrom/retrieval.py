@@ -2,9 +2,9 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from whatfrom.contracts import Candidate, Evidence
+from whatfrom.contracts import Candidate, Evidence, Platform
 from whatfrom.embed import Embedder
-from whatfrom.models import Document, DocumentChunk, ImageTag, ImageVariant, Repository
+from whatfrom.models import Document, DocumentChunk, ImageTag, Repository
 
 
 def search_chunks(
@@ -69,14 +69,29 @@ def search_candidates(
         )
 
         for tag in tags:
+            platforms = sorted(
+                (
+                    Platform(
+                        os=v.os,
+                        architecture=v.architecture,
+                        arch_variant=v.arch_variant,
+                        os_version=v.os_version,
+                        size_bytes=v.size_bytes,
+                        digest=v.digest,
+                    )
+                    for v in tag.variants
+                ),
+                # os_version까지 넣어야 전순서가 된다. 빼면 Windows 커널 버전만
+                # 다른 두 행이 동률이 되어 순서가 DB 행 순서에 맡겨진다.
+                key=lambda p: (p.os, p.architecture, p.arch_variant, p.os_version),
+            )
             candidates.append(
                 Candidate(
                     image=f"{repository}:{tag.tag}",
                     repository=repository,
                     tag=tag.tag,
                     digest=tag.manifest_digest,
-                    architectures=sorted({v.architecture for v in tag.variants}),
-                    size_bytes=_representative_size(tag.variants),
+                    platforms=platforms,
                     last_pushed_at=tag.last_pushed_at,
                     source_url=repo.source_url,
                     collected_at=tag.collected_at,
@@ -84,14 +99,6 @@ def search_candidates(
                 )
             )
     return candidates
-
-
-def _representative_size(variants: list[ImageVariant]) -> int | None:
-    """가장 흔히 받는 아키텍처(amd64) 크기를 대표값으로 쓴다. 없으면 첫 변종으로."""
-    if not variants:
-        return None
-    amd64 = next((v for v in variants if v.architecture == "amd64"), None)
-    return (amd64 or variants[0]).size_bytes
 
 
 def _dedupe_evidence(evidence: list[Evidence]) -> list[Evidence]:
