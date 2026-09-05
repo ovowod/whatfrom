@@ -62,6 +62,28 @@ def test_index_readme_rejects_an_embedder_with_the_wrong_dimension(session):
         index_readme(session, "python", row.readme, row.source_url, WrongDimEmbedder(), NOW)
 
 
+def test_index_readme_removes_sections_that_disappeared_from_the_readme(session):
+    """README에서 섹션이 사라지면 인덱스에서도 사라져야 한다.
+
+    멱등성 테스트는 같은 내용 재실행만 검사하므로 이 경로를 건드리지 않는다.
+    """
+    row = _seed_repository(session)
+    index_readme(session, "python", row.readme, row.source_url, FakeEmbedder(), NOW)
+    session.flush()
+    before = {t for (t,) in session.execute(select(Document.section_title))}
+    assert any("alpine" in t for t in before)
+
+    shrunk = "# What is Python?\n\nJust the one section now.\n"
+    index_readme(session, "python", shrunk, row.source_url, FakeEmbedder(), NOW)
+    session.flush()
+
+    after = {t for (t,) in session.execute(select(Document.section_title))}
+    assert after == {"What is Python?"}
+    # 고아 청크가 남으면 안 된다.
+    remaining = session.execute(select(DocumentChunk)).scalars().all()
+    assert len(remaining) == 1
+
+
 def test_index_readme_is_idempotent(session):
     row = _seed_repository(session)
 

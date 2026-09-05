@@ -1,7 +1,7 @@
 # src/whatfrom/indexer.py
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from whatfrom.collect.chunk import chunk_text, split_sections
@@ -29,7 +29,9 @@ def index_readme(
         )
 
     created = 0
+    seen_titles: list[str] = []
     for section in split_sections(readme):
+        seen_titles.append(section.title)
         document = session.execute(
             select(Document).where(
                 Document.repository == repository,
@@ -57,6 +59,16 @@ def index_readme(
                 DocumentChunk(chunk_index=index, content=piece, embedding=vector)
             )
         created += len(pieces)
+
+    # 이번 실행에 나오지 않은 섹션은 README에서 사라진 것이다. 남겨두면 옛 내용이
+    # 계속 검색에 뜬다. 청크는 FK의 ON DELETE CASCADE가 함께 지운다.
+    stale = delete(Document).where(
+        Document.repository == repository,
+        Document.doc_type == DOC_TYPE,
+    )
+    if seen_titles:
+        stale = stale.where(Document.section_title.not_in(seen_titles))
+    session.execute(stale)
 
     session.flush()
     return created
