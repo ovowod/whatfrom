@@ -1,4 +1,4 @@
-# src/whatfrom/embed.py
+# src/whatfrom/core/embed.py
 import hashlib
 import math
 import re
@@ -8,8 +8,8 @@ from typing import Protocol
 
 import httpx2
 
-from whatfrom.config import settings
-from whatfrom.httpclient import DEFAULT_TIMEOUT, RemoteCallError, post_json
+from whatfrom.core.config import settings
+from whatfrom.core.httpclient import DEFAULT_TIMEOUT, RemoteCallError, post_json
 
 EMBEDDING_DIM = 1024
 # 라틴 문자·숫자 덩어리 또는 비ASCII 덩어리. 한국어가 이 제품의 주 입력 언어인데

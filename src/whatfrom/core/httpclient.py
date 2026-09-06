@@ -1,4 +1,4 @@
-# src/whatfrom/httpclient.py
+# src/whatfrom/core/httpclient.py
 import random
 import time
 from collections.abc import Callable

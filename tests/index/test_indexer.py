@@ -7,11 +7,11 @@ from sqlalchemy import select
 
 from whatfrom.collect.hub import parse_repository
 from whatfrom.collect.store import upsert_repository
-from whatfrom.embed import EMBEDDING_DIM, FakeEmbedder
-from whatfrom.indexer import index_readme
-from whatfrom.models import Document, DocumentChunk
+from whatfrom.core.embed import EMBEDDING_DIM, FakeEmbedder
+from whatfrom.core.models import Document, DocumentChunk
+from whatfrom.index.indexer import index_readme
 
-FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURES = Path(__file__).parents[1] / "fixtures"
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
 
 

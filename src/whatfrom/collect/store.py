@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from whatfrom.collect.hub import RepositoryRow, TagRow
-from whatfrom.models import ImageTag, ImageVariant, Repository
+from whatfrom.core.models import ImageTag, ImageVariant, Repository
 
 
 def upsert_repository(session: Session, row: RepositoryRow, collected_at: datetime) -> Repository:

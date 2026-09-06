@@ -1,6 +1,6 @@
 import math
 
-from whatfrom.embed import EMBEDDING_DIM, FakeEmbedder
+from whatfrom.core.embed import EMBEDDING_DIM, FakeEmbedder
 
 
 def test_fake_embedder_returns_unit_vectors_of_the_declared_dimension():

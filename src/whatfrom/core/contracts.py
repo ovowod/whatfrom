@@ -1,4 +1,4 @@
-# src/whatfrom/contracts.py
+# src/whatfrom/core/contracts.py
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field

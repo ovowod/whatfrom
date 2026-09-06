@@ -1,10 +1,10 @@
-# src/whatfrom/retrieval.py
+# src/whatfrom/search/retrieval.py
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from whatfrom.contracts import Candidate, Evidence, Platform
-from whatfrom.embed import Embedder
-from whatfrom.models import Document, DocumentChunk, ImageTag, Repository
+from whatfrom.core.contracts import Candidate, Evidence, Platform
+from whatfrom.core.embed import Embedder
+from whatfrom.core.models import Document, DocumentChunk, ImageTag, Repository
 
 
 def search_chunks(

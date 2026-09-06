@@ -2,8 +2,8 @@ from datetime import UTC, datetime
 
 from whatfrom.collect.hub import RepositoryRow, TagRow, VariantRow
 from whatfrom.collect.store import upsert_repository, upsert_tags
-from whatfrom.contracts import Candidate, Recommendation
-from whatfrom.verify import dockerfile_image_refs, verify_recommendation
+from whatfrom.core.contracts import Candidate, Recommendation
+from whatfrom.recommend.verify import dockerfile_image_refs, verify_recommendation
 
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
 

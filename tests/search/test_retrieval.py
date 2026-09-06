@@ -4,11 +4,11 @@ from pathlib import Path
 
 from whatfrom.collect.hub import TagRow, VariantRow, parse_repository
 from whatfrom.collect.store import upsert_repository, upsert_tags
-from whatfrom.embed import FakeEmbedder
-from whatfrom.indexer import index_readme
-from whatfrom.retrieval import search_candidates, search_chunks
+from whatfrom.core.embed import FakeEmbedder
+from whatfrom.index.indexer import index_readme
+from whatfrom.search.retrieval import search_candidates, search_chunks
 
-FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURES = Path(__file__).parents[1] / "fixtures"
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
 
 

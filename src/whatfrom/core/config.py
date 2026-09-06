@@ -1,4 +1,4 @@
-# src/whatfrom/config.py
+# src/whatfrom/core/config.py
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

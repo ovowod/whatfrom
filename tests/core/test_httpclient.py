@@ -1,7 +1,7 @@
 import httpx2
 import pytest
 
-from whatfrom.httpclient import RemoteCallError, post_json
+from whatfrom.core.httpclient import RemoteCallError, post_json
 
 URL = "http://svc.invalid/v1/thing"
 

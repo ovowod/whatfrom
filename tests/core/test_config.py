@@ -1,5 +1,5 @@
-# tests/test_config.py
-from whatfrom.config import Settings
+# tests/core/test_config.py
+from whatfrom.core.config import Settings
 
 
 def test_llm_api_key_accepts_the_vendor_env_name(monkeypatch):

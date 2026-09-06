@@ -1,6 +1,6 @@
-from whatfrom.contracts import Candidate, Platform, Recommendation
-from whatfrom.httpclient import RemoteCallError
-from whatfrom.llm import LLMProvider
+from whatfrom.core.contracts import Candidate, Platform, Recommendation
+from whatfrom.core.httpclient import RemoteCallError
+from whatfrom.recommend.llm import LLMProvider
 
 SYSTEM_PROMPT = """You compare container base images and explain the trade-offs.
 
