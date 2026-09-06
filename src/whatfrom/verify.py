@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -6,6 +7,26 @@ from sqlalchemy.orm import Session
 from whatfrom.contracts import Candidate, Recommendation
 from whatfrom.models import ImageTag
 
+# FROM [--platform=...] <ref> [AS <stage>]
+_FROM = re.compile(r"^\s*FROM\s+(?:--\S+\s+)*(\S+)(?:\s+[Aa][Ss]\s+(\S+))?", re.MULTILINE)
+
+
+def dockerfile_image_refs(dockerfile: str) -> list[str]:
+    """Dockerfile이 FROM으로 가져오는 이미지들.
+
+    멀티스테이지에서 앞 단계 이름을 참조하는 FROM과 `scratch`는 이미지가 아니므로
+    제외한다. 나머지는 전부 실재해야 하는 이미지 참조다.
+    """
+    stages: set[str] = set()
+    refs: list[str] = []
+    for match in _FROM.finditer(dockerfile):
+        ref, alias = match.group(1), match.group(2)
+        if ref.lower() != "scratch" and ref not in stages:
+            refs.append(ref)
+        if alias:
+            stages.add(alias)
+    return refs
+
 
 @dataclass(frozen=True)
 class VerifyResult:
@@ -13,6 +34,8 @@ class VerifyResult:
     reason: str | None = None
     # 후보에 없는 대안들. 답변을 폐기하는 대신 이것만 떼어낸다.
     dropped_alternatives: tuple[str, ...] = ()
+    # Dockerfile의 FROM이 가리키는 것 중 추천/대안 어느 것도 아닌 참조.
+    unverifiable_dockerfile_refs: tuple[str, ...] = ()
 
 
 def verify_recommendation(
@@ -47,6 +70,13 @@ def verify_recommendation(
     if not is_real(rec.image):
         return VerifyResult(False, f"{rec.image} is not a verifiable candidate image")
 
-    return VerifyResult(
-        True, dropped_alternatives=tuple(a for a in rec.alternatives if not is_real(a))
-    )
+    dropped = tuple(a for a in rec.alternatives if not is_real(a))
+
+    # Dockerfile의 FROM도 사용자에게 이미지 이름으로 노출된다. 오히려 복사해서
+    # 그대로 쓰는 쪽이라 image 필드보다 더 위험하다. 살아남은 추천·대안만
+    # 가리킬 수 있게 한다 — 실재하더라도 자기가 추천하지 않은 이미지를 쓰면
+    # 답변이 자기모순이다.
+    allowed = {rec.image} | {a for a in rec.alternatives if a not in dropped}
+    bad_refs = tuple(ref for ref in dockerfile_image_refs(rec.dockerfile) if ref not in allowed)
+
+    return VerifyResult(True, dropped_alternatives=dropped, unverifiable_dockerfile_refs=bad_refs)

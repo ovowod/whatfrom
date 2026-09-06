@@ -88,6 +88,16 @@ def recommend_for_question(
             notes=notes,
         )
 
+    if verdict.unverifiable_dockerfile_refs:
+        # Dockerfile은 사용자가 그대로 복사해 쓰는 산출물이다. 검증되지 않은
+        # FROM을 남겨두면 불변식이 여기서 뚫린다. 추천 자체는 유효하므로
+        # Dockerfile만 비우고 무엇이 문제였는지 알린다.
+        recommendation = recommendation.model_copy(update={"dockerfile": ""})
+        notes.append(
+            "Dockerfile의 FROM이 추천 이미지를 가리키지 않아 제거했습니다: "
+            + ", ".join(verdict.unverifiable_dockerfile_refs)
+        )
+
     if verdict.dropped_alternatives:
         # 검증을 통과하지 못한 대안은 응답에서 지운다. 주 추천은 유효하므로 남긴다.
         recommendation = recommendation.model_copy(

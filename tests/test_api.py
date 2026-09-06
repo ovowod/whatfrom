@@ -128,6 +128,44 @@ def test_recommend_strips_unverifiable_alternatives_but_keeps_the_recommendation
     assert any("실재하지 않는 대안" in note for note in body["notes"])
 
 
+def test_recommend_strips_a_dockerfile_that_pulls_an_unverified_image(session):
+    """Dockerfile은 사용자가 복사해 쓰는 산출물이라 image 필드보다 위험하다."""
+    _seed(session)
+    provider = FakeLLMProvider(
+        recommendation=Recommendation(
+            image="python:3.13-slim",
+            reason="numpy는 glibc 기반이 안정적입니다.",
+            dockerfile='FROM python:3.13-slim-bookworm-arm64-INVENTED\nCMD ["python"]',
+        )
+    )
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    assert body["recommendation"]["image"] == "python:3.13-slim"
+    assert body["recommendation"]["dockerfile"] == ""
+    # 추천 객체에는 남으면 안 된다. 사용자가 복사해 쓰는 건 이쪽이다.
+    assert "INVENTED" not in json.dumps(body["recommendation"], ensure_ascii=False)
+    # 알림에는 남아야 한다. 무엇을 왜 지웠는지 말하지 않으면 진단이 안 된다.
+    assert any("INVENTED" in note for note in body["notes"])
+
+
+def test_recommend_keeps_a_dockerfile_that_matches_the_recommendation(session):
+    _seed(session)
+    provider = FakeLLMProvider(
+        recommendation=Recommendation(
+            image="python:3.13-slim",
+            reason="ok",
+            dockerfile="FROM python:3.13-slim\nWORKDIR /app\n",
+        )
+    )
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    assert body["recommendation"]["dockerfile"].startswith("FROM python:3.13-slim")
+    assert body["degraded"] is False
+    assert body["notes"] == []
+
+
 def test_recommend_degrades_when_the_embedder_fails(session):
     """임베딩도 HTTP 호출이고 매 요청마다 부른다. LLM보다 먼저, 더 자주 실패한다."""
 

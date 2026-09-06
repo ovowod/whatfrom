@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from whatfrom.collect.hub import RepositoryRow, TagRow, VariantRow
 from whatfrom.collect.store import upsert_repository, upsert_tags
 from whatfrom.contracts import Candidate, Recommendation
-from whatfrom.verify import verify_recommendation
+from whatfrom.verify import dockerfile_image_refs, verify_recommendation
 
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
 
@@ -146,3 +146,61 @@ def test_verify_keeps_alternatives_drawn_from_the_candidate_set(session):
 
     assert result.ok is True
     assert result.dropped_alternatives == ()
+
+
+def test_dockerfile_image_refs_reads_every_from_line():
+    refs = dockerfile_image_refs("FROM python:3.13-slim\nRUN pip install x\nFROM nginx:1.27\n")
+    assert refs == ["python:3.13-slim", "nginx:1.27"]
+
+
+def test_dockerfile_image_refs_ignores_stage_names_and_scratch():
+    """멀티스테이지의 앞 단계 참조와 scratch는 이미지가 아니다."""
+    refs = dockerfile_image_refs(
+        "FROM --platform=linux/amd64 python:3.13-slim AS builder\n"
+        "RUN pip install x\n"
+        "FROM scratch\n"
+        "COPY --from=builder /app /app\n"
+        "FROM builder\n"
+    )
+    assert refs == ["python:3.13-slim"]
+
+
+def test_verify_flags_a_dockerfile_that_pulls_an_invented_image(session):
+    """image는 실재하는데 FROM만 지어낸 경우 — 사용자가 복사하는 쪽이 위험하다."""
+    _seed(session)
+    rec = Recommendation(
+        image="python:3.13-slim",
+        reason="ok",
+        dockerfile='FROM python:3.13-slim-bookworm-arm64-INVENTED\nCMD ["python"]',
+    )
+
+    result = verify_recommendation(session, rec, [_candidate()])
+
+    assert result.ok is True
+    assert result.unverifiable_dockerfile_refs == ("python:3.13-slim-bookworm-arm64-INVENTED",)
+
+
+def test_verify_flags_a_dockerfile_that_contradicts_its_own_recommendation(session):
+    """실재하더라도 추천하지 않은 이미지를 쓰면 답변이 자기모순이다."""
+    _seed(session)
+    rec = Recommendation(
+        image="python:3.13-slim", reason="ok", dockerfile="FROM python:3.12-alpine"
+    )
+
+    result = verify_recommendation(session, rec, [_candidate()])
+
+    assert result.unverifiable_dockerfile_refs == ("python:3.12-alpine",)
+
+
+def test_verify_accepts_a_dockerfile_that_matches_the_recommendation(session):
+    _seed(session)
+    rec = Recommendation(
+        image="python:3.13-slim",
+        reason="ok",
+        dockerfile="FROM python:3.13-slim\nWORKDIR /app\n",
+    )
+
+    result = verify_recommendation(session, rec, [_candidate()])
+
+    assert result.ok is True
+    assert result.unverifiable_dockerfile_refs == ()
