@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # 테스트는 whatfrom_test에만 접속한다. 그래서 POSTGRES_DB를 whatfrom_test로
+    # 두어 컨테이너 entrypoint가 직접 만들게 한다. 서비스 컨테이너는 볼륨 마운트를
+    # 지원하지 않아 db/init/01-init.sql이 돌지 않지만, 거기서 하던
+    # CREATE EXTENSION vector는 tests/conftest.py가 이미 한다.
+    services:
+      db:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: whatfrom
+          POSTGRES_PASSWORD: whatfrom
+          POSTGRES_DB: whatfrom_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U whatfrom -d whatfrom_test"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Test
+        run: uv run pytest -q
