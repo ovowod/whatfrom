@@ -5,9 +5,9 @@ import pytest
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
-from whatfrom.config import settings
-from whatfrom.db import make_engine
-from whatfrom.models import Base
+from whatfrom.core.config import settings
+from whatfrom.core.db import make_engine
+from whatfrom.core.models import Base
 
 
 @pytest.fixture(scope="session")

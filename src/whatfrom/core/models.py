@@ -1,4 +1,4 @@
-# src/whatfrom/models.py
+# src/whatfrom/core/models.py
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector

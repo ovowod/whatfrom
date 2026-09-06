@@ -3,9 +3,9 @@ import json
 import httpx2
 import pytest
 
-from whatfrom.contracts import Recommendation
-from whatfrom.httpclient import RemoteCallError
-from whatfrom.llm import OpenAICompatibleProvider, strict_json_schema
+from whatfrom.core.contracts import Recommendation
+from whatfrom.core.httpclient import RemoteCallError
+from whatfrom.recommend.llm import OpenAICompatibleProvider, strict_json_schema
 
 VALID_CONTENT = (
     '{"image": "python:3.13-slim", "reason": "glibc", '

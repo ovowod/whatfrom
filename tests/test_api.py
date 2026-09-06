@@ -11,11 +11,11 @@ from sqlalchemy.orm import Session
 from whatfrom.api import create_app
 from whatfrom.collect.hub import TagRow, VariantRow, parse_repository
 from whatfrom.collect.store import upsert_repository, upsert_tags
-from whatfrom.contracts import Recommendation
-from whatfrom.embed import FakeEmbedder
-from whatfrom.httpclient import RemoteCallError
-from whatfrom.indexer import index_readme
-from whatfrom.llm import FakeLLMProvider
+from whatfrom.core.contracts import Recommendation
+from whatfrom.core.embed import FakeEmbedder
+from whatfrom.core.httpclient import RemoteCallError
+from whatfrom.index.indexer import index_readme
+from whatfrom.recommend.llm import FakeLLMProvider
 
 FIXTURES = Path(__file__).parent / "fixtures"
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)

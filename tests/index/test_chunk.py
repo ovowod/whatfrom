@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
-from whatfrom.collect.chunk import Section, chunk_text, split_sections
+from whatfrom.index.chunk import Section, chunk_text, split_sections
 
-FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURES = Path(__file__).parents[1] / "fixtures"
 
 
 def test_split_sections_uses_h1_and_h2_headings():

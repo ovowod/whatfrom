@@ -5,9 +5,9 @@ from typing import Protocol
 import httpx2
 from pydantic import BaseModel, ValidationError
 
-from whatfrom.config import settings
-from whatfrom.contracts import Recommendation
-from whatfrom.httpclient import RemoteCallError, post_json
+from whatfrom.core.config import settings
+from whatfrom.core.contracts import Recommendation
+from whatfrom.core.httpclient import RemoteCallError, post_json
 
 
 def strict_json_schema(model: type[BaseModel]) -> dict:

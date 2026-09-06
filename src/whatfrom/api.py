@@ -7,15 +7,15 @@ from pydantic import BaseModel, field_validator
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from whatfrom.advisor import advise
-from whatfrom.config import settings
-from whatfrom.contracts import RecommendResponse
-from whatfrom.db import make_engine
-from whatfrom.embed import Embedder, get_embedder
-from whatfrom.httpclient import RemoteCallError
-from whatfrom.llm import LLMProvider, get_provider
-from whatfrom.retrieval import search_candidates_by_vector
-from whatfrom.verify import verify_recommendation
+from whatfrom.core.config import settings
+from whatfrom.core.contracts import RecommendResponse
+from whatfrom.core.db import make_engine
+from whatfrom.core.embed import Embedder, get_embedder
+from whatfrom.core.httpclient import RemoteCallError
+from whatfrom.recommend.advisor import advise
+from whatfrom.recommend.llm import LLMProvider, get_provider
+from whatfrom.recommend.verify import verify_recommendation
+from whatfrom.search.retrieval import search_candidates_by_vector
 
 
 class RecommendRequest(BaseModel):

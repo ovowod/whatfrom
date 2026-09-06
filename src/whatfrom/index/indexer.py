@@ -1,12 +1,12 @@
-# src/whatfrom/indexer.py
+# src/whatfrom/index/indexer.py
 from datetime import datetime
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from whatfrom.collect.chunk import chunk_text, split_sections
-from whatfrom.embed import EMBEDDING_DIM, Embedder
-from whatfrom.models import Document, DocumentChunk
+from whatfrom.core.embed import EMBEDDING_DIM, Embedder
+from whatfrom.core.models import Document, DocumentChunk
+from whatfrom.index.chunk import chunk_text, split_sections
 
 DOC_TYPE = "readme"
 

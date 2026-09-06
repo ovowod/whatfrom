@@ -1,4 +1,4 @@
-# src/whatfrom/db.py
+# src/whatfrom/core/db.py
 from collections.abc import Generator
 from contextlib import contextmanager
 

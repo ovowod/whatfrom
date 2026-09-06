@@ -2,10 +2,10 @@ from datetime import UTC, datetime
 
 import pytest
 
-from whatfrom.advisor import advise, build_prompt
-from whatfrom.contracts import Candidate, Evidence, Platform, Recommendation
-from whatfrom.httpclient import RemoteCallError
-from whatfrom.llm import FakeLLMProvider
+from whatfrom.core.contracts import Candidate, Evidence, Platform, Recommendation
+from whatfrom.core.httpclient import RemoteCallError
+from whatfrom.recommend.advisor import advise, build_prompt
+from whatfrom.recommend.llm import FakeLLMProvider
 
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
 

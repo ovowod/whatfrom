@@ -3,8 +3,8 @@ import json
 import httpx2
 import pytest
 
-from whatfrom.embed import EMBEDDING_DIM, OpenAICompatibleEmbedder
-from whatfrom.httpclient import RemoteCallError
+from whatfrom.core.embed import EMBEDDING_DIM, OpenAICompatibleEmbedder
+from whatfrom.core.httpclient import RemoteCallError
 
 
 def _vec(fill: float, dim: int = EMBEDDING_DIM) -> list[float]:

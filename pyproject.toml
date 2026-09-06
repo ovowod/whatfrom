@@ -28,6 +28,7 @@ packages = ["src/whatfrom"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+addopts = ["--import-mode=importlib"]
 filterwarnings = [
     # 경고는 전부 실패로 취급한다. 새로 생긴 경고가 조용히 쌓이지 않게 한다.
     "error",

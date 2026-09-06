@@ -1,4 +1,4 @@
-# tests/test_store.py
+# tests/collect/test_store.py
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,11 +10,11 @@ from sqlalchemy import delete, select
 from whatfrom.cli import collect_repository
 from whatfrom.collect.hub import HubClient, RepositoryRow, TagRow, VariantRow
 from whatfrom.collect.store import upsert_repository, upsert_tags
-from whatfrom.db import session_scope
-from whatfrom.models import ImageTag, ImageVariant, Repository
+from whatfrom.core.db import session_scope
+from whatfrom.core.models import ImageTag, ImageVariant, Repository
 
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
-FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURES = Path(__file__).parents[1] / "fixtures"
 
 
 def _repo_row() -> RepositoryRow:

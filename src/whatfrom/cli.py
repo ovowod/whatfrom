@@ -7,12 +7,12 @@ from sqlalchemy import Engine, text
 
 from whatfrom.collect.hub import HubClient, parse_repository, parse_tag_page
 from whatfrom.collect.store import upsert_repository, upsert_tags
-from whatfrom.config import settings
-from whatfrom.db import make_engine, session_scope
-from whatfrom.embed import get_embedder
-from whatfrom.indexer import index_readme
-from whatfrom.models import Base
-from whatfrom.retrieval import search_chunks
+from whatfrom.core.config import settings
+from whatfrom.core.db import make_engine, session_scope
+from whatfrom.core.embed import get_embedder
+from whatfrom.core.models import Base
+from whatfrom.index.indexer import index_readme
+from whatfrom.search.retrieval import search_chunks
 
 
 def cmd_init_db(args: argparse.Namespace) -> None:

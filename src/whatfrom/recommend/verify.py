@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from whatfrom.contracts import Candidate, Recommendation
-from whatfrom.models import ImageTag
+from whatfrom.core.contracts import Candidate, Recommendation
+from whatfrom.core.models import ImageTag
 
 # FROM [--platform=...] <ref> [AS <stage>]
 _FROM = re.compile(r"^\s*FROM\s+(?:--\S+\s+)*(\S+)(?:\s+[Aa][Ss]\s+(\S+))?", re.MULTILINE)
