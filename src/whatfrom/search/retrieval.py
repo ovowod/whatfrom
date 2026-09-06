@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, selectinload
 from whatfrom.core.contracts import Candidate, Evidence, Platform
 from whatfrom.core.embed import Embedder
 from whatfrom.core.models import Document, DocumentChunk, ImageTag, Repository
+from whatfrom.search.tagselect import TagRef, select_tags
 
 
 def search_chunks(
@@ -52,10 +53,12 @@ def search_candidates_by_vector(
     chunk_k: int = 5,
     tags_per_repo: int = 5,
 ) -> list[Candidate]:
-    """벡터 검색으로 리포와 근거를 찾고, 그 리포의 최근 태그를 후보로 세운다.
+    """벡터 검색으로 리포와 근거를 찾고, 그 리포의 태그 중에서 후보를 세운다.
 
-    Phase 0에는 구조화 필터가 없다. 요구사항 조건으로 태그를 좁히는 일은
-    SearchPlan이 도착하는 F7의 몫이다 (스펙 §11).
+    태그 선택 규칙은 tagselect.select_tags에 있다.
+
+    질문 내용은 아직 태그 선택에 영향을 주지 않는다. 요구사항 조건으로 태그를
+    좁히는 일은 SearchPlan이 도착하는 F7의 몫이다 (스펙 §11).
     """
     hits = search_chunks_by_vector(session, vector, limit=chunk_k)
     if not hits:
@@ -78,17 +81,40 @@ def search_candidates_by_vector(
         repo = session.get(Repository, repository)
         if repo is None:
             continue
-        tags = (
-            session.execute(
+        # 선택에 필요한 네 컬럼만 가볍게 전부 가져온다. variants까지 붙이면
+        # python 리포 기준 태그 300개에 변종 1868행이 딸려온다.
+        refs = [
+            TagRef(
+                id=row.id,
+                tag=row.tag,
+                manifest_digest=row.manifest_digest,
+                last_pushed_at=row.last_pushed_at,
+            )
+            for row in session.execute(
+                select(
+                    ImageTag.id,
+                    ImageTag.tag,
+                    ImageTag.manifest_digest,
+                    ImageTag.last_pushed_at,
+                ).where(ImageTag.repository == repository)
+            )
+        ]
+        chosen = select_tags(refs, tags_per_repo)
+        if not chosen:
+            continue
+
+        # 고른 것만 변종과 함께 다시 가져온다. IN 절은 순서를 보장하지 않으므로
+        # select_tags가 정한 순서로 다시 세운다.
+        by_id = {
+            tag.id: tag
+            for tag in session.execute(
                 select(ImageTag)
                 .options(selectinload(ImageTag.variants))
-                .where(ImageTag.repository == repository)
-                .order_by(ImageTag.last_pushed_at.desc().nulls_last())
-                .limit(tags_per_repo)
+                .where(ImageTag.id.in_([ref.id for ref in chosen]))
             )
             .scalars()
-            .all()
-        )
+        }
+        tags = [by_id[ref.id] for ref in chosen]
 
         for tag in tags:
             # image_variants 행을 그대로 옮긴다. 아키텍처 이름으로 접으면
