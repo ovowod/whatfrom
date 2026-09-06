@@ -12,7 +12,13 @@ from whatfrom.config import settings
 from whatfrom.httpclient import DEFAULT_TIMEOUT, RemoteCallError, post_json
 
 EMBEDDING_DIM = 1024
-_TOKEN = re.compile(r"[a-z0-9]+")
+# 라틴 문자·숫자 덩어리 또는 비ASCII 덩어리. 한국어가 이 제품의 주 입력 언어인데
+# [a-z0-9]+ 만 쓰면 순수 한국어 질문이 영벡터가 되고, pgvector가 코사인 거리를
+# nan으로 돌려주면서 검색 순서가 아무 의미도 없어진다.
+#
+# \w+ 로는 안 되는 이유: "numpy를"처럼 조사가 영어 단어에 붙어버려서 영어 README와
+# 매칭이 오히려 나빠진다. 두 문자 종류를 나눠서 잘라야 "numpy"가 온전히 남는다.
+_TOKEN = re.compile(r"[a-z0-9]+|[^\x00-\x7f]+")
 
 
 class Embedder(Protocol):
