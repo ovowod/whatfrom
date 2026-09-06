@@ -98,3 +98,34 @@ def test_post_json_rejects_a_non_json_body():
 
     with pytest.raises(RemoteCallError, match="not JSON"):
         post_json(_client(handler), URL, {})
+
+
+def test_post_json_does_not_retry_a_read_timeout():
+    """읽기 타임아웃은 이미 예산을 다 쓴 뒤다. 재시도하면 대기가 배로 늘 뿐이다.
+
+    LLM 타임아웃이 120초인데 3회 시도하면 요청 하나가 6분을 넘긴다.
+    """
+    calls = {"n": 0}
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        calls["n"] += 1
+        raise httpx2.ReadTimeout("too slow", request=request)
+
+    with pytest.raises(RemoteCallError, match="request failed"):
+        post_json(_client(handler), URL, {}, sleep=lambda _: None)
+
+    assert calls["n"] == 1
+
+
+def test_post_json_retries_a_connect_error():
+    """연결 단계 실패는 아직 아무것도 못 보낸 상태고 3초에 끝난다. 재시도가 싸다."""
+    calls = {"n": 0}
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise httpx2.ConnectError("refused", request=request)
+        return httpx2.Response(200, json={"ok": True})
+
+    assert post_json(_client(handler), URL, {}, sleep=lambda _: None) == {"ok": True}
+    assert calls["n"] == 2
