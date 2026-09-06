@@ -3,8 +3,9 @@ import json
 import httpx2
 import pytest
 
+from whatfrom.contracts import Recommendation
 from whatfrom.httpclient import RemoteCallError
-from whatfrom.llm import OpenAICompatibleProvider
+from whatfrom.llm import OpenAICompatibleProvider, strict_json_schema
 
 VALID_CONTENT = (
     '{"image": "python:3.13-slim", "reason": "glibc", '
@@ -36,6 +37,27 @@ def test_provider_posts_to_chat_completions_with_bearer_auth_and_model():
     assert seen["body"]["model"] == "test-model"
     assert seen["body"]["messages"][0] == {"role": "system", "content": "sys"}
     assert result.image == "python:3.13-slim"
+
+
+def test_strict_schema_lists_every_property_as_required():
+    """OpenAI strict 모드는 properties와 required가 같아야 하고 아니면 400을 낸다.
+
+    Pydantic은 기본값이 있는 필드를 required에서 빼므로 alternatives가 빠진다.
+    Kimi와 vLLM은 관대해서 통과시키지만 OpenAI는 거부한다.
+    """
+    schema = strict_json_schema(Recommendation)
+
+    assert set(schema["required"]) == set(schema["properties"])
+    assert "alternatives" in schema["required"]
+    # Pydantic 기본 동작과 다르다는 것 자체를 확인해 둔다.
+    assert "alternatives" not in Recommendation.model_json_schema()["required"]
+
+
+def test_strict_schema_does_not_mutate_the_model():
+    """스키마를 두 번 만들어도 원본 모델의 기본 스키마는 그대로여야 한다."""
+    strict_json_schema(Recommendation)
+
+    assert "alternatives" not in Recommendation.model_json_schema()["required"]
 
 
 def test_provider_requests_a_json_schema_forbidding_extra_fields():

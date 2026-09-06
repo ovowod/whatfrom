@@ -3,11 +3,29 @@ from collections.abc import Callable
 from typing import Protocol
 
 import httpx2
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from whatfrom.config import settings
 from whatfrom.contracts import Recommendation
 from whatfrom.httpclient import RemoteCallError, post_json
+
+
+def strict_json_schema(model: type[BaseModel]) -> dict:
+    """모든 속성을 required에 넣은 JSON 스키마.
+
+    OpenAI의 strict 모드는 properties에 있는 필드가 전부 required에도 있어야
+    하고, 아니면 요청을 400으로 거부한다. Pydantic은 기본값이 있는 필드를
+    required에서 빼므로 alternatives가 누락된다.
+
+    Kimi와 vLLM은 이걸 통과시켜서 지금까지 드러나지 않았다. 보정하지 않으면
+    base_url만 바꿔 다른 백엔드로 옮길 수 있다는 말이 OpenAI에서만 거짓이 된다.
+
+    파이썬 쪽에서는 기본값을 그대로 둔다. 서버에 요구하는 것과 우리가 받아들이는
+    것을 굳이 같게 맞출 이유가 없고, 응답은 어차피 Pydantic이 다시 검증한다.
+    """
+    schema = model.model_json_schema()
+    schema["required"] = list(schema["properties"])
+    return schema
 
 
 class LLMProvider(Protocol):
@@ -89,7 +107,7 @@ class OpenAICompatibleProvider:
                     "json_schema": {
                         "name": "recommendation",
                         "strict": True,
-                        "schema": Recommendation.model_json_schema(),
+                        "schema": strict_json_schema(Recommendation),
                     },
                 },
             },
