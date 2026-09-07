@@ -116,11 +116,12 @@ def test_search_candidates_keeps_same_architecture_on_different_os(session):
     assert {p.size_bytes for p in multi.platforms} == {400_000_000, 2_400_000_000}
 
 
-def test_search_candidates_orders_tags_by_most_recent_push(session):
+def test_search_candidates_orders_tags_by_version_then_shortest_name(session):
     _seed(session)
 
     candidates = search_candidates(session, FakeEmbedder(), "python", tags_per_repo=5)
 
+    # 픽스처의 두 태그는 마이너가 같으므로 이름 길이로 갈린다.
     assert [c.tag for c in candidates] == ["3.13-slim", "3.13-alpine"]
 
 
@@ -169,3 +170,55 @@ def test_search_candidates_orders_windows_kernel_versions_deterministically(sess
 
 def test_search_candidates_returns_empty_when_nothing_is_indexed(session):
     assert search_candidates(session, FakeEmbedder(), "anything") == []
+
+
+def test_search_candidates_skips_prereleases_and_folds_aliases(session):
+    """푸시가 가장 최근인 것이 RC이고, 별칭이 같은 이미지를 가리키는 상황."""
+    payload = json.loads((FIXTURES / "hub_repository.json").read_text())
+    row = parse_repository(payload)
+    upsert_repository(session, row, NOW)
+    session.flush()
+    upsert_tags(
+        session,
+        "python",
+        [
+            # 가장 최근 푸시. 옛 규칙이라면 1위였다.
+            TagRow(
+                tag="3.15-rc-slim",
+                manifest_digest="sha256:rc",
+                last_pushed_at=datetime(2026, 9, 5, tzinfo=UTC),
+                variants=(VariantRow("linux", "amd64", "", "", "sha256:rc1", 50_000_000),),
+            ),
+            # 아래 둘은 같은 이미지다. 긴 이름이 접혀야 한다.
+            TagRow(
+                tag="3.14-alpine3.24",
+                manifest_digest="sha256:shared",
+                last_pushed_at=datetime(2026, 9, 4, tzinfo=UTC),
+                variants=(VariantRow("linux", "amd64", "", "", "sha256:a1", 18_000_000),),
+            ),
+            TagRow(
+                tag="3.14-alpine",
+                manifest_digest="sha256:shared",
+                last_pushed_at=datetime(2026, 9, 4, tzinfo=UTC),
+                variants=(VariantRow("linux", "amd64", "", "", "sha256:a1", 18_000_000),),
+            ),
+            TagRow(
+                tag="3.14-slim",
+                manifest_digest="sha256:slim",
+                last_pushed_at=datetime(2026, 8, 1, tzinfo=UTC),
+                variants=(VariantRow("linux", "amd64", "", "", "sha256:s1", 46_000_000),),
+            ),
+        ],
+        NOW,
+    )
+    index_readme(session, "python", row.readme, row.source_url, FakeEmbedder(), NOW)
+    session.flush()
+
+    candidates = search_candidates(session, FakeEmbedder(), "python", tags_per_repo=5)
+
+    tags = [c.tag for c in candidates]
+    assert "3.15-rc-slim" not in tags
+    assert "3.14-alpine3.24" not in tags
+    assert tags == ["3.14-slim", "3.14-alpine"]
+    # 후보끼리 같은 이미지를 가리키지 않는다.
+    assert len({c.digest for c in candidates}) == len(candidates)
