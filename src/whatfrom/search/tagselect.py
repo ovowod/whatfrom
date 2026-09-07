@@ -10,7 +10,9 @@ from datetime import datetime
 
 # 프리릴리스 표기. 파이썬 이미지는 PEP 440을 따라 3.15.0a8, 3.15.0b1처럼
 # 숫자 뒤에 알파벳이 바로 붙는다. rc만 걸러서는 알파와 베타를 놓친다.
-PRERELEASE = re.compile(r"[0-9](a|b|rc)[0-9]|-rc")
+# -m03처럼 마일스톤 빌드를 쓰는 리포(redis)도 있고, ubuntu는 devel이라는
+# 이름으로 개발 브랜치를 낸다.
+PRERELEASE = re.compile(r"[0-9](a|b|rc)[0-9]|-rc|-m[0-9]+|^devel$")
 
 # 마이너 이동 별칭. 3.14와 3.14-slim은 통과하고
 # latest, 3, 3.14.7-slim은 걸린다.
@@ -33,6 +35,11 @@ def select_tags(tags: list[TagRef], limit: int) -> list[TagRef]:
     프리릴리스를 빼고, 마이너 이동 별칭 형태만 남기고, 같은 이미지를 가리키는
     태그를 접은 뒤 버전 내림차순으로 자른다.
 
+    프리릴리스 제외는 이름뿐 아니라 digest로도 전파된다. ubuntu의 26.10처럼
+    이름만 봐서는 안정 버전 같아도, devel처럼 이름으로 걸러진 프리릴리스와
+    같은 digest를 가리키면 함께 빠진다. digest가 None인 태그는 전파의
+    대상도, 근거도 되지 않는다.
+
     tags는 한 리포지토리의 태그여야 한다. 폴백 로직이 리포 단위로 동작하므로
     여러 리포의 태그를 섞어 넘기면 결과가 뒤섞인다.
 
@@ -43,7 +50,7 @@ def select_tags(tags: list[TagRef], limit: int) -> list[TagRef]:
     태그에 딸린 푸시 시각과 digest가 있으니 모델이 그것을 릴리스 후보라고
     설명할 수 있다. 어떤 리포도 후보가 0개가 되지 않게 한다.
     """
-    stable = [ref for ref in tags if not PRERELEASE.search(ref.tag)]
+    stable = _exclude_prerelease(tags)
     if not stable:
         return _by_recent_push(tags)[:limit]
 
@@ -61,6 +68,28 @@ def select_tags(tags: list[TagRef], limit: int) -> list[TagRef]:
     # 버전은 내림차순, 이름 길이와 사전순은 오름차순이라 버전 쪽 부호를 뒤집는다.
     folded.sort(key=lambda ref: (-versions[ref.id][0], -versions[ref.id][1], len(ref.tag), ref.tag))
     return folded[:limit]
+
+
+def _exclude_prerelease(tags: list[TagRef]) -> list[TagRef]:
+    """이름으로 걸러진 프리릴리스와, 그것과 같은 digest를 가리키는 태그를 뺀다.
+
+    ubuntu의 devel과 26.10처럼 개발 브랜치가 안정 버전 이름으로도 배포될 수
+    있다. 이름만으로는 26.10을 걸러낼 수 없으니, devel의 digest를 함께 가진
+    태그도 프리릴리스로 취급해 뺀다. digest가 None이면 동일성을 알 수
+    없으므로 전파의 대상으로도, 근거로도 쓰지 않는다.
+    """
+    named_ids = {ref.id for ref in tags if PRERELEASE.search(ref.tag)}
+    prerelease_digests = {
+        ref.manifest_digest
+        for ref in tags
+        if ref.id in named_ids and ref.manifest_digest is not None
+    }
+    return [
+        ref
+        for ref in tags
+        if ref.id not in named_ids
+        and not (ref.manifest_digest is not None and ref.manifest_digest in prerelease_digests)
+    ]
 
 
 def _fold_by_digest(refs: list[TagRef]) -> list[TagRef]:

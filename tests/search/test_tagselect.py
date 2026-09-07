@@ -31,6 +31,41 @@ def test_prerelease_tags_never_become_candidates():
     assert [t.tag for t in select_tags(tags, limit=10)] == ["3.14-slim"]
 
 
+def test_milestone_tags_are_excluded():
+    """redis의 8.8-m03 같은 마일스톤 빌드는 후보가 되지 않는다."""
+    tags = [ref(1, "8.8-m03"), ref(2, "8.8-slim")]
+    assert [t.tag for t in select_tags(tags, limit=10)] == ["8.8-slim"]
+
+
+def test_devel_tag_is_excluded():
+    """ubuntu의 devel은 개발 브랜치라 후보가 되지 않는다."""
+    tags = [ref(1, "devel"), ref(2, "26.4-slim")]
+    assert [t.tag for t in select_tags(tags, limit=10)] == ["26.4-slim"]
+
+
+def test_a_tag_sharing_a_digest_with_a_prerelease_is_excluded_too():
+    """ubuntu의 devel과 26.10은 같은 digest를 가리킨다.
+
+    26.10은 이름만 보면 안정 버전 같지만 실제로는 아직 나오지 않은
+    개발 브랜치라, digest로 전파해서 함께 뺀다.
+    """
+    tags = [
+        ref(1, "devel", digest="sha256:same"),
+        ref(2, "26.10", digest="sha256:same"),
+        ref(3, "26.4-slim"),
+    ]
+    assert [t.tag for t in select_tags(tags, limit=10)] == ["26.4-slim"]
+
+
+def test_digest_propagation_ignores_unknown_digests():
+    """digest가 None인 태그는 전파의 근거로도, 대상으로도 쓰지 않는다."""
+    tags = [
+        ref(1, "devel", digest=None),
+        ref(2, "26.4-slim", digest=None),
+    ]
+    assert {t.tag for t in select_tags(tags, limit=10)} == {"26.4-slim"}
+
+
 def test_floating_and_patch_pinned_tags_are_not_candidates():
     """latest와 3은 다음 달에 다른 이미지가 되고, 3.14.7-slim은 패치에 묶인다."""
     tags = [
