@@ -111,8 +111,7 @@ def search_candidates_by_vector(
                 select(ImageTag)
                 .options(selectinload(ImageTag.variants))
                 .where(ImageTag.id.in_([ref.id for ref in chosen]))
-            )
-            .scalars()
+            ).scalars()
         }
         tags = [by_id[ref.id] for ref in chosen]
 
