@@ -1,5 +1,5 @@
 # src/whatfrom/api.py
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import AbstractContextManager, contextmanager
 
 from fastapi import FastAPI
@@ -148,7 +148,7 @@ def create_app(
     factory = sessionmaker(bind=resolved_engine, expire_on_commit=False)
 
     @contextmanager
-    def open_session() -> Iterator[Session]:
+    def open_session() -> Generator[Session]:
         session = factory()
         try:
             yield session

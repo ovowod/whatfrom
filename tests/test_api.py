@@ -1,6 +1,6 @@
 # tests/test_api.py
 import json
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -55,7 +55,7 @@ def _client(session, provider, embedder=None) -> TestClient:
     """
 
     @contextmanager
-    def open_fixed() -> Iterator[Session]:
+    def open_fixed() -> Generator[Session]:
         yield session
 
     app = create_app(embedder=embedder or FakeEmbedder(), provider=provider)
