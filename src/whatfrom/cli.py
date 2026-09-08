@@ -3,7 +3,7 @@ import argparse
 from datetime import UTC, datetime
 
 import httpx2
-from sqlalchemy import Engine, text
+from sqlalchemy import Engine, inspect, text
 
 from whatfrom.collect.hub import HubClient, parse_repository, parse_tag_page
 from whatfrom.collect.store import upsert_repository, upsert_tags
@@ -19,8 +19,17 @@ def cmd_init_db(args: argparse.Namespace) -> None:
     engine = make_engine(args.database_url)
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+
+    # create_all은 이미 있는 테이블을 말없이 건너뛴다. 무엇을 만들었는지 세어두지
+    # 않으면 아무것도 안 하고도 만들었다고 말하게 된다.
+    existing = set(inspect(engine).get_table_names())
+    created = sorted(set(Base.metadata.tables) - existing)
     Base.metadata.create_all(engine)
-    print(f"initialized schema on {engine.url.database}")
+
+    if created:
+        print(f"created on {engine.url.database}: {', '.join(created)}")
+    else:
+        print(f"{engine.url.database} already has every table, created nothing")
 
 
 def collect_repository(
