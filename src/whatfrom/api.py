@@ -1,5 +1,5 @@
 # src/whatfrom/api.py
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import AbstractContextManager, contextmanager
 
 from fastapi import FastAPI
@@ -51,7 +51,11 @@ def recommend_for_question(
     except RemoteCallError as exc:
         notes.append(f"임베딩 생성에 실패해 후보를 만들지 못했습니다: {exc}")
         return RecommendResponse(
-            question=question, recommendation=None, candidates=[], degraded=True, notes=notes
+            question=question,
+            recommendation=None,
+            candidates=[],
+            degraded=True,
+            notes=notes,
         )
 
     with open_session() as session:
@@ -60,7 +64,11 @@ def recommend_for_question(
     if not candidates:
         notes.append("검색된 후보가 없습니다. 수집·인덱싱이 되어 있는지 확인하세요.")
         return RecommendResponse(
-            question=question, recommendation=None, candidates=[], degraded=True, notes=notes
+            question=question,
+            recommendation=None,
+            candidates=[],
+            degraded=True,
+            notes=notes,
         )
 
     try:
@@ -78,7 +86,14 @@ def recommend_for_question(
     with open_session() as session:
         verdict = verify_recommendation(session, recommendation, candidates)
     if not verdict.ok:
-        # 그럴듯한 환각을 내보내느니 표를 내보낸다.
+        # 검증을 통과하지 못한 답변 대신 후보 목록을 표로 보여준다.
+
+        # 답변을 다시 생성하지 않는다.
+        # 같은 프롬프트와 후보 목록으로 재요청하면 같은 답이 나올 가능성이 높고,
+        # LLM 호출 한 번에 실측 59초가 걸린다. (kimi-k3 기준)
+        #
+        # 재시도를 도입하려면 먼저 답변이 검증에서 거부되는 비율을 확인해야 한다.
+        # 재시도할 때는 이전 답변이 거부된 이유를 프롬프트에 포함해야 한다.
         notes.append(f"추천이 실재성 검증을 통과하지 못해 폐기했습니다: {verdict.reason}")
         return RecommendResponse(
             question=question,
@@ -133,7 +148,7 @@ def create_app(
     factory = sessionmaker(bind=resolved_engine, expire_on_commit=False)
 
     @contextmanager
-    def open_session() -> Iterator[Session]:
+    def open_session() -> Generator[Session]:
         session = factory()
         try:
             yield session
@@ -150,7 +165,10 @@ def create_app(
     @app.post("/recommend", response_model=RecommendResponse)
     def recommend(request: RecommendRequest) -> RecommendResponse:
         return recommend_for_question(
-            app.state.open_session, resolved_embedder, resolved_provider, request.question
+            app.state.open_session,
+            resolved_embedder,
+            resolved_provider,
+            request.question,
         )
 
     return app

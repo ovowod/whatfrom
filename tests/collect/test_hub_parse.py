@@ -115,3 +115,29 @@ def test_hub_client_stops_at_max_pages():
         collected = list(HubClient(http).iter_tag_pages("python", max_pages=3))
 
     assert len(collected) == 3
+
+
+def test_hub_client_fetches_a_repository_from_the_library_namespace(repository_payload):
+    calls: list[str] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        calls.append(str(request.url))
+        return httpx2.Response(200, json=repository_payload)
+
+    transport = httpx2.MockTransport(handler)
+    with httpx2.Client(transport=transport) as http:
+        payload = HubClient(http).fetch_repository("python")
+
+    # library 네임스페이스와 끝의 슬래시가 빠지면 허브가 404를 준다.
+    assert calls == ["https://hub.docker.com/v2/repositories/library/python/"]
+    assert payload == repository_payload
+
+
+def test_hub_client_raises_when_the_repository_is_missing():
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(404, json={"detail": "object not found"})
+
+    transport = httpx2.MockTransport(handler)
+    with httpx2.Client(transport=transport) as http:
+        with pytest.raises(httpx2.HTTPStatusError):
+            HubClient(http).fetch_repository("does-not-exist")
