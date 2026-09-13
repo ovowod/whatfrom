@@ -6,3 +6,6 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .env
+
+# 평가 실행으로 생성되는 결과 JSON은 버전 관리에서 제외한다.
+eval/results/

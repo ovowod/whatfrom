@@ -1,4 +1,4 @@
-.PHONY: up down test lint fmt
+.PHONY: up down test lint fmt eval eval-retrieval
 
 up:
 	docker compose up -d --wait
@@ -15,3 +15,9 @@ lint:
 
 fmt:
 	uv run ruff format .
+
+eval:
+	uv run python -m whatfrom.cli eval
+
+eval-retrieval:
+	uv run python -m whatfrom.cli eval --retrieval-only

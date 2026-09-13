@@ -1,0 +1,1639 @@
+# whatfrom 골든셋 v1 — 리포 10종 40문항.
+#
+# 라벨 작성 및 검토 기준:
+#   1. accept/reject에는 존재를 확인한 이미지 태그를 적는다. 확인 범위는 아래와 같다.
+#   2. rationale.sources에는 판정 근거를 확인한 문서 URL을 적는다.
+#   3. requires_repositories 중 하나라도 색인되지 않았으면 문항은 미측정이다.
+#   4. 질문의 요구를 만족하는 답이 여러 개라면 accept에 함께 포함한다.
+#
+# 기존 검토에서 Python 태그는 DB의 image_tags로, 나머지는 공식 README의
+# 태그 목록으로 존재를 확인했다. 모든 태그가 로컬 DB에 수집됐다는 뜻은 아니다.
+# 같은 문항이 허용하는 버전·변형 조합의 누락도 검토했지만,
+# 이 목록이 모든 유효한 태그를 포함한다고 보장하지는 않는다.
+#
+# accept는 정답으로 인정할 목록이고, reject는 명시적 오답 경보를 표시할 목록이다.
+# 추천 정확도는 accept 포함 여부로 계산하므로 두 목록에 없는 답도 오답 처리된다.
+# reject는 단순한 선호 차이가 아니라 질문의 필수 제약을 어기는 경우에 사용한다.
+#
+# Python 버전을 고정하지 않은 문항은 검토 당시 bugfix 지원 단계인
+# 3.14와 3.13 계열을 허용한다. 3.12 이하는 버전이 명시된 문항에서만 허용한다.
+# 이 정책과 아래 라벨의 시점은 verified_on을 기준으로 해석한다.
+version: 1
+# 아래 라벨들이 인용한 출처를 마지막으로 열어 확인한 날이다. latest가 무엇인지,
+# 어느 버전이 LTS인지, 최신 패치가 몇인지는 시간이 지나면 낡는다.
+verified_on: 2026-09-12
+cases:
+  - id: python-numpy-arm64
+    question: |
+      FastAPI 서비스이고 numpy를 사용해. 이미지 크기는 작았으면
+      좋겠지만 빌드 안정성이 더 중요해. ARM64에서도 실행해야 해.
+    requires_repositories: [python]
+    tags: [size, arch, native-deps]
+    accept:
+      - python:3.14-slim
+      - python:3.14-slim-trixie
+      - python:3.14-slim-bookworm
+      - python:3.14-bookworm
+      - python:3.14-trixie
+      - python:3.13-slim
+      - python:3.13-slim-trixie
+      - python:3.13-slim-bookworm
+      - python:3.13-bookworm
+      - python:3.13-trixie
+    reject: []
+    conditions:
+      architectures: [arm64]
+      exclude_distributions: [alpine]
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        alpine을 reject에서 뺐다. python-scientific-stack과 같은 전제를
+        쓰면서 결론만 다르게 둘 수는 없기 때문이다. 이 문항이 따지는
+        arm64/aarch64에서도 근거는 같은 방향이다. numpy는 musllinux_1_2
+        휠을 x86_64와 aarch64 둘 다 올리고(2.5.3 기준 cp312~cp315),
+        FastAPI 쪽 네이티브 의존인 pydantic-core도 musllinux_1_1_aarch64
+        휠을 올린다. 공식 README의 아키텍처 목록도 변형별로 갈리지 않아
+        alpine 태그 역시 arm64v8을 지원한다. 즉 arm64라는 조건 때문에
+        alpine만 따로 틀렸다고 할 문서 근거가 없다.
+        공식 README가 musl libc는 "libc 요구의 깊이에 따라 문제를 겪는
+        경우가 잦다"고 경고하는 것은 사실이지만, 이 경고는 아키텍처와
+        무관하게 모든 musl 사용에 걸리는 일반 경고라 scientific-stack에서
+        오답으로 치지 않은 것을 여기서만 오답으로 칠 근거가 되지 못한다.
+        권장하지 않는 것과 명시적 오답은 다른 주장이므로, 크기보다 빌드
+        안정성을 위에 둔 요구에 맞춰 accept는 slim/데비안 계열로 좁혀 두되
+        alpine은 accept에도 reject에도 넣지 않는다. 공식 이미지는 arm64v8을
+        지원하므로 ARM64 요구는 어느 데비안 변형이든 만족한다.
+      sources:
+        - https://hub.docker.com/_/python
+        - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
+        - https://pypi.org/project/numpy/
+        - https://pypi.org/project/pydantic-core/
+        - https://pythonspeed.com/articles/alpine-docker-python/
+
+  - id: python-size-first
+    question: |
+      웹훅 중계 서버야. requirements는 httpx랑 pydantic 정도뿐이고,
+      httpx는 순수 파이썬, pydantic은 Rust로 짠 pydantic-core를 쓰지만
+      PyPI에 musllinux 휠이 올라와 있어서 musl 환경에서도 컴파일 없이
+      깔린다. 레지스트리 비용 때문에 이미지 크기를 최대한 줄이는 게
+      1순위야.
+    requires_repositories: [python]
+    tags: [size]
+    accept:
+      - python:3.14-alpine
+      - python:3.14-alpine3.24
+      - python:3.14-alpine3.23
+      - python:3.13-alpine
+      - python:3.13-alpine3.24
+      - python:3.14-slim
+      - python:3.14-slim-trixie
+      - python:3.13-slim
+      - python:3.13-slim-trixie
+      - python:3.13-alpine3.23
+    reject:
+      - python:3.14
+      - python:3.14-trixie
+      - python:latest
+    conditions:
+      max_size_mb: 100
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        질문의 전제를 고쳤다. 전에는 "순수 파이썬이고 C 확장이 하나도
+        없다"면서 pydantic을 의존으로 들었는데, pydantic의 검증 코어인
+        pydantic-core는 Rust로 구현된 네이티브 확장이라 전제 자체가 틀린
+        문항이었다. 다만 네이티브 코어가 있다는 사실만으로 alpine이
+        불가능하다고 결론 낼 수는 없다 — 갈리는 것은 musllinux 휠의 유무다.
+        PyPI의 pydantic-core는 musllinux_1_1 휠을 x86_64·aarch64·armv7l로
+        올리고 httpx는 py3-none-any 하나뿐이라, 이 스택은 alpine에서도 소스
+        빌드로 떨어지지 않는다. 그래서 musl/glibc 차이가 휠 설치에 걸릴
+        지점이 없고 alpine의 단점이 사라진 채 크기 이점만 남는다. 공식
+        README가 alpine 변형을 "최종 이미지 크기가 최우선 관심사일 때
+        유용하다"고 못 박은 경우가 정확히 이 상황이다. slim도 기본 이미지의
+        1/9 수준이라 함께 넣는다. DB 실측으로 alpine 약 20MB, slim 약 46MB,
+        기본 태그 약 415MB라 기본 태그는 크기 최우선 요구와 정면으로
+        어긋난다.
+      sources:
+        - https://hub.docker.com/_/python
+        - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
+        - https://pypi.org/project/pydantic-core/
+        - https://pypi.org/project/httpx/
+        - https://docs.docker.com/build/building/best-practices/
+
+  # 이 문항은 지금 구조적으로 맞출 수 없다. 후보 생성이 질문을 보지 않고
+  # 항상 3.14 계열 5개만 돌려주므로 3.12 태그는 후보에 오를 수가 없다.
+  # 라벨이 틀린 게 아니라 시스템의 한계이고, F7(질문에 반응하는 후보 생성)이
+  # 도착했을 때 그 가치를 보여줄 문항이다. 점수가 0이라고 지우지 말 것.
+  - id: python-version-pinned-312
+    question: |
+      회사 내부 라이브러리가 3.12에서만 검증돼 있어서 런타임을 3.12로
+      고정해야 해. 3.13 이상으로 올리면 CI가 깨져. 어떤 태그를 써야 해?
+    requires_repositories: [python]
+    tags: [version]
+    accept:
+      - python:3.12
+      - python:3.12-slim
+      - python:3.12-slim-bookworm
+      - python:3.12-slim-trixie
+      - python:3.12-bookworm
+      - python:3.12-trixie
+      - python:3.12-alpine
+      - python:3.12.14
+      - python:3.12.14-slim
+    reject:
+      - python:3.14
+      - python:3.14-slim
+      - python:3.14-alpine
+      - python:3.14-trixie
+      - python:3.14-bookworm
+      - python:3.13-slim
+      - python:latest
+    conditions:
+      version_prefix: "3.12"
+    expected_sections: [Supported tags]
+    rationale:
+      note: |
+        3.12는 devguide 버전 표에서 security 단계이고 EOL이 2028-10이라
+        아직 지원 범위 안이며, 공식 이미지도 3.12 계열 태그를 계속 낸다.
+        버전을 못 박은 요구이므로 3.12로 시작하는 태그만 정답이고 변형
+        선택(slim/alpine/데비안)은 열려 있다.
+        3.14 계열은 변형과 무관하게 같은 이유로 틀리므로 전부 오답으로 둔다.
+      sources:
+        - https://devguide.python.org/versions/
+        - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
+
+  - id: python-fastapi-prod
+    question: |
+      FastAPI로 만든 사내 API를 쿠버네티스에 처음 올리려고 해. 특별한
+      제약은 없고 프로덕션에서 무난하게 굴러가면 좋겠어. 베이스 이미지
+      뭘로 시작하는 게 좋을까?
+    requires_repositories: [python]
+    tags: [prod, baseline]
+    accept:
+      - python:3.14-slim
+      - python:3.14-slim-trixie
+      - python:3.14-slim-bookworm
+      - python:3.14
+      - python:3.14-trixie
+      - python:3.14-bookworm
+      - python:3.13-slim
+      - python:3.13-slim-trixie
+      - python:3.13-slim-bookworm
+      - python:3.13
+      - python:3.13-trixie
+      - python:3.13-bookworm
+    reject:
+      - python:latest
+      - python:3.15.0b1-slim
+      - python:3.15.0a8-slim
+    expected_sections: [Image Variants, How to use this image]
+    rationale:
+      note: |
+        FastAPI 공식 배포 문서가 별도 베이스 이미지를 쓰지 말고 공식 python
+        이미지에서 직접 빌드하라고 하고 예제도 FROM python:3.14다. 기본
+        태그와 slim 둘 다 타당해서 함께 넣는다. latest를 빼는 이유는 Docker
+        빌드 모범 사례가 퍼블리셔가 태그를 갈아끼울 수 있으니 버전을 고정
+        하라고 하기 때문이고, 3.15는 devguide 기준 prerelease라 프로덕션
+        기본값이 될 수 없다.
+      sources:
+        - https://fastapi.tiangolo.com/deployment/docker/
+        - https://docs.docker.com/build/building/best-practices/
+        - https://devguide.python.org/versions/
+
+  - id: python-scientific-stack
+    question: |
+      pandas랑 scipy로 돌리는 야간 배치 작업이야. 매일 새벽에 한 번
+      도는 거라 이미지가 조금 커도 상관없고, 빌드가 안 깨지는 게 중요해.
+    requires_repositories: [python]
+    tags: [native-deps, prod]
+    accept:
+      - python:3.14-slim
+      - python:3.14-slim-trixie
+      - python:3.14-slim-bookworm
+      - python:3.14
+      - python:3.14-trixie
+      - python:3.14-bookworm
+      - python:3.13-slim
+      - python:3.13-slim-trixie
+      - python:3.13
+      - python:3.13-trixie
+      - python:3.13-bookworm
+      - python:3.13-slim-bookworm
+    reject:
+      - python:3.15.0a8-slim
+      - python:latest
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        여기서 alpine을 reject에 넣지 않았다. pandas와 scipy는 지금 PyPI에
+        musllinux_1_2 휠을 x86_64/aarch64 둘 다 올리므로 "alpine이면 소스
+        빌드"는 더 이상 사실이 아니다. 다만 slim조차 공식 README가 확장
+        모듈 컴파일 시 pip install이 실패할 수 있다고 경고하고, 소스 빌드로
+        떨어지면 numpy 빌드에 C/C++ 컴파일러와 BLAS/LAPACK이 필요하므로
+        여유 있는 데비안 기반을 accept의 중심에 둔다. alpha 릴리스와 고정
+        되지 않은 latest는 야간 배치의 재현성 요구와 맞지 않는다.
+      sources:
+        - https://pypi.org/project/pandas/
+        - https://pypi.org/project/scipy/
+        - https://numpy.org/devdocs/building/
+        - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
+
+  - id: python-build-stage
+    question: |
+      멀티스테이지 Dockerfile을 쓰려고 해. 휠 컴파일하고 의존성 설치하는
+      빌드 단계용 이미지를 고르는 중인데, 최종 런타임 단계 말고 빌드
+      단계에는 어떤 걸 쓰는 게 맞아?
+    requires_repositories: [python]
+    tags: [build, native-deps]
+    accept:
+      - python:3.14
+      - python:3.14-trixie
+      - python:3.14-bookworm
+      - python:3.13
+      - python:3.13-trixie
+      - python:3.13-bookworm
+    reject: []
+    conditions:
+      exclude_distributions: [alpine]
+    expected_sections: [Image Variants, How to use this image]
+    rationale:
+      note: |
+        기본 태그는 buildpack-deps 기반이라 흔한 데비안 개발 패키지를 이미
+        갖고 있고, 공식 README도 이 태그를 "다른 이미지를 빌드하는 베이스"로
+        설명하면서 임의의 pip install 대부분이 추가 헤더 없이 성공한다고
+        한다. 반대로 slim은 확장 모듈 컴파일에 필요한 패키지가 없다고 같은
+        문서가 명시한다. 멀티스테이지에서는 빌드 도구가 최종 이미지에 남지
+        않으므로 빌드 단계가 큰 것은 비용이 아니다.
+        reject를 비웠다. slim과 alpine을 명시적 오답으로 두고 있었는데,
+        문서가 말하는 것은 "그 이미지에는 컴파일에 필요한 데비안 패키지가
+        없다"이지 "그 이미지로는 빌드할 수 없다"가 아니다. 질문도 패키지를
+        더 깔지 말라고 하지 않았고, 실제로 slim에 build-essential을,
+        alpine에 build-base를 먼저 까는 빌드 단계는 흔하고 동작한다.
+        같은 문서의 "기본 이미지를 강력히 권한다"는 문장은 권고이지
+        오답 판정이 아니다. 권장하지 않는 것과 문서가 틀렸다고 적은 것은
+        다른 주장이라, 선호는 accept를 기본 태그로만 두는 것으로 이미
+        표현되므로 reject에서는 뺀다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
+        - https://docs.docker.com/build/building/multi-stage/
+        - https://docs.docker.com/build/building/best-practices/
+
+  - id: python-latest-stable
+    question: |
+      새로 시작하는 프로젝트라 파이썬 최신 안정 버전으로 가고 싶어.
+      베타나 RC 말고 정식 릴리스여야 하고, 태그도 버전이 드러나게
+      박아두고 싶어.
+    requires_repositories: [python]
+    tags: [version]
+    accept:
+      - python:3.14
+      - python:3.14-slim
+      - python:3.14-slim-trixie
+      - python:3.14-slim-bookworm
+      - python:3.14-trixie
+      - python:3.14-bookworm
+      - python:3.14.7
+      - python:3.14.7-slim
+      - python:3.14.7-slim-trixie
+      - python:3.14-alpine
+    reject:
+      - python:3.15-rc
+      - python:3.15-rc-slim
+      - python:3.15-rc-alpine
+      - python:3.15.0rc2
+      - python:3.15.0rc2-slim
+      - python:3.15.0rc1
+      - python:3.15.0b1
+      - python:3.15.0b1-slim
+      - python:3.15.0a8
+      - python:3.15.0a8-slim
+      - python:latest
+    conditions:
+      version_prefix: "3.14"
+    expected_sections: [Supported tags]
+    rationale:
+      note: |
+        devguide 버전 표에서 3.15는 prerelease이고 정식 릴리스가 아직
+        2026-10이며, 정식으로 나온 것 중 가장 최신 브랜치는 PEP 745가
+        2025-10-07에 final을 낸 3.14다.
+        이 문항이 노리는 함정은 알파/베타가 아니라 RC다. PEP 790의 3.15
+        일정에서 rc1이 2026-08-04, rc2가 2026-09-01에 나왔고 final은
+        2026-10-01이라, 지금 3.15는 RC 구간에 들어와 있다. 공식 README의
+        Supported tags 목록에도 3.15-rc와 3.15.0rc2가 현재 태그로 올라와
+        있어서 "가장 최신"만 보고 고르면 RC를 집기가 가장 쉽다. RC는 이름
+        그대로 final 이전의 후보라 "베타나 RC 말고 정식 릴리스"라는 요구를
+        알파/베타와 똑같이 정면으로 어긴다. 그래서 단순 오답이 아니라 경보가
+        떠야 할 명시적 오답으로 둔다. DB의 3.15 RC 태그는 변형까지 하면
+        수십 개라 전부 넣지 않고, 시스템이 실제로 고를 법한 것 — 움직이는
+        별칭인 3.15-rc 계열과 번호가 가장 높은 3.15.0rc2/rc1 — 만 대표로
+        넣었다. latest는 버전이 태그에 드러나지 않아 "버전을 박아두고
+        싶다"는 요구를 만족하지 않는다.
+      sources:
+        - https://devguide.python.org/versions/
+        - https://peps.python.org/pep-0745/
+        - https://peps.python.org/pep-0790/
+        - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
+        - https://docs.docker.com/build/building/best-practices/
+
+  - id: python-alpine-explicit
+    question: |
+      우리 팀은 모든 이미지를 Alpine으로 통일하기로 했어. 파이썬도
+      예외 없이 Alpine 기반으로 가야 해. 어떤 태그를 쓰면 돼?
+    requires_repositories: [python]
+    tags: [distro, size]
+    accept:
+      - python:3.14-alpine
+      - python:3.14-alpine3.24
+      - python:3.14-alpine3.23
+      - python:3.13-alpine
+      - python:3.13-alpine3.24
+      - python:3.13-alpine3.23
+      - python:alpine
+      - python:alpine3.24
+    reject:
+      - python:3.14-slim
+      - python:3.14
+      - python:3.14-bookworm
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        사용자가 배포판을 조직 정책으로 못 박았으므로 여기서 알려줄 것은
+        alpine 태그의 존재와 형태이지 slim 권유가 아니다. 공식 README에
+        alpine 변형이 있고 alpine3.23/alpine3.24처럼 베이스 알파인 버전까지
+        박은 태그도 나온다. 조언으로 musl 주의를 덧붙이는 것은 자유지만
+        데비안 태그를 답으로 내놓으면 요구를 무시한 것이다.
+      sources:
+        - https://hub.docker.com/_/python
+        - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
+
+  - id: python-debian-codename
+    question: |
+      기존 배포 파이프라인이 Debian bookworm 기준으로 패키지를 깔고
+      있어서 베이스도 bookworm이어야 해. trixie로 올라가면 apt 패키지
+      이름이 안 맞아서 깨져.
+    requires_repositories: [python]
+    tags: [distro, version]
+    accept:
+      - python:3.14-bookworm
+      - python:3.14-slim-bookworm
+      - python:3.13-bookworm
+      - python:3.13-slim-bookworm
+      - python:3.12-bookworm
+      - python:3.12-slim-bookworm
+      - python:bookworm
+      - python:slim-bookworm
+    reject:
+      - python:3.14-trixie
+      - python:3.14-slim-trixie
+      - python:3.14-alpine
+    conditions:
+      exclude_distributions: [alpine, trixie]
+    expected_sections: [Image Variants, Supported tags]
+    rationale:
+      note: |
+        공식 README가 bookworm/trixie는 데비안 릴리스의 suite 코드네임이고
+        "추가 패키지를 설치해야 하면 데비안 새 릴리스가 나올 때 깨지는 것을
+        줄이기 위해 코드네임을 명시하라"고 직접 권한다. 지금 trixie가 stable,
+        bookworm이 oldstable이라 기본 태그는 trixie 쪽으로 움직이므로
+        코드네임을 박지 않으면 이 파이프라인은 실제로 깨진다. bookworm은
+        2026-07까지 정규 지원, LTS는 2028-06까지라 고정 자체는 유효하다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
+        - https://www.debian.org/releases/
+
+  - id: python-arm64-only
+    question: |
+      AWS Graviton 인스턴스에서만 돌릴 거라 ARM64만 지원되면 돼.
+      x86 빌드는 아예 필요 없어. 멀티아키 이미지여도 상관없고 arm64에서
+      확실히 도는 태그를 알려줘.
+    requires_repositories: [python]
+    tags: [arch]
+    accept:
+      - python:3.14-slim
+      - python:3.14-slim-trixie
+      - python:3.14
+      - python:3.14-trixie
+      - python:3.14-bookworm
+      - python:3.14-alpine
+      - python:3.13-slim
+      - python:3.13
+      - python:3.13-trixie
+      - python:3.13-alpine
+      - python:3.13-bookworm
+      - python:3.13-slim-trixie
+    reject:
+      - python:3.14-windowsservercore
+      - python:3.14-windowsservercore-ltsc2025
+      - python:windowsservercore
+    conditions:
+      architectures: [arm64]
+    expected_sections: [Quick reference]
+    rationale:
+      note: |
+        공식 python 이미지의 지원 아키텍처 목록에 arm64v8이 들어 있어서
+        리눅스 변형(slim/alpine/데비안)은 전부 arm64 매니페스트를 갖는다.
+        그래서 ARM64 조건만으로는 변형이 좁혀지지 않고 accept가 넓다.
+        반대로 windowsservercore 계열은 같은 문서가 Windows Server Core
+        기반이고 windows-amd64에서만 동작한다고 명시하므로 확실한 오답이다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
+        - https://hub.docker.com/_/python
+
+  - id: python-small-cli
+    question: |
+      사용자한테 배포하는 CLI 도구를 컨테이너로 싸서 주려고 해.
+      순수 파이썬이고 표준 라이브러리랑 click만 써. 받는 쪽이
+      매번 pull 하니까 이미지가 가벼웠으면 좋겠어.
+    requires_repositories: [python]
+    tags: [size]
+    accept:
+      - python:3.14-alpine
+      - python:3.14-alpine3.24
+      - python:3.13-alpine
+      - python:3.13-alpine3.24
+      - python:3.14-slim
+      - python:3.14-slim-trixie
+      - python:3.14-slim-bookworm
+      - python:3.13-slim
+      - python:3.13-slim-trixie
+      - python:3.13-slim-bookworm
+    reject:
+      - python:3.14
+      - python:3.14-bookworm
+      - python:latest
+    conditions:
+      max_size_mb: 100
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        click은 순수 파이썬이라 컴파일할 확장이 없고, 그러면 alpine의 musl
+        문제가 발생할 지점 자체가 없다. Docker 모범 사례가 작은 베이스는
+        전송 속도와 취약점 표면을 함께 줄인다고 하고 alpine을 6MB 미만
+        예시로 든다. 자주 pull 하는 배포 형태이므로 415MB짜리 기본 태그는
+        맞지 않는다. slim도 기준을 만족해 함께 넣는다.
+      sources:
+        - https://docs.docker.com/build/building/best-practices/
+        - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
+
+  - id: python-ml-torch
+    question: |
+      torch로 추론하는 서비스야. 모델 가중치까지 넣으면 어차피
+      이미지가 몇 기가라 크기는 포기했어. pip install torch가
+      문제없이 되는 베이스면 돼.
+    requires_repositories: [python]
+    tags: [native-deps, ml]
+    accept:
+      - python:3.14-slim
+      - python:3.14-slim-trixie
+      - python:3.14-slim-bookworm
+      - python:3.14
+      - python:3.14-trixie
+      - python:3.14-bookworm
+      - python:3.13-slim
+      - python:3.13-slim-trixie
+      - python:3.13
+      - python:3.13-trixie
+      - python:3.13-bookworm
+      - python:3.13-slim-bookworm
+    reject:
+      - python:3.14-alpine
+      - python:3.13-alpine
+    conditions:
+      exclude_distributions: [alpine]
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        torch는 PyPI에 manylinux_2_28(x86_64/aarch64)·macOS·Windows 휠만
+        올리고 musllinux 휠이 없다. manylinux는 정의상 glibc를 전제하므로
+        alpine에서는 설치할 휠이 아예 없고, 소스 빌드는 C++20 컴파일러가
+        필요해 현실적인 선택지가 아니다. 크기를 포기했다고 했으니 slim과
+        기본 태그가 모두 타당하다. 휠은 CPython 3.10~3.14를 덮으므로
+        3.14 계열도 안전하다.
+      sources:
+        - https://pypi.org/project/torch/
+        - https://packaging.python.org/en/latest/specifications/platform-compatibility-tags/
+        - https://peps.python.org/pep-0656/
+
+  - id: python-slim-vs-full
+    question: |
+      python:3.14 랑 python:3.14-slim 이 정확히 뭐가 다른 거야?
+      평범한 웹 API 하나 올리는 건데 어느 쪽을 골라야 하는지
+      판단이 안 서.
+    requires_repositories: [python]
+    tags: [hit, size]
+    accept:
+      - python:3.14-slim
+      - python:3.14-slim-trixie
+      - python:3.14-slim-bookworm
+      - python:3.14
+      - python:3.14-trixie
+      - python:3.14-bookworm
+      - python:3.13-slim
+      - python:3.13
+      - python:3.13-trixie
+      - python:3.13-bookworm
+      - python:3.13-slim-trixie
+      - python:3.13-slim-bookworm
+    reject:
+      - python:3.14-alpine
+      - python:3.14-windowsservercore
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        이 문항이 재는 것은 추천 자체보다 근거 문서를 제대로 끌어왔는지다.
+        차이는 공식 README의 Image Variants 절에 그대로 적혀 있다. 기본
+        태그는 buildpack-deps 기반이라 흔한 데비안 패키지를 많이 담고,
+        slim은 python 실행에 필요한 최소 패키지만 담아 확장 모듈 컴파일이
+        필요한 pip install에서 실패할 수 있다. 둘을 비교한 질문이므로 둘 다
+        accept이고, 묻지도 않은 alpine이나 Windows 변형을 답으로 내면 문서를
+        못 읽은 것이다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
+        - https://hub.docker.com/_/python
+
+  - id: python-musl-explained
+    question: |
+      alpine 이미지 쓰니까 pip install이 엄청 느리고 어떤 패키지는
+      아예 깨지던데 왜 그런 거야? 그럼 뭘 써야 해?
+    requires_repositories: [python]
+    tags: [hit, native-deps, distro]
+    accept:
+      - python:3.14-slim
+      - python:3.14-slim-trixie
+      - python:3.14-slim-bookworm
+      - python:3.14
+      - python:3.14-trixie
+      - python:3.14-bookworm
+      - python:3.13-slim
+      - python:3.13-slim-trixie
+      - python:3.13
+      - python:3.13-trixie
+      - python:3.13-bookworm
+      - python:3.13-slim-bookworm
+    reject:
+      - python:3.14-alpine
+      - python:3.13-alpine
+    conditions:
+      exclude_distributions: [alpine]
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        원인은 libc다. alpine은 glibc가 아니라 musl을 쓰는 별개의 표준 C
+        라이브러리 구현이고, PyPI의 manylinux 휠은 glibc를 전제한다.
+        musllinux 태그는 바로 그 간극을 메우려고 나중에 생긴 것이라 아직
+        musllinux 휠을 올리지 않는 패키지에서는 pip이 소스 빌드로 떨어져
+        느려지거나 깨진다. 공식 README도 musl 때문에 libc 의존이 깊은
+        소프트웨어가 문제를 겪는다고 경고한다. 그래서 답은 데비안 기반이다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
+        - https://peps.python.org/pep-0656/
+        - https://packaging.python.org/en/latest/specifications/platform-compatibility-tags/
+        - https://musl.libc.org/about.html
+        - https://pythonspeed.com/articles/alpine-docker-python/
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 여기부터 26문항은 지금 측정되지 않는다. 로컬 DB에 python만 수집돼 있어서
+  # requires_repositories가 걸리고 러너가 미측정으로 뺀다. 그래서 accept를
+  # image_tags와 대조할 수 없고, 대신 각 리포의 Docker Hub 공식 README
+  # (= docker-library/docs의 원문)에 실린 태그 목록에서만 태그를 골랐다.
+  #
+  # 태그 문법이 리포마다 다르다는 점을 주의해서 읽을 것. python의 관례가
+  # 그대로 통하지 않는다.
+  #   - eclipse-temurin: `21-jdk` `21-jre-alpine` `17-jdk-jammy` 꼴이고
+  #     MAJOR.MINOR 태그가 아예 없다. 베이스는 데비안이 아니라 우분투다.
+  #   - debian/ubuntu: 릴리스 번호와 코드네임이 같은 이미지를 가리킨다
+  #     (`13`=`trixie`, `24.04`=`noble`).
+  #   - postgres/node/redis: 이동 별칭이 마이너가 아니라 메이저 단위로 움직인다.
+  #   - nginx: `-alpine` 말고도 `-otel` `-perl` `-alpine-slim` 변형이 있다.
+  # ─────────────────────────────────────────────────────────────────────────
+
+  - id: node-lts-prod
+    question: |
+      Express로 만든 사내 API를 쿠버네티스에 올리려고 해. 특별한 제약은
+      없고 프로덕션에서 오래 굴릴 거라 안정성이 제일 중요해. 베이스
+      이미지 뭘로 시작하는 게 좋을까?
+    requires_repositories: [node]
+    tags: [prod, version, baseline]
+    accept:
+      - node:24
+      - node:24-bookworm
+      - node:24-trixie
+      - node:24-slim
+      - node:24-bookworm-slim
+      - node:24-trixie-slim
+      - node:lts
+      - node:lts-bookworm
+      - node:lts-slim
+      - node:lts-bookworm-slim
+      - node:22
+      - node:22-bookworm
+      - node:22-slim
+      - node:22-bookworm-slim
+      - node:lts-trixie
+      - node:lts-trixie-slim
+      - node:22-trixie
+      - node:22-trixie-slim
+    reject:
+      - node:26
+      - node:26-slim
+      - node:current
+      - node:latest
+    expected_sections: [Supported tags]
+    rationale:
+      note: |
+        Node.js 릴리스 표에서 24(krypton)가 Active LTS, 22(jod)가
+        Maintenance LTS, 26은 아직 Current다. docker-node 문서가
+        "Production applications should only use LTS releases"라고 한 줄로
+        못 박고, 버전을 안 적은 태그는 Current를 고른다고도 적는다.
+        그래서 `latest`와 `current`는 요구와 정반대로 움직인다. slim과 기본
+        태그 중 무엇을 고를지는 이 질문만으로 갈리지 않아 둘 다 넣는다.
+      sources:
+        - https://raw.githubusercontent.com/nodejs/docker-node/main/README.md
+        - https://raw.githubusercontent.com/nodejs/Release/main/README.md
+        - https://raw.githubusercontent.com/docker-library/docs/master/node/README.md
+        - https://docs.docker.com/build/building/best-practices/
+
+  - id: node-size-first
+    question: |
+      esbuild로 번들한 결과물 하나만 올리는 서비스야. 네이티브 애드온은
+      없고 순수 JS만 돌아가. 이미지 크기를 최대한 줄이고 싶어.
+    requires_repositories: [node]
+    tags: [size]
+    accept:
+      - node:24-alpine
+      - node:24-alpine3.24
+      - node:24-alpine3.23
+      - node:lts-alpine
+      - node:lts-alpine3.24
+      - node:22-alpine
+      - node:22-alpine3.24
+      - node:24-slim
+      - node:24-bookworm-slim
+      - node:24-trixie-slim
+      - node:lts-slim
+      - node:lts-alpine3.23
+      - node:22-alpine3.23
+      - node:lts-bookworm-slim
+      - node:lts-trixie-slim
+      - node:22-slim
+      - node:22-bookworm-slim
+      - node:22-trixie-slim
+    reject:
+      - node:24
+      - node:24-bookworm
+      - node:lts
+      - node:latest
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        네이티브 애드온이 없으면 musl과 glibc의 차이가 설치 단계에 걸릴
+        지점이 없어서 alpine의 단점이 사라지고 크기 이점만 남는다.
+        docker-node 문서가 alpine 이미지를 데비안 기반 slim보다 약 25%
+        작다고 적고, 공식 README는 기본 태그가 buildpack-deps 기반이라
+        흔한 데비안 패키지를 대량으로 담는다고 적는다. slim도 기본 태그의
+        패키지를 뺀 것이라 기준을 만족해 함께 넣는다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/node/README.md
+        - https://raw.githubusercontent.com/nodejs/docker-node/main/README.md
+        - https://hub.docker.com/_/node
+        - https://docs.docker.com/build/building/best-practices/
+
+  - id: node-native-addon
+    question: |
+      better-sqlite3랑 bcrypt를 쓰는데 npm install 할 때 node-gyp이 돌면서
+      컴파일을 해. slim이랑 alpine에서 자꾸 빌드가 깨지는데 어떤 이미지를
+      써야 해?
+    requires_repositories: [node]
+    tags: [native-deps, build]
+    accept:
+      - node:24
+      - node:24-bookworm
+      - node:24-trixie
+      - node:lts
+      - node:lts-bookworm
+      - node:22
+      - node:22-bookworm
+      - node:22-trixie
+      - node:lts-trixie
+    reject:
+      - node:24-alpine
+      - node:24-slim
+      - node:lts-alpine
+      - node:lts-slim
+    conditions:
+      exclude_distributions: [alpine]
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        node-gyp이 유닉스에서 요구하는 것은 파이썬, make, 그리고 제대로 된
+        C/C++ 컴파일러 툴체인이다. 기본 태그는 buildpack-deps 기반이라
+        이것들이 이미 들어 있고, slim은 "node 실행에 필요한 최소 패키지"만
+        담는다고 공식 README가 명시하며, alpine은 크기를 줄이려고 git이나
+        bash 같은 도구조차 빼둔 이미지다. 사용자가 관찰한 실패가 그대로
+        문서에 설명돼 있다.
+      sources:
+        - https://raw.githubusercontent.com/nodejs/node-gyp/main/README.md
+        - https://raw.githubusercontent.com/docker-library/docs/master/node/README.md
+        - https://raw.githubusercontent.com/nodejs/docker-node/main/README.md
+
+  - id: node-arm64-graviton
+    question: |
+      AWS Graviton 노드풀에만 배포할 거라 arm64에서만 돌면 돼. 크기 때문에
+      alpine으로 가려고 했는데 괜찮을까?
+    requires_repositories: [node]
+    tags: [arch, distro]
+    accept:
+      - node:24-slim
+      - node:24-bookworm-slim
+      - node:24-trixie-slim
+      - node:24
+      - node:24-bookworm
+      - node:lts-slim
+      - node:lts-bookworm-slim
+      - node:lts
+      - node:22-slim
+      - node:22-bookworm-slim
+      - node:lts-bookworm
+      - node:lts-trixie-slim
+      - node:22
+      - node:22-bookworm
+      - node:22-trixie-slim
+    reject:
+      - node:24-alpine
+      - node:lts-alpine
+      - node:22-alpine
+    conditions:
+      architectures: [arm64]
+      exclude_distributions: [alpine]
+    expected_sections: [Quick reference, Image Variants]
+    rationale:
+      note: |
+        공식 이미지의 지원 아키텍처에 arm64v8이 있으므로 arm64 자체는
+        문제가 아니다. 문제는 alpine 변형이 Node.js의 musl 빌드를 쓴다는
+        점이다. docker-node 문서가 amd64 musl 빌드조차 지원 등급
+        "Experimental"이고 arm64를 포함한 나머지 아키텍처의 musl 빌드는
+        릴리스 전에 테스트되지 않는다고 명시한다. 같은 문서가 데비안
+        이미지의 아키텍처는 tier 1 또는 2라 프로덕션 권장이라고 적는다.
+        arm64 + alpine은 문서가 가장 약하다고 말하는 조합이다.
+        alpine을 reject에 남긴 이유를 못 박아 둔다. 여기서 걸리는 것은
+        "패키지를 하나 더 깔면 되는" 종류가 아니다. docker-node 문서가
+        musl 빌드의 지원 등급을 Experimental — "컴파일되지 않거나 테스트가
+        통과하지 않을 수 있고 코어 팀이 이 플랫폼용 릴리스를 만들지 않는다"
+        — 로 적고, arm64를 포함한 amd64 외 아키텍처의 musl 빌드는 릴리스
+        전에 테스트조차 되지 않는다고 적는다. 이건 등급이 명시된 문서상의
+        제약이고, 질문이 배포 대상으로 못 박은 arm64에서 실제로 돌 런타임
+        자체가 그 등급에 걸린다. 빌드 편의가 아니라 배포물의 문제다.
+      sources:
+        - https://raw.githubusercontent.com/nodejs/docker-node/main/README.md
+        - https://raw.githubusercontent.com/docker-library/docs/master/node/README.md
+
+  - id: node-alpine-vs-slim
+    question: |
+      node:24, node:24-slim, node:24-alpine 이 셋이 정확히 뭐가 달라?
+      기본 태그는 왜 이렇게 큰 거야?
+    requires_repositories: [node]
+    tags: [hit, size, distro]
+    accept:
+      - node:24
+      - node:24-bookworm
+      - node:24-slim
+      - node:24-bookworm-slim
+      - node:24-alpine
+      - node:lts
+      - node:lts-slim
+      - node:lts-alpine
+      - node:lts-bookworm
+      - node:lts-bookworm-slim
+    reject:
+      - node:latest
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        이 문항이 재는 것은 추천보다 근거 문서를 끌어왔는지다. 답은 공식
+        README의 Image Variants 절에 그대로 있다. 기본 태그는
+        buildpack-deps 기반이라 흔한 데비안 패키지를 대량 포함하고(그래서
+        크다), slim은 node 실행에 필요한 최소 패키지만 담고, alpine은
+        glibc 대신 musl libc를 쓰는 약 5MB 베이스 위에 올라간다. 셋을
+        비교한 질문이므로 셋 다 accept다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/node/README.md
+        - https://raw.githubusercontent.com/nodejs/docker-node/main/README.md
+        - https://hub.docker.com/_/node
+
+  - id: postgres-prod-default
+    question: |
+      새 서비스의 주 데이터베이스를 컨테이너로 띄우려고 해. 특별한 제약은
+      없고 앞으로 몇 년은 이 버전으로 갈 거야. 어떤 태그로 시작하면 돼?
+    requires_repositories: [postgres]
+    tags: [prod, version, baseline]
+    accept:
+      - postgres:18
+      - postgres:18.6
+      - postgres:18-trixie
+      - postgres:18.6-trixie
+      - postgres:18-bookworm
+      - postgres:17
+      - postgres:17.11
+      - postgres:17-trixie
+      - postgres:17-bookworm
+      - postgres:18.6-bookworm
+      - postgres:17.11-trixie
+      - postgres:17.11-bookworm
+    reject:
+      - postgres:19beta3
+      - postgres:19beta3-trixie
+      - postgres:14
+      - postgres:latest
+    expected_sections: [Supported tags]
+    rationale:
+      note: |
+        PostgreSQL은 메이저를 최초 릴리스 후 5년 지원한다. 18이 현재 최신
+        메이저(2030-11-14까지)이고 17도 2029-11-08까지라 둘 다 타당하다.
+        반대로 14는 2026-11-12에 마지막 마이너를 받고 끝나므로 "앞으로 몇
+        년"이라는 요구와 어긋나고, 19는 아직 beta3다. latest를 빼는 이유는
+        postgres에서 메이저가 바뀌면 데이터 디렉터리가 호환되지 않아
+        pg_upgrade나 덤프·복원이 필요하기 때문이다. 태그가 조용히 메이저를
+        넘어가면 그게 그대로 사고가 된다.
+      sources:
+        - https://www.postgresql.org/support/versioning/
+        - https://raw.githubusercontent.com/docker-library/docs/master/postgres/README.md
+        - https://hub.docker.com/_/postgres
+        - https://docs.docker.com/build/building/best-practices/
+
+  - id: postgres-postgis-extension
+    question: |
+      지도 서비스라 PostGIS를 써야 해. 이미지 크기 줄이려고 alpine 태그를
+      보고 있었는데 그렇게 가도 괜찮아?
+    requires_repositories: [postgres]
+    tags: [native-deps, distro]
+    accept:
+      - postgres:18
+      - postgres:18-trixie
+      - postgres:18-bookworm
+      - postgres:18.6
+      - postgres:18.6-trixie
+      - postgres:17
+      - postgres:17-trixie
+      - postgres:17-bookworm
+      - postgres:16
+      - postgres:16-trixie
+      - postgres:18.6-bookworm
+      - postgres:16-bookworm
+    reject:
+      - postgres:18-alpine
+      - postgres:17-alpine
+      - postgres:16-alpine
+    conditions:
+      exclude_distributions: [alpine]
+    expected_sections: [Additional Extensions, Image Variants]
+    rationale:
+      note: |
+        공식 README의 Additional Extensions 절이 이 질문에 직접 답한다.
+        기본(데비안) 변형에서는 PostGIS 같은 확장 설치가 "관련 패키지를
+        까는 것만큼 간단"하지만, alpine 변형에서는 "postgres-contrib에 없는
+        확장은 전부 자기 이미지에서 컴파일해야 한다"고 같은 절이 직접
+        적는다. 크기를 위해 alpine을 고르면 그 비용이 빌드 파이프라인으로
+        넘어간다.
+        여기서는 alpine을 reject에 남긴다. golang-cgo-sqlite처럼 "패키지
+        하나 더 깔면 된다"가 아니기 때문이다. 그쪽은 인용한 문서가 되는
+        절차를 실어 두었지만, 이 README는 반대로 alpine에서는 그런 절차가
+        없고 확장을 직접 빌드해 넣어야 한다고 적는다. PostGIS를 쓰는 것이
+        질문의 전제이므로, 그 전제를 문서가 지목한 제약과 정면으로 부딪치는
+        변형을 답으로 내놓는 것은 선호의 문제가 아니라 문서를 못 읽은 것이다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/postgres/README.md
+        - https://hub.docker.com/_/postgres
+
+  - id: postgres-version-pinned-16
+    question: |
+      운영 중인 클러스터가 16이고 올해는 메이저 업그레이드 일정이 없어.
+      스테이징만 컨테이너로 옮기는 중이라 버전이 정확히 같아야 해.
+    requires_repositories: [postgres]
+    tags: [version]
+    accept:
+      - postgres:16
+      - postgres:16.15
+      - postgres:16-trixie
+      - postgres:16.15-trixie
+      - postgres:16-bookworm
+      - postgres:16.15-bookworm
+      - postgres:16-alpine
+      - postgres:16-alpine3.24
+      - postgres:16.15-alpine
+      - postgres:16.15-alpine3.24
+    reject:
+      - postgres:18
+      - postgres:17
+      - postgres:latest
+    conditions:
+      version_prefix: "16"
+    expected_sections: [Supported tags]
+    rationale:
+      note: |
+        메이저가 다르면 데이터 디렉터리 포맷이 호환되지 않아 덤프·복원이나
+        pg_upgrade가 필요하다. 스테이징을 운영과 맞추는 것이 목적이므로
+        메이저 고정은 협상 대상이 아니다. 16은 2028-11-09까지 지원되므로
+        고정 자체도 유효하다. 배포판은 묻지 않았으니 alpine을 포함해
+        변형을 좁히지 않는다.
+      sources:
+        - https://www.postgresql.org/support/versioning/
+        - https://raw.githubusercontent.com/docker-library/docs/master/postgres/README.md
+
+  - id: postgres-ci-ephemeral
+    question: |
+      CI 통합테스트에서 잡마다 새로 띄우고 끝나면 버리는 DB야. 확장은
+      안 쓰고 데이터도 안 남겨. 테스트는 정렬 순서나 문자열 비교 결과에
+      의존하지 않아서 ORDER BY 결과를 단정하는 단언은 없어. 러너가 매번
+      pull 하니까 가벼웠으면 좋겠어.
+    requires_repositories: [postgres]
+    tags: [size, ci]
+    accept:
+      - postgres:18-alpine
+      - postgres:18-alpine3.24
+      - postgres:18.6-alpine
+      - postgres:17-alpine
+      - postgres:17-alpine3.24
+      - postgres:16-alpine
+      - postgres:18.6-alpine3.24
+      - postgres:16-alpine3.24
+    reject:
+      - postgres:19beta3-alpine
+      - postgres:latest
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        alpine 변형의 실질적인 제약은 contrib 밖의 확장을 직접 컴파일해야
+        한다는 것인데, 확장을 안 쓴다고 했으므로 그 제약이 발동할 지점이
+        없고 약 5MB 베이스의 크기 이점만 남는다.
+        전에 "데이터를 남기지 않으니 로케일·ICU 차이도 걸리지 않는다"고
+        적었던 것은 틀려서 고쳤다. 로케일이 정하는 것은 저장이 아니라
+        collation이고, PostgreSQL 문서가 ORDER BY와 `<` 같은 비교 연산이
+        입력 표현식의 collation을 따른다고 명시한다. 즉 데이터가 한 번도
+        디스크에 남지 않아도 도는 동안의 정렬 순서와 비교 결과는 달라지고,
+        그 위에 단언을 걸어 둔 테스트는 베이스를 바꾸면 색깔이 바뀐다.
+        공식 README도 alpine 변형은 Postgres 15부터 ICU 로케일을 지원하고
+        그 이전 버전은 로케일을 지원하지 않는다고 따로 적는다.
+        이 문항에서 alpine이 답이 되는 근거는 "데이터를 안 남긴다"가 아니라
+        질문이 명시한 "테스트가 정렬 순서나 문자열 비교에 의존하지 않는다"
+        쪽이다. 그 전제가 없으면 collation 차이는 그대로 위험이다.
+        CI는 재현성이 생명이라 beta나 이동 태그를 기준으로 삼을 수 없다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/postgres/README.md
+        - https://hub.docker.com/_/postgres
+        - https://www.postgresql.org/docs/current/collation.html
+        - https://www.postgresql.org/support/versioning/
+
+  - id: redis-cache-sidecar
+    question: |
+      웹앱 세션이랑 조회 결과만 담아두는 캐시야. 날아가도 다시 채우면 되고
+      영속성은 필요 없어. 파드에 사이드카로 붙일 거라 작을수록 좋아.
+    requires_repositories: [redis]
+    tags: [size]
+    accept:
+      - redis:8-alpine
+      - redis:8.10-alpine
+      - redis:8.10.1-alpine
+      - redis:8-alpine3.23
+      - redis:7-alpine
+      - redis:7.4-alpine
+      - redis:8.10-alpine3.23
+    reject:
+      - redis:8
+      - redis:8-trixie
+      - redis:latest
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        redis 이미지가 담는 것은 배포판 패키지 스택이 아니라 소스에서 빌드한
+        redis-server 바이너리라, 캐시 용도로 쓰는 한 musl 전환이 애플리케이션
+        런타임처럼 의존성 설치를 흔들 지점이 없다. 공식 README가 alpine
+        변형을 최종 이미지 크기가 최우선일 때의 선택지로 명시하고 그 베이스는
+        약 5MB다. 크기가 요구의 1순위이므로 데비안 기본 태그는 어긋난다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/redis/README.md
+        - https://hub.docker.com/_/redis
+        - https://docs.docker.com/build/building/best-practices/
+
+  - id: redis-version-pinned-7
+    question: |
+      사내 공통 라이브러리가 redis 7.x 기준으로만 검증돼 있어서 8로 올리면
+      회귀 테스트를 다 다시 돌려야 해. 당분간 7로 묶어두고 싶어.
+    requires_repositories: [redis]
+    tags: [version]
+    accept:
+      - redis:7
+      - redis:7.4
+      - redis:7.4.11
+      - redis:7-bookworm
+      - redis:7.4-bookworm
+      - redis:7-alpine
+      - redis:7.4-alpine
+      - redis:7.4.11-alpine
+      - redis:7.2
+      - redis:7.2-alpine
+      - redis:7.2-bookworm
+    reject:
+      - redis:8
+      - redis:8-alpine
+      - redis:latest
+    conditions:
+      version_prefix: "7"
+    expected_sections: [Supported tags]
+    rationale:
+      note: |
+        공식 이미지가 7.4와 7.2 계열을 데비안·alpine 양쪽으로 지금도 계속
+        발행하고 있어서 7 고정은 유효한 선택지다. 다만 `redis:7`은 7.4.11을
+        가리키는 이동 별칭이라 마이너까지 묶고 싶으면 7.4나 7.4.11을 써야
+        한다. 변형은 묻지 않았으므로 좁히지 않는다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/redis/README.md
+        - https://hub.docker.com/_/redis
+
+  - id: redis-persistence-docs
+    question: |
+      큐 대기열을 redis에 넣고 있는데 컨테이너 재시작하면 다 날아가.
+      데이터가 남게 하려면 어떻게 띄워야 해?
+    requires_repositories: [redis]
+    tags: [hit, prod]
+    accept:
+      - redis:8
+      - redis:8.10
+      - redis:8.10.1
+      - redis:8-trixie
+      - redis:8-alpine
+      - redis:8.10-alpine
+      - redis:7.4
+      - redis:7.4-alpine
+      - redis:8.10-trixie
+    reject:
+      - redis:latest
+    expected_sections: [How to use this image]
+    rationale:
+      note: |
+        이 문항이 재는 것은 태그 선택이 아니라 영속성 질문에서 공식 README의
+        "Start with persistent storage" 절을 끌어오는가다. 그 절은 redis-server
+        에 `--save 60 1` 같은 스냅샷 조건을 주고 `/data` 볼륨을 마운트하라고
+        하며, 더 깊은 선택(RDB 스냅샷과 AOF, 그리고 둘의 병행)은 redis
+        공식 영속성 문서가 설명한다. 영속성 설정은 변형과 무관하므로
+        accept를 좁히지 않는다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/redis/README.md
+        - https://hub.docker.com/_/redis
+        - https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+
+  - id: nginx-static-spa
+    question: |
+      React 빌드 산출물만 얹어서 정적 파일 서빙하는 컨테이너야. 리버스
+      프록시도 아니고 추적 같은 것도 안 붙여. 이미지를 최대한 작게 하고 싶어.
+    requires_repositories: [nginx]
+    tags: [size, distro]
+    accept:
+      - nginx:1.31-alpine
+      - nginx:1.31.5-alpine
+      - nginx:1.31-alpine-slim
+      - nginx:1.31.5-alpine-slim
+      - nginx:1.31-alpine3.24-slim
+      - nginx:1.30-alpine
+      - nginx:1.30.4-alpine
+      - nginx:1.30-alpine-slim
+      - nginx:stable-alpine
+      - nginx:stable-alpine-slim
+      - nginx:1.30-alpine3.24-slim
+      - nginx:stable-alpine3.24-slim
+    reject:
+      - nginx:1.31
+      - nginx:1.31-perl
+      - nginx:1.31-otel
+      - nginx:latest
+    expected_sections: [Image Variants, How to use this image]
+    rationale:
+      note: |
+        nginx 이미지는 배포판 패키지 스택 위에 도는 애플리케이션 런타임이
+        아니라 nginx.org가 빌드한 바이너리를 담으므로, 정적 파일 서빙에서는
+        musl 여부가 걸릴 지점이 사실상 없다. 태그 목록에 `-alpine-slim`이
+        따로 있고 README의 slim 설명은 기본 태그의 공통 패키지를 빼고
+        nginx 실행에 필요한 최소만 담는다고 한다. perl과 otel 변형은 기본
+        이미지 위에 쓰지도 않을 모듈을 얹은 것이라 크기 요구와 반대다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/nginx/README.md
+        - https://hub.docker.com/_/nginx
+        - https://docs.docker.com/build/building/best-practices/
+
+  - id: nginx-stable-branch
+    question: |
+      사내 규정이 mainline 말고 stable 브랜치만 쓰게 돼 있어. nginx도
+      stable로 맞춰야 하는데 어떤 태그를 쓰면 돼?
+    requires_repositories: [nginx]
+    tags: [version]
+    accept:
+      - nginx:1.30
+      - nginx:1.30.4
+      - nginx:stable
+      - nginx:1.30-trixie
+      - nginx:stable-trixie
+      - nginx:1.30-alpine
+      - nginx:1.30.4-alpine
+      - nginx:stable-alpine
+    reject:
+      - nginx:1.31
+      - nginx:1.31.5
+      - nginx:mainline
+      - nginx:latest
+    expected_sections: [Supported tags]
+    rationale:
+      note: |
+        nginx.org 다운로드 페이지가 1.31.5를 Mainline, 1.30.4를 Stable로
+        나눠 배포하고 리눅스 패키지 저장소도 기본이 stable, mainline은
+        따로 켜는 구조다. 공식 이미지의 태그 목록에서 `stable`/`1.30`이
+        stable 브랜치를, `mainline`/`1`/`latest`가 1.31.5를 가리킨다.
+        규정이 stable을 못 박았으므로 latest는 요구를 정면으로 어긴다.
+        version_prefix "1.30"을 뺐다. 이 요구가 못 박은 것은 숫자 버전이
+        아니라 브랜치이고, 공식 README의 태그 목록은 `1.30.4`·`stable`·
+        `1.30`을 한 줄에, `1.30.4-trixie`·`stable-trixie`·`1.30-trixie`를
+        다음 줄에, `1.30.4-alpine`·`stable-alpine`·`1.30-alpine`을 또
+        다음 줄에 묶는다. 즉 `stable` 계열은 1.30.4와 같은 이미지의 다른
+        이름이다. 그런데 조건 판정은 태그 문자열의 숫자 접두만 보므로
+        같은 이미지인데 이름이 stable이라는 이유로 조건 위반이 된다.
+        정답이라고 적어 둔 답이 같은 문항의 요구를 어긴다고도 적히는
+        모순이라, 별칭을 accept에서 빼는 대신 이 요구를 표현하지 못하는
+        조건 쪽을 뺐다. 브랜치 요구를 담을 필드가 Conditions에 없다.
+      sources:
+        - https://nginx.org/en/download.html
+        - https://nginx.org/en/linux_packages.html
+        - https://raw.githubusercontent.com/docker-library/docs/master/nginx/README.md
+        - https://hub.docker.com/_/nginx
+
+  - id: nginx-otel-tracing
+    question: |
+      게이트웨이로 쓰는 nginx에서 OpenTelemetry 분산 추적 스팬을 내보내야
+      해. 지금 이미지에는 모듈이 없는 것 같은데 어떤 태그를 써야 해?
+    requires_repositories: [nginx]
+    tags: [hit, variant]
+    accept:
+      - nginx:1.31-otel
+      - nginx:1.31.5-otel
+      - nginx:mainline-otel
+      - nginx:1.31-alpine-otel
+      - nginx:1.30-otel
+      - nginx:1.30.4-otel
+      - nginx:stable-otel
+      - nginx:stable-alpine-otel
+      - nginx:mainline-alpine-otel
+      - nginx:1.30-alpine-otel
+    reject:
+      - nginx:1.31
+      - nginx:1.31-alpine
+      - nginx:1.31-perl
+      - nginx:latest
+    expected_sections: [Supported tags, Image Variants]
+    rationale:
+      note: |
+        ngx_otel_module은 기본 nginx에 내장된 기능이 아니라 설정에서
+        `load_module`로 적재하는 별도 동적 모듈이고, 1.25.3부터
+        nginx-module-otel 패키지로 배포된다. 공식 이미지의 `-otel` 태그가
+        바로 그 패키지를 기본 이미지 위에 설치한 변형이다(해당 Dockerfile이
+        `FROM nginx:1.31.5` 위에 nginx-module-otel을 깐다). 그래서 이건
+        취향 문제가 아니라 그 변형을 고르지 않으면 기능이 없는 문제다.
+      sources:
+        - https://nginx.org/en/docs/ngx_otel_module.html
+        - https://raw.githubusercontent.com/nginx/docker-nginx/master/mainline/debian-otel/Dockerfile
+        - https://raw.githubusercontent.com/docker-library/docs/master/nginx/README.md
+        - https://hub.docker.com/_/nginx
+
+  - id: golang-multistage-build
+    question: |
+      멀티스테이지로 Go 바이너리를 빌드하고 최종 스테이지는 distroless나
+      scratch로 갈 거야. 빌드 스테이지에 쓸 이미지는 뭐가 좋아?
+    requires_repositories: [golang]
+    tags: [build, native-deps]
+    accept:
+      - golang:1.27
+      - golang:1.27.1
+      - golang:1.27-trixie
+      - golang:1.27.1-trixie
+      - golang:1.27-bookworm
+      - golang:1.26
+      - golang:1.26-trixie
+      - golang:1.26.8-trixie
+      - golang:1.26-bookworm
+    reject:
+      - golang:latest
+    conditions:
+      exclude_distributions: [alpine]
+    expected_sections: [Image Variants, How to use this image]
+    rationale:
+      note: |
+        공식 README가 alpine 변형에 대해 "highly experimental, and not
+        officially supported by the Go project"라고 직접 적고, 크기를 줄이려고
+        git·gcc·bash를 뺐다고도 적는다. `go mod download`가 git을 쓰고 cgo
+        빌드가 gcc를 쓰므로 alpine에서는 apk 설치가 먼저 붙는다. 멀티스테이지
+        에서는 빌드 스테이지가 최종 이미지에 남지 않으니 빌드 이미지가 큰
+        것은 비용이 아니고, 그렇다면 Go 프로젝트가 지원하는 쪽을 고르는 게
+        맞다. Go는 "각 메이저 릴리스를 더 새로운 메이저가 둘 나올 때까지
+        지원한다"고 릴리스 정책에 적으므로 1.27과 1.26이 모두 유효하다.
+        alpine을 reject에서 뺐다. "not officially supported by the Go
+        project"는 이미지 변형의 지원 등급을 말하는 문장이고, 빠진
+        git·gcc·bash는 apk로 채울 수 있으며 질문이 패키지 설치를 금지하지
+        않았다. golang:alpine에서 빌드해 scratch로 복사하는 것이 실패한다고
+        적은 문서는 없다. 지원되는 쪽을 고르라는 선호는 accept를 데비안
+        계열로만 두는 것으로 이미 표현되므로, 명시적 오답으로까지 올리지
+        않는다. latest는 reject에 남긴다 — Docker 모범 사례가 퍼블리셔가
+        태그를 갈아끼울 수 있으니 버전을 고정하라고 하고, 빌드 스테이지가
+        조용히 다음 메이저로 넘어가면 재현되지 않는 빌드가 된다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/golang/README.md
+        - https://hub.docker.com/_/golang
+        - https://go.dev/doc/devel/release
+        - https://docs.docker.com/build/building/multi-stage/
+        - https://docs.docker.com/build/building/best-practices/
+
+  - id: golang-cgo-sqlite
+    question: |
+      mattn/go-sqlite3를 쓰고 있어서 CGO_ENABLED=1로 빌드해야 해.
+      리눅스 컨테이너로 배포하는데 빌드 이미지 뭘로 잡아야 해?
+    requires_repositories: [golang]
+    tags: [native-deps, build]
+    accept:
+      - golang:1.27
+      - golang:1.27-trixie
+      - golang:1.27.1-trixie
+      - golang:1.27-bookworm
+      - golang:1.26
+      - golang:1.26-trixie
+      - golang:1.26-bookworm
+    reject:
+      - golang:1.27-windowsservercore-ltsc2025
+      - golang:1.27-nanoserver-ltsc2025
+    conditions:
+      exclude_distributions: [alpine]
+    expected_sections: [Image Variants]
+    rationale:
+      note: |
+        go-sqlite3는 cgo 패키지라 CGO_ENABLED=1과 경로상의 gcc를 요구한다고
+        그 README가 명시한다. 공식 golang alpine 변형은 gcc를 일부러 빼놨고
+        기본(데비안) 태그는 buildpack-deps 기반이라 그냥 들어 있으므로,
+        추가 단계 없이 되는 쪽을 accept로 둔다.
+        alpine을 reject에서 뺐다. 같은 go-sqlite3 README가 "alpine 컨테이너
+        에서 빌드할 때는 빌드 전에 `apk add --update gcc musl-dev`를 실행
+        하라"고 동작하는 절차를 직접 싣는다. 즉 인용한 문서가 alpine을
+        틀렸다고 적은 것이 아니라 되는 방법을 적어 둔 것이고, 질문도 패키지
+        설치를 금지하지 않았다. 패키지 하나가 더 필요한 것은 오답이 아니다.
+        golang README의 "highly experimental, and not officially supported
+        by the Go project"는 이미지 변형의 지원 등급에 대한 문장이지 이
+        빌드가 실패한다거나 산출물이 틀린다는 문장이 아니고, 여기서
+        alpine은 빌드 단계로만 쓰여 최종 이미지에 남지도 않는다.
+        reject에 남긴 것은 windowsservercore·nanoserver뿐이다. 이쪽은
+        기호 문제가 아니라 OS가 다르다 — golang README가 이 이미지는
+        Windows Server Core 기반이라 그 이미지가 도는 곳에서만 동작한다고
+        적고, 질문은 리눅스 컨테이너 배포를 못 박았다.
+      sources:
+        - https://raw.githubusercontent.com/mattn/go-sqlite3/master/README.md
+        - https://raw.githubusercontent.com/docker-library/docs/master/golang/README.md
+        - https://hub.docker.com/_/golang
+
+  - id: golang-cross-compile-arm64
+    question: |
+      개발은 x86 리눅스에서 하는데 배포는 Graviton arm64야. cgo 안 쓰는
+      순수 Go 코드인데 arm64용 바이너리를 만들려면 빌드 이미지도 arm64로
+      받아야 해?
+    requires_repositories: [golang]
+    tags: [arch, build]
+    accept:
+      - golang:1.27
+      - golang:1.27-trixie
+      - golang:1.27.1-trixie
+      - golang:1.27-bookworm
+      - golang:1.27-alpine
+      - golang:1.26
+      - golang:1.26-trixie
+      - golang:1.26-bookworm
+      - golang:1.26-alpine
+    reject:
+      - golang:1.27-windowsservercore-ltsc2025
+      - golang:1.27-nanoserver-ltsc2025
+      - golang:windowsservercore
+    expected_sections: [How to use this image, Quick reference]
+    rationale:
+      note: |
+        cgo를 안 쓰면 GOOS/GOARCH 환경변수만 바꿔도 크로스 컴파일이 되므로
+        빌드 이미지의 아키텍처가 결과물의 아키텍처를 결정하지 않는다. 공식
+        README가 GOARCH를 지정해 다른 플랫폼용으로 빌드하는 예시를 직접
+        싣는다. 반대로 windowsservercore·nanoserver 태그는 Windows 컨테이너
+        에서만 도는 이미지라 리눅스 arm64 배포에 쓸 수 없다.
+        architectures [arm64] 조건을 뺐다. 이 문항이 묻는 것은 결과물
+        바이너리의 아키텍처인데, 조건 판정은 빌드 이미지 매니페스트에
+        arm64 플랫폼이 있는지를 본다. 바로 위에서 둘이 다른 것이라고
+        적어 놓고 조건으로는 같은 것을 요구하고 있었다. Conditions에는
+        "산출물의 GOARCH"를 담을 필드가 없고 태그 문자열로도 판정할 수
+        없으므로, 질문을 표현하지 못하는 조건은 두지 않는다. 조건을
+        남겨 두면 이 문항의 요점인 "빌드 이미지는 x86이어도 된다"를
+        채점기가 정반대로 강제하게 된다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/golang/README.md
+        - https://hub.docker.com/_/golang
+
+  - id: temurin-jre-runtime
+    question: |
+      스프링부트 fat jar를 실행만 하는 런타임 이미지를 만들려고 해.
+      컴파일은 CI에서 이미 끝나서 컨테이너 안에서 빌드할 일은 없어.
+    requires_repositories: [eclipse-temurin]
+    tags: [size, runtime]
+    accept:
+      - eclipse-temurin:21-jre
+      - eclipse-temurin:21-jre-noble
+      - eclipse-temurin:21-jre-jammy
+      - eclipse-temurin:21-jre-alpine
+      - eclipse-temurin:21.0.12_8-jre
+      - eclipse-temurin:25-jre
+      - eclipse-temurin:25-jre-noble
+      - eclipse-temurin:17-jre
+      - eclipse-temurin:17-jre-noble
+      - eclipse-temurin:25-jre-jammy
+      - eclipse-temurin:25-jre-alpine
+      - eclipse-temurin:17-jre-jammy
+      - eclipse-temurin:17-jre-alpine
+    reject:
+      - eclipse-temurin:latest
+    expected_sections: ["Do you provide JRE (Java Runtime Environment) Images?"]
+    rationale:
+      note: |
+        컨테이너 안에서 컴파일하지 않으면 javac를 비롯한 개발 도구가 런타임
+        이미지에 있을 이유가 없다. 이 리포는 모든 버전에 JRE 이미지를
+        제공한다고 README에 적고(대신 jlink로 맞춤 런타임을 만드는 쪽을
+        권한다), 태그에서 jdk와 jre가 갈린다. 주의할 점은 버전만 적은
+        `21`이나 `latest`가 JRE가 아니라 각각 `21-jdk`, `25-jdk`의 별칭
+        이라는 것이다. python처럼 MAJOR.MINOR 태그로 고르는 습관이 여기서는
+        통하지 않는다.
+        JDK 태그(`21`, `21-jdk`, `25-jdk`)를 reject에서 뺐다. JDK는 fat jar를
+        그대로 실행한다 — README의 사용 예제부터 JDK 이미지로 java를 돌리고,
+        어디에도 JDK로 애플리케이션을 실행하는 것이 틀렸다거나 지원되지
+        않는다고 적혀 있지 않다. 그 문서가 적은 것은 "JRE 이미지는 모든
+        버전에 있지만 jlink로 맞춤 런타임을 만드는 쪽을 권한다"는 권고이고,
+        권고를 어긴 답은 최적이 아닐 뿐 오답이 아니다. 크기를 줄이라는
+        요구는 accept를 -jre 계열로만 두는 것으로 이미 표현된다.
+        `latest`는 reject에 남긴다. 이쪽은 JDK냐 JRE냐와 다른 이유다 —
+        버전이 태그에 드러나지 않고 새 메이저가 나오면 따라 움직이는 이동
+        태그라, Docker 모범 사례가 못 박은 "퍼블리셔가 갈아끼울 수 있으니
+        버전을 고정하라"에 정면으로 걸린다. 지금은 25-jdk를 가리키지만
+        26이 올라오면 같은 태그가 다른 자바 런타임이 된다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/eclipse-temurin/README.md
+        - https://hub.docker.com/_/eclipse-temurin
+        - https://docs.docker.com/build/building/best-practices/
+
+  - id: temurin-jdk-build-stage
+    question: |
+      Gradle로 컴파일하고 테스트까지 돌리는 빌드 스테이지 이미지를 고르는
+      중이야. 최종 런타임 스테이지는 따로 둘 거야.
+    requires_repositories: [eclipse-temurin]
+    tags: [build]
+    accept:
+      - eclipse-temurin:21-jdk
+      - eclipse-temurin:21
+      - eclipse-temurin:21-jdk-noble
+      - eclipse-temurin:21-jdk-jammy
+      - eclipse-temurin:21.0.12_8-jdk
+      - eclipse-temurin:25-jdk
+      - eclipse-temurin:25
+      - eclipse-temurin:17-jdk
+      - eclipse-temurin:25-jdk-noble
+      - eclipse-temurin:25-jdk-jammy
+      - eclipse-temurin:17
+      - eclipse-temurin:17-jdk-noble
+      - eclipse-temurin:17-jdk-jammy
+    reject:
+      - eclipse-temurin:21-jre
+      - eclipse-temurin:25-jre
+      - eclipse-temurin:21-jre-alpine
+    expected_sections: [How to use this Image, Image Variants]
+    rationale:
+      note: |
+        컴파일과 jlink는 JDK 쪽 도구다. README의 jlink 예시도 빌드 스테이지를
+        JDK 태그(`eclipse-temurin:25`)로 잡고 그 결과만 얇은 베이스로
+        복사한다. 그래서 빌드 스테이지에 `-jre` 태그를 쓰면 애초에 컴파일이
+        안 된다. 멀티스테이지라면 빌드 스테이지의 크기는 최종 이미지에
+        남지 않으므로 JDK를 쓰는 비용이 없다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/eclipse-temurin/README.md
+        - https://hub.docker.com/_/eclipse-temurin
+        - https://docs.docker.com/build/building/multi-stage/
+
+  - id: temurin-17-jammy-pinned
+    question: |
+      레거시 서비스라 Java 17에서만 돌아가. 게다가 사내 모니터링 에이전트
+      .deb이 Ubuntu 22.04용으로만 빌드돼 있어서 베이스 OS도 거기 맞춰야 해.
+    requires_repositories: [eclipse-temurin]
+    tags: [version, distro]
+    accept:
+      - eclipse-temurin:17-jdk-jammy
+      - eclipse-temurin:17-jre-jammy
+      - eclipse-temurin:17-jammy
+      - eclipse-temurin:17.0.20_8-jdk-jammy
+      - eclipse-temurin:17.0.20_8-jre-jammy
+    reject:
+      - eclipse-temurin:17-jdk
+      - eclipse-temurin:17-jdk-noble
+      - eclipse-temurin:17-jdk-resolute
+      - eclipse-temurin:21-jdk-jammy
+      - eclipse-temurin:latest
+    conditions:
+      version_prefix: "17"
+    expected_sections: [Image Variants, Supported tags]
+    rationale:
+      note: |
+        temurin의 베이스는 데비안이 아니라 우분투이고 jammy·noble·resolute가
+        그 릴리스 코드네임이다. README가 추가 패키지를 설치할 거라면
+        코드네임을 명시해 우분투 새 릴리스 때 깨지는 것을 줄이라고 직접
+        권하는데, 지금 `17-jdk`와 `17`의 실제 베이스는 resolute이므로
+        코드네임을 박지 않으면 jammy용 .deb이 실제로 깨진다. Java 17은
+        LTS이고 Adoptium이 최소 2027-10까지 지원하므로 고정 자체는 유효하다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/eclipse-temurin/README.md
+        - https://hub.docker.com/_/eclipse-temurin
+        - https://adoptium.net/support/
+
+  - id: debian-slim-runtime
+    question: |
+      Rust로 만든 바이너리 하나만 담는 런타임 베이스가 필요해. glibc랑
+      ca-certificates 정도만 있으면 되고 이미지는 작을수록 좋아.
+    requires_repositories: [debian]
+    tags: [size, distro]
+    accept:
+      - debian:13-slim
+      - debian:trixie-slim
+      - debian:13.6-slim
+      - debian:trixie-20260824-slim
+      - debian:12-slim
+      - debian:bookworm-slim
+    reject:
+      - debian:13
+      - debian:trixie
+      - debian:sid-slim
+      - debian:testing-slim
+      - debian:latest
+    expected_sections: [Image Variants, About this image]
+    rationale:
+      note: |
+        debian 이미지는 원래 minbase 변형이라 이미 작지만, `-slim` 태그는
+        거기서 man 페이지나 문서처럼 컨테이너에서 보통 필요 없는 파일을 더
+        덜어낸 것이다. 다만 공식 README가 이 태그를 "an experiment ...
+        definitely subject to change"라고 적으므로 날짜가 붙은 태그로
+        고정하는 선택도 타당해서 함께 넣었다. sid와 testing은 개발이
+        진행 중인 굴러가는 스위트라 런타임 베이스가 될 수 없다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/debian/README.md
+        - https://hub.docker.com/_/debian
+        - https://www.debian.org/releases/
+
+  - id: debian-codename-vs-number
+    question: |
+      debian:13이랑 debian:trixie가 뭐가 다른 거야? 그냥 debian:stable
+      써도 되는 거 아니야?
+    requires_repositories: [debian]
+    tags: [hit, version]
+    accept:
+      - debian:13
+      - debian:trixie
+      - debian:13.6
+      - debian:13-slim
+      - debian:trixie-slim
+      - debian:12
+      - debian:bookworm
+      - debian:12-slim
+      - debian:13.6-slim
+      - debian:bookworm-slim
+    reject:
+      - debian:stable
+      - debian:testing
+      - debian:sid
+      - debian:latest
+    expected_sections: [About this image, Supported tags]
+    rationale:
+      note: |
+        `13`과 `trixie`는 같은 이미지다. 공식 README가 stable 릴리스는 버전
+        번호로도 태그된다고 적고(`debian:11`은 `debian:bullseye`의 별칭),
+        태그 목록에서도 trixie·13.6·13·latest가 한 줄에 묶여 있다. 반면
+        `stable`/`testing`/`unstable`은 굴러가는 스위트 이름을 그대로
+        sources.list에 쓰는 태그라 데비안이 다음 릴리스를 내는 순간 가리키는
+        대상도 apt 저장소도 통째로 바뀐다. 지금 stable은 trixie지만 forky가
+        testing에서 올라오면 같은 태그가 다른 OS가 된다.
+      sources:
+        - https://raw.githubusercontent.com/docker-library/docs/master/debian/README.md
+        - https://hub.docker.com/_/debian
+        - https://www.debian.org/releases/
+
+  - id: ubuntu-lts-base
+    question: |
+      벤더가 Ubuntu용 .deb만 주는 모니터링 에이전트를 이미지에 넣어야 해.
+      프로덕션에서 몇 년 굴릴 거라 오래 지원되는 쪽이면 좋겠어.
+    requires_repositories: [ubuntu]
+    tags: [prod, version, distro]
+    accept:
+      - ubuntu:24.04
+      - ubuntu:noble
+      - ubuntu:26.04
+      - ubuntu:resolute
+      - ubuntu:22.04
+      - ubuntu:jammy
+    reject:
+      - ubuntu:26.10
+      - ubuntu:stonking
+      - ubuntu:devel
+      - ubuntu:rolling
+      - ubuntu:latest
+    expected_sections: ["What's in this image?", Supported tags]
+    rationale:
+      note: |
+        우분투는 2년마다 LTS를 내고 LTS는 5년의 표준 보안 유지보수를 받는
+        반면, 중간(interim) 릴리스는 9개월만 업데이트를 받고 Canonical도
+        프로덕션에는 LTS를 쓰라고 적는다. 태그 목록에서 26.10(stonking)과
+        그 별칭 `devel`이 그 중간 릴리스다. `rolling`은 LTS 여부와 무관하게
+        최신 릴리스를, `latest`는 최신 LTS를 따라가는 이동 태그라 벤더
+        패키지가 특정 릴리스용이면 언젠가 조용히 깨진다.
+      sources:
+        - https://hub.docker.com/_/ubuntu
+        - https://raw.githubusercontent.com/docker-library/docs/master/ubuntu/README.md
+        - https://ubuntu.com/about/release-cycle
+        - https://docs.docker.com/build/building/best-practices/
+
+  - id: ubuntu-noble-pinned
+    question: |
+      GPU 드라이버랑 CUDA 저장소가 24.04용만 올라와 있어서 베이스를 24.04로
+      고정해야 해. 코드네임으로 써야 하는 건지도 헷갈려.
+    requires_repositories: [ubuntu]
+    tags: [version, distro]
+    accept:
+      - ubuntu:24.04
+      - ubuntu:noble
+      - ubuntu:noble-20260905
+    reject:
+      - ubuntu:22.04
+      - ubuntu:jammy
+      - ubuntu:26.04
+      - ubuntu:resolute
+      - ubuntu:rolling
+      - ubuntu:latest
+    expected_sections: [Supported tags]
+    rationale:
+      note: |
+        `24.04`와 `noble`은 태그 목록에서 한 줄에 묶인 같은 이미지라 어느
+        쪽으로 써도 결과가 같다. 날짜가 붙은 `noble-20260905`는 빌드까지
+        고정한다. 주의할 것은 지금 `latest`와 `rolling`이 둘 다 26.04
+        (resolute)를 가리킨다는 점이다. "latest는 LTS니까 안전하다"는 통념에
+        기대면 24.04 전용 저장소를 쓰는 이 요구는 그대로 깨진다.
+        version_prefix "24.04"를 뺐다. 공식 README의 태그 목록이
+        `24.04`·`noble-20260905`·`noble`을 한 줄에 묶으므로 셋은 같은
+        이미지이고, 사용자가 코드네임으로 써야 하느냐고 물은 문항에서
+        코드네임 답은 오답일 수 없다. 그런데 조건 판정은 태그 문자열이
+        "24.04"로 시작하는지만 보므로 `noble`과 `noble-20260905`가 같은
+        이미지인데도 조건 위반으로 떨어진다. 정답과 조건 위반이 같은
+        답에 동시에 붙는 모순이라, 별칭을 accept에서 빼는 대신 조건을
+        뺐다. 별칭이 어느 릴리스를 가리키는지는 태그 문자열이 아니라
+        README의 묶음이 정하는 것이고 Conditions에는 그 필드가 없다.
+      sources:
+        - https://hub.docker.com/_/ubuntu
+        - https://raw.githubusercontent.com/docker-library/docs/master/ubuntu/README.md
+        - https://docs.docker.com/build/building/best-practices/
+
+  - id: alpine-static-binary
+    question: |
+      정적 링크된 CLI 바이너리 하나에 ca-certificates랑 curl만 얹어서
+      배포하려고 해. 베이스를 최대한 작게 가져가고 싶은데 어떤 태그를 써야 해?
+    requires_repositories: [alpine]
+    tags: [size, version]
+    accept:
+      - alpine:3.24
+      - alpine:3.24.1
+      - alpine:3.23
+      - alpine:3.23.5
+      - alpine:3.22
+      - alpine:3.22.5
+    reject:
+      - alpine:edge
+      - alpine:20260805
+      - alpine:latest
+    expected_sections: ["What is Alpine Linux?", Supported tags]
+    rationale:
+      note: |
+        alpine은 musl libc와 BusyBox로 구성한 약 5MB 이미지라 정적 바이너리에
+        apk로 몇 개만 얹는 용도에 정확히 맞는다. 고를 때 갈리는 것은 릴리스
+        브랜치다. `edge`는 릴리스가 아니라 매년 5월·11월에 여기서 브랜치를
+        떠가는 개발 줄기이고 지원 종료일이라는 개념 자체가 없다.
+        주의할 것은 지원 기간이 저장소마다 다르다는 점이다. 릴리스 페이지가
+        "main 저장소는 보통 2년, community 저장소는 다음 안정 릴리스까지"
+        지원한다고 명시한다. 즉 두 저장소가 같은 기간 지원되는 것이 아니다.
+        지금 표에서 최신인 v3.24만 2028-06-01까지 main과 community가 함께
+        지원 등급으로 잡혀 있고, v3.23(2027-11-01)과 v3.22(2027-05-01)는
+        이미 main만 남았다 — 다음 안정 릴리스가 나오면서 community 지원이
+        끝났기 때문이고, v3.24도 v3.25가 나오는 순간 같은 자리로 내려간다.
+        이 요구에서 그 차이가 답을 바꾸지는 않는다. 얹으려는 것이
+        ca-certificates와 curl뿐인데 둘 다 main 패키지라 accept에 넣은
+        3.22까지 전부 지원 기간 안에 있다. 그래도 "3.24는 2028년까지
+        community도 지원된다"를 다른 브랜치로 일반화하면 틀린다.
+        릴리스 브랜치로 고정하는 것이 맞고 `latest`는 새 브랜치가 나면
+        따라 움직인다.
+      sources:
+        - https://hub.docker.com/_/alpine
+        - https://raw.githubusercontent.com/docker-library/docs/master/alpine/README.md
+        - https://alpinelinux.org/releases/
+        - https://docs.docker.com/build/building/best-practices/
