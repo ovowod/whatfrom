@@ -1,7 +1,7 @@
 # tests/test_layering.py
 """레이어링 규칙을 강제한다.
 
-stage 패키지(collect, index, search, recommend)는 자기 자신과 whatfrom.core만
+stage 패키지(collect, index, search, recommend, eval)는 자기 자신과 whatfrom.core만
 임포트할 수 있다. stage끼리는 서로 임포트하지 않는다. whatfrom.core는 어떤
 stage도 임포트하지 않는다. stage들을 조합하는 건 api.py와 cli.py뿐이다.
 
@@ -15,7 +15,7 @@ import pytest
 
 SRC_ROOT = Path(__file__).parents[1] / "src"
 WHATFROM_DIR = SRC_ROOT / "whatfrom"
-STAGES = ["collect", "index", "search", "recommend"]
+STAGES = ["collect", "index", "search", "recommend", "eval"]
 
 
 def _display_path(path: Path) -> str:
