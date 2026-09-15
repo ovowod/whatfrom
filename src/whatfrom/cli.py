@@ -12,8 +12,9 @@ from sqlalchemy import Engine, inspect, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from whatfrom.api import recommend_for_question
-from whatfrom.collect.hub import HubClient, parse_repository, parse_tag_page
-from whatfrom.collect.store import upsert_repository, upsert_tags
+from whatfrom.collect.hub import HubClient, parse_repository
+from whatfrom.collect.store import upsert_repository
+from whatfrom.collect.sync import collect_repository
 from whatfrom.core.config import settings
 from whatfrom.core.db import make_engine, session_scope
 from whatfrom.core.embed import get_embedder
@@ -44,43 +45,13 @@ def cmd_init_db(args: argparse.Namespace) -> None:
         print(f"{engine.url.database} already has every table, created nothing")
 
 
-def collect_repository(
-    engine: Engine,
-    client: HubClient,
-    repository: str,
-    max_pages: int | None,
-    now: datetime,
-) -> int:
-    """리포 하나를 수집한다. 페이지마다 짧은 트랜잭션을 연다.
-
-    네트워크 왕복은 트랜잭션 밖에서 일어나야 한다. 한 트랜잭션 안에서
-    페이지를 계속 받으면 Docker Hub가 느린 만큼 Postgres 커넥션과 락을
-    붙잡고 있게 된다 — 리포 10개를 전량 수집하는 F5에서는 수 분이 된다.
-
-    페이지 단위로 커밋하므로 중간에 실패해도 그때까지 받은 것은 남는다.
-    upsert가 멱등이라 재실행하면 이어서 채워진다.
-    """
-    repo_row = parse_repository(client.fetch_repository(repository))
-    with session_scope(engine) as session:
-        upsert_repository(session, repo_row, now)
-
-    total = 0
-    for page in client.iter_tag_pages(repository, page_size=100, max_pages=max_pages):
-        rows = parse_tag_page(page)
-        # 트랜잭션은 이 블록 안에서만 열린다. 다음 페이지 요청은 블록을 나온 뒤다.
-        with session_scope(engine) as session:
-            total += upsert_tags(session, repository, rows, now)
-        print(f"  ... {total} tags")
-    return total
-
-
 def cmd_collect(args: argparse.Namespace) -> None:
     engine = make_engine(args.database_url)
     with httpx2.Client(timeout=30.0) as http:
-        total = collect_repository(
+        outcome = collect_repository(
             engine, HubClient(http), args.repository, args.max_pages, datetime.now(UTC)
         )
-    print(f"collected {total} tags for {args.repository}")
+    print(f"collected {outcome.tags_seen} tags for {args.repository} ({outcome.stop_reason})")
 
 
 def cmd_index(args: argparse.Namespace) -> None:

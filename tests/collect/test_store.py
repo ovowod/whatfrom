@@ -8,11 +8,11 @@ import pytest
 from sqlalchemy import delete, event, select
 from sqlalchemy.orm import sessionmaker
 
-from whatfrom.cli import collect_repository
 from whatfrom.collect.hub import HubClient, RepositoryRow, TagRow, VariantRow
 from whatfrom.collect.store import upsert_repository, upsert_tags
+from whatfrom.collect.sync import collect_repository
 from whatfrom.core.db import session_scope
-from whatfrom.core.models import ImageTag, ImageVariant, Repository
+from whatfrom.core.models import CollectionRun, ImageTag, ImageVariant, Repository
 
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
 FIXTURES = Path(__file__).parents[1] / "fixtures"
@@ -242,7 +242,7 @@ def test_collect_repository_commits_completed_pages_before_a_later_page_fails(en
     transport = httpx2.MockTransport(handler)
     try:
         with httpx2.Client(transport=transport) as http:
-            client = HubClient(http)
+            client = HubClient(http, sleep=lambda _seconds: None)
             with pytest.raises(httpx2.ConnectError):
                 collect_repository(engine, client, repo_name, None, NOW)
 
@@ -264,3 +264,4 @@ def test_collect_repository_commits_completed_pages_before_a_later_page_fails(en
             )
             session.execute(delete(ImageTag).where(ImageTag.repository == repo_name))
             session.execute(delete(Repository).where(Repository.name == repo_name))
+            session.execute(delete(CollectionRun).where(CollectionRun.repository == repo_name))
