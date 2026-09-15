@@ -2,7 +2,7 @@
 import argparse
 import hashlib
 import json
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -14,10 +14,15 @@ from sqlalchemy.orm import Session, sessionmaker
 from whatfrom.api import recommend_for_question
 from whatfrom.collect.hub import HubClient, parse_repository
 from whatfrom.collect.store import upsert_repository
-from whatfrom.collect.sync import collect_repository
+from whatfrom.collect.sync import (
+    OFFICIAL_REPOSITORIES,
+    STOP_ERROR,
+    CollectOutcome,
+    collect_all,
+)
 from whatfrom.core.config import settings
 from whatfrom.core.db import make_engine, session_scope
-from whatfrom.core.embed import get_embedder
+from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.models import Base, Document, DocumentChunk, ImageTag, Repository
 from whatfrom.index.indexer import index_readme
 from whatfrom.recommend.llm import get_provider
@@ -45,27 +50,76 @@ def cmd_init_db(args: argparse.Namespace) -> None:
         print(f"{engine.url.database} already has every table, created nothing")
 
 
+def run_collect(
+    engine: Engine,
+    client: HubClient,
+    repositories: Sequence[str],
+    max_pages: int | None,
+) -> int:
+    outcomes = collect_all(engine, client, repositories, max_pages, datetime.now(UTC))
+    print(_format_collect_summary(outcomes))
+    # 실패를 종료 코드로 알린다. 스케줄러에 올렸을 때 조용히 묻히지 않게 한다.
+    return 1 if any(outcome.stop_reason == STOP_ERROR for outcome in outcomes) else 0
+
+
+def _format_collect_summary(outcomes: list[CollectOutcome]) -> str:
+    lines = [
+        f"{'repository':<16} {'pages':>5} {'seen':>6} {'new_or_changed':>14}  "
+        f"{'stop':<12} {'seconds':>7}"
+    ]
+    for outcome in outcomes:
+        lines.append(
+            f"{outcome.repository:<16} {outcome.pages:>5} {outcome.tags_seen:>6} "
+            f"{outcome.tags_written:>14}  {outcome.stop_reason:<12} "
+            f"{outcome.elapsed_seconds:>7.1f}"
+        )
+    for outcome in outcomes:
+        if outcome.stop_reason == STOP_ERROR:
+            lines.append(f"  {outcome.repository}: {outcome.error}")
+    return "\n".join(lines)
+
+
 def cmd_collect(args: argparse.Namespace) -> None:
+    repositories = OFFICIAL_REPOSITORIES if args.all else (args.repository,)
     engine = make_engine(args.database_url)
     with httpx2.Client(timeout=30.0) as http:
-        outcome = collect_repository(
-            engine, HubClient(http), args.repository, args.max_pages, datetime.now(UTC)
-        )
-    print(f"collected {outcome.tags_seen} tags for {args.repository} ({outcome.stop_reason})")
+        code = run_collect(engine, HubClient(http), repositories, args.max_pages)
+    if code:
+        raise SystemExit(code)
+
+
+def run_index(
+    engine: Engine,
+    client: HubClient,
+    embedder: Embedder,
+    repositories: Sequence[str],
+) -> int:
+    failed = 0
+    for repository in repositories:
+        try:
+            repo_row = parse_repository(client.fetch_repository(repository))
+            now = datetime.now(UTC)
+            with session_scope(engine) as session:
+                upsert_repository(session, repo_row, now)
+                created = index_readme(
+                    session, repository, repo_row.readme, repo_row.source_url, embedder, now
+                )
+            print(f"{repository:<16} indexed {created} chunks")
+        except Exception as exc:
+            # 한 리포지토리의 실패가 나머지 색인을 막지 않는다.
+            failed += 1
+            print(f"{repository:<16} failed: {type(exc).__name__}: {exc}")
+    return 1 if failed else 0
 
 
 def cmd_index(args: argparse.Namespace) -> None:
+    repositories = OFFICIAL_REPOSITORIES if args.all else (args.repository,)
     engine = make_engine(args.database_url)
-    now = datetime.now(UTC)
     embedder = get_embedder(args.embedder)
     with httpx2.Client(timeout=30.0) as http:
-        repo_row = parse_repository(HubClient(http).fetch_repository(args.repository))
-    with session_scope(engine) as session:
-        upsert_repository(session, repo_row, now)
-        created = index_readme(
-            session, args.repository, repo_row.readme, repo_row.source_url, embedder, now
-        )
-    print(f"indexed {created} chunks for {args.repository}")
+        code = run_index(engine, HubClient(http), embedder, repositories)
+    if code:
+        raise SystemExit(code)
 
 
 def cmd_search(args: argparse.Namespace) -> None:
@@ -244,6 +298,13 @@ def cmd_eval(args: argparse.Namespace) -> None:
     print(f"\n{out} 저장")
 
 
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("1 이상이어야 한다")
+    return parsed
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="whatfrom")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -253,13 +314,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.set_defaults(func=cmd_init_db)
 
     p_collect = sub.add_parser("collect", help="collect tags from Docker Hub")
-    p_collect.add_argument("repository")
-    p_collect.add_argument("--max-pages", type=int, default=3)
+    collect_target = p_collect.add_mutually_exclusive_group(required=True)
+    collect_target.add_argument("repository", nargs="?")
+    collect_target.add_argument(
+        "--all", action="store_true", help="스펙의 공식 이미지 10개를 모두 수집"
+    )
+    # 익명 요청은 리포지토리당 10페이지(1,000개)까지만 닿는다.
+    p_collect.add_argument("--max-pages", type=_positive_int, default=None)
     p_collect.add_argument("--database-url", default=settings.database_url)
     p_collect.set_defaults(func=cmd_collect)
 
     p_index = sub.add_parser("index", help="fetch README, chunk it, embed it")
-    p_index.add_argument("repository")
+    index_target = p_index.add_mutually_exclusive_group(required=True)
+    index_target.add_argument("repository", nargs="?")
+    index_target.add_argument("--all", action="store_true", help="공식 이미지 10개를 모두 색인")
     p_index.add_argument("--embedder", default=settings.embedder)
     p_index.add_argument("--database-url", default=settings.database_url)
     p_index.set_defaults(func=cmd_index)
