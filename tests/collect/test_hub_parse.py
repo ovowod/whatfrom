@@ -74,6 +74,97 @@ def test_parse_tag_page_normalizes_null_variant_to_empty_string(tags_payload):
     assert amd.arch_variant == ""
 
 
+def test_parse_tag_page_skips_images_without_a_digest():
+    """오래된 비활성 매니페스트는 digest가 없다. NOT NULL 컬럼이라 저장할 수 없다."""
+    payload = {
+        "results": [
+            {
+                "name": "4.0.13-alpine3.9",
+                "digest": "sha256:tagdigest",
+                "tag_last_pushed": None,
+                "images": [
+                    {
+                        "architecture": "amd64",
+                        "variant": None,
+                        "digest": "sha256:normal",
+                        "os": "linux",
+                        "size": 123,
+                    },
+                    {
+                        "architecture": "arm",
+                        "variant": "v6",
+                        "os": "linux",
+                        "size": 13297953,
+                        "status": "inactive",
+                    },
+                ],
+            }
+        ]
+    }
+
+    rows = parse_tag_page(payload)
+
+    assert len(rows) == 1
+    assert len(rows[0].variants) == 1
+    assert rows[0].variants[0].digest == "sha256:normal"
+
+
+def test_parse_tag_page_skips_images_with_a_null_digest():
+    """digest 키는 있지만 값이 None인 경우도 같은 이유로 건너뛴다. 태그 행은 남는다."""
+    payload = {
+        "results": [
+            {
+                "name": "wily-20160526",
+                "digest": "sha256:tagdigest",
+                "tag_last_pushed": None,
+                "images": [
+                    {
+                        "architecture": "amd64",
+                        "variant": None,
+                        "digest": None,
+                        "os": "",
+                        "size": 50976456,
+                        "status": "inactive",
+                    }
+                ],
+            }
+        ]
+    }
+
+    rows = parse_tag_page(payload)
+
+    assert len(rows) == 1
+    assert rows[0].tag == "wily-20160526"
+    assert rows[0].variants == ()
+
+
+def test_parse_tag_page_handles_missing_tag_digest_alongside_missing_image_digest():
+    """이미지 digest도, 태그 digest도 없는 경우 — manifest_digest는 기존처럼 None이다."""
+    payload = {
+        "results": [
+            {
+                "name": "wily-20160526",
+                "tag_last_pushed": None,
+                "images": [
+                    {
+                        "architecture": "amd64",
+                        "variant": None,
+                        "os": "",
+                        "size": 50976456,
+                        "status": "inactive",
+                    }
+                ],
+            }
+        ]
+    }
+
+    rows = parse_tag_page(payload)
+
+    assert len(rows) == 1
+    assert rows[0].manifest_digest is None
+    assert rows[0].variants == ()
+
+
 def test_parse_repository_marks_library_namespace_as_official(repository_payload):
     row = parse_repository(repository_payload)
 

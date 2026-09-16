@@ -87,6 +87,9 @@ def parse_tag_page(payload: dict) -> list[TagRow]:
             # os=unknown은 attestation manifest(provenance/SBOM)이지 이미지가 아니다.
             for image in result.get("images", [])
             if image.get("os") != "unknown"
+            # 오래된 비활성 매니페스트는 digest가 없다. digest가 없으면 플랫폼
+            # 이미지를 식별할 수 없고, image_variants.digest는 NOT NULL이다.
+            if image.get("digest")
         )
         rows.append(
             TagRow(
