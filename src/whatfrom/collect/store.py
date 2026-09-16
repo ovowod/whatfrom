@@ -88,7 +88,11 @@ def upsert_tags(
 
     if changes.new:
         inserted = session.execute(
-            insert(ImageTag).returning(ImageTag.id, ImageTag.tag),
+            # ORM 일괄 INSERT는 값이 None인 키를 기본적으로 문장에서 뺀다. digest가 없는
+            # 태그가 섞이면 컬럼 구성이 달라져 행마다 문장이 나뉘므로 NULL도 명시한다.
+            insert(ImageTag)
+            .returning(ImageTag.id, ImageTag.tag)
+            .execution_options(render_nulls=True),
             [
                 {
                     "repository": repository,

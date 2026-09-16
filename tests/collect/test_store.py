@@ -148,7 +148,7 @@ def test_an_unchanged_tag_keeps_its_variants_and_refreshes_collected_at(session)
     assert collected == later
 
 
-def _pushed_row(tag: str, digest: str) -> TagRow:
+def _pushed_row(tag: str, digest: str | None) -> TagRow:
     return TagRow(
         tag=tag,
         manifest_digest=digest,
@@ -161,7 +161,16 @@ def _pushed_row(tag: str, digest: str) -> TagRow:
 
 
 def _page(kind: str, n: int) -> tuple[list[TagRow], list[TagRow]]:
-    """(미리 저장할 태그, 측정할 페이지)를 만든다. mixed는 세 종류를 n개씩 섞는다."""
+    """(미리 저장할 태그, 측정할 페이지)를 만든다. mixed는 세 종류를 n개씩 섞는다.
+
+    *_null_mixed는 digest가 없는 태그를 한 개 걸러 섞는다. 실제 Hub 페이지에서
+    오래된 태그가 이렇게 섞여 오고, 일괄 INSERT가 NULL 키를 빼면 행마다 문장이 나뉜다.
+    """
+    null_mixed = [_pushed_row(f"nul-{i}", None if i % 2 else "sha256:n") for i in range(n)]
+    if kind == "new_null_mixed":
+        return [], null_mixed
+    if kind == "changed_null_mixed":
+        return [_pushed_row(f"nul-{i}", "sha256:old") for i in range(n)], null_mixed
     new = [_pushed_row(f"new-{i}", "sha256:n") for i in range(n)]
     changed_before = [_pushed_row(f"chg-{i}", "sha256:old") for i in range(n)]
     changed_after = [_pushed_row(f"chg-{i}", "sha256:new") for i in range(n)]
@@ -196,7 +205,9 @@ def _count_statements(session, kind: str, n: int) -> int:
     return len(executed)
 
 
-@pytest.mark.parametrize("kind", ["new", "changed", "unchanged", "mixed"])
+@pytest.mark.parametrize(
+    "kind", ["new", "changed", "unchanged", "mixed", "new_null_mixed", "changed_null_mixed"]
+)
 def test_statement_count_does_not_grow_with_the_page(engine, kind):
     """구성이 같으면 태그가 2개든 50개든 SQL 실행 횟수가 같아야 한다.
 
