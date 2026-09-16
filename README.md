@@ -73,18 +73,21 @@ WHATFROM_LLM_PROVIDER=openai_compatible
 ollama pull bge-m3
 ```
 
-DB를 준비하고 Python 이미지 정보를 수집·색인한 뒤 API 서버를 실행한다.
+DB를 준비하고 공식 이미지 10개의 태그와 README를 수집·색인한 뒤 API 서버를 실행한다.
 색인과 검색에는 같은 임베딩 모델을 사용해야 한다.
 
 ```bash
 make up                 # PostgreSQL + pgvector 시작
 uv run python -m whatfrom.cli init-db
-uv run python -m whatfrom.cli collect python
-uv run python -m whatfrom.cli index python
+uv run python -m whatfrom.cli collect --all
+uv run python -m whatfrom.cli index --all
 uv run uvicorn whatfrom.api:app
 ```
 
-`collect`는 기본적으로 최대 3페이지(페이지당 100개)의 태그를 수집한다.
+`collect`는 Docker Hub 태그 목록을 최근 갱신 순으로 받는다. 익명 요청은 리포지토리당 최근 1,000개까지만 받을 수 있다.
+다시 실행하면 digest나 푸시 시각이 바뀐 태그만 다시 쓰고, 실행마다 결과를 `collection_runs` 테이블에 기록한다.
+digest가 없는 오래된 태그는 같은 이미지인지 판단할 수 없어 매번 다시 쓴다.
+하나의 리포지토리만 다룰 때는 `--all` 대신 이름을 넘긴다(`collect python`).
 서버가 실행되면 다른 터미널에서 추천을 요청할 수 있다.
 
 ```bash
