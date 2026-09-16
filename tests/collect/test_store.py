@@ -1,17 +1,18 @@
 # tests/collect/test_store.py
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx2
 import pytest
-from sqlalchemy import delete, select
+from sqlalchemy import delete, event, select
+from sqlalchemy.orm import sessionmaker
 
-from whatfrom.cli import collect_repository
 from whatfrom.collect.hub import HubClient, RepositoryRow, TagRow, VariantRow
 from whatfrom.collect.store import upsert_repository, upsert_tags
+from whatfrom.collect.sync import collect_repository
 from whatfrom.core.db import session_scope
-from whatfrom.core.models import ImageTag, ImageVariant, Repository
+from whatfrom.core.models import CollectionRun, ImageTag, ImageVariant, Repository
 
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
 FIXTURES = Path(__file__).parents[1] / "fixtures"
@@ -133,6 +134,100 @@ def test_upsert_tags_is_idempotent_and_replaces_variants(session):
     assert variants[0].size_bytes == 1
 
 
+def test_an_unchanged_tag_keeps_its_variants_and_refreshes_collected_at(session):
+    upsert_repository(session, _repo_row(), NOW)
+    upsert_tags(session, "python", [_tag_row()], NOW)
+    before = sorted(session.execute(select(ImageVariant.id)).scalars())
+
+    later = NOW + timedelta(hours=1)
+    written = upsert_tags(session, "python", [_tag_row()], later)
+
+    assert written == 0
+    assert sorted(session.execute(select(ImageVariant.id)).scalars()) == before
+    collected = session.execute(select(ImageTag.collected_at)).scalar_one()
+    assert collected == later
+
+
+def _pushed_row(tag: str, digest: str | None) -> TagRow:
+    return TagRow(
+        tag=tag,
+        manifest_digest=digest,
+        last_pushed_at=datetime(2026, 9, 1, tzinfo=UTC),
+        variants=(
+            VariantRow("linux", "amd64", "", "", "sha256:v1", 1),
+            VariantRow("linux", "arm64", "v8", "", "sha256:v2", 2),
+        ),
+    )
+
+
+def _page(kind: str, n: int) -> tuple[list[TagRow], list[TagRow]]:
+    """(미리 저장할 태그, 측정할 페이지)를 만든다. mixed는 세 종류를 n개씩 섞는다.
+
+    *_null_mixed는 digest가 없는 태그를 한 개 걸러 섞는다. 실제 Hub 페이지에서
+    오래된 태그가 이렇게 섞여 오고, 일괄 INSERT가 NULL 키를 빼면 행마다 문장이 나뉜다.
+    """
+    null_mixed = [_pushed_row(f"nul-{i}", None if i % 2 else "sha256:n") for i in range(n)]
+    if kind == "new_null_mixed":
+        return [], null_mixed
+    if kind == "changed_null_mixed":
+        return [_pushed_row(f"nul-{i}", "sha256:old") for i in range(n)], null_mixed
+    new = [_pushed_row(f"new-{i}", "sha256:n") for i in range(n)]
+    changed_before = [_pushed_row(f"chg-{i}", "sha256:old") for i in range(n)]
+    changed_after = [_pushed_row(f"chg-{i}", "sha256:new") for i in range(n)]
+    same = [_pushed_row(f"same-{i}", "sha256:s") for i in range(n)]
+    if kind == "new":
+        return [], new
+    if kind == "changed":
+        return changed_before, changed_after
+    if kind == "unchanged":
+        return same, same
+    return changed_before + same, new + changed_after + same
+
+
+def _count_statements(session, kind: str, n: int) -> int:
+    upsert_repository(session, _repo_row(), NOW)
+    seed, page = _page(kind, n)
+    if seed:
+        upsert_tags(session, "python", seed, NOW)
+    session.flush()
+
+    connection = session.connection()
+    executed: list[str] = []
+
+    def count(conn, cursor, statement, parameters, context, executemany):
+        executed.append(statement)
+
+    event.listen(connection, "before_cursor_execute", count)
+    try:
+        upsert_tags(session, "python", page, NOW)
+    finally:
+        event.remove(connection, "before_cursor_execute", count)
+    return len(executed)
+
+
+@pytest.mark.parametrize(
+    "kind", ["new", "changed", "unchanged", "mixed", "new_null_mixed", "changed_null_mixed"]
+)
+def test_statement_count_does_not_grow_with_the_page(engine, kind):
+    """구성이 같으면 태그가 2개든 50개든 SQL 실행 횟수가 같아야 한다.
+
+    태그마다 쿼리가 나가면 첫 전체 수집(약 1만 태그)이 태그 수만큼 왕복한다.
+    """
+    counts = []
+    for n in (2, 50):
+        connection = engine.connect()
+        transaction = connection.begin()
+        sess = sessionmaker(bind=connection, expire_on_commit=False)()
+        try:
+            counts.append(_count_statements(sess, kind, n))
+        finally:
+            sess.close()
+            transaction.rollback()
+            connection.close()
+
+    assert counts[0] == counts[1]
+
+
 def test_collect_repository_commits_completed_pages_before_a_later_page_fails(engine):
     """네트워크가 두 번째 페이지에서 끊겨도 첫 페이지는 이미 커밋되어 남아 있어야 한다.
 
@@ -158,7 +253,7 @@ def test_collect_repository_commits_completed_pages_before_a_later_page_fails(en
     transport = httpx2.MockTransport(handler)
     try:
         with httpx2.Client(transport=transport) as http:
-            client = HubClient(http)
+            client = HubClient(http, sleep=lambda _seconds: None)
             with pytest.raises(httpx2.ConnectError):
                 collect_repository(engine, client, repo_name, None, NOW)
 
@@ -180,3 +275,4 @@ def test_collect_repository_commits_completed_pages_before_a_later_page_fails(en
             )
             session.execute(delete(ImageTag).where(ImageTag.repository == repo_name))
             session.execute(delete(Repository).where(Repository.name == repo_name))
+            session.execute(delete(CollectionRun).where(CollectionRun.repository == repo_name))

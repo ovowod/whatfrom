@@ -86,6 +86,28 @@ class ImageVariant(Base):
     image_tag: Mapped[ImageTag] = relationship(back_populates="variants")
 
 
+class CollectionRun(Base):
+    """수집 실행 한 번의 기록. 수집 판단에는 쓰지 않고, 무엇이 어떻게 끝났는지 남긴다.
+
+    repository에 FK를 걸지 않는다. 리포지토리 행을 만들기 전에 실패한 실행도
+    기록해야 한다. finished_at이 NULL이면 완료되지 않은 실행이다.
+    """
+
+    __tablename__ = "collection_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    repository: Mapped[str] = mapped_column(String(200))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # end, offset_limit, max_pages, error, interrupted
+    stop_reason: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    pages: Mapped[int] = mapped_column(Integer, default=0)
+    tags_seen: Mapped[int] = mapped_column(Integer, default=0)
+    # 신규·변경 태그 수. collected_at만 갱신한 태그는 세지 않는다.
+    tags_written: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class Document(Base):
     __tablename__ = "documents"
     __table_args__ = (
