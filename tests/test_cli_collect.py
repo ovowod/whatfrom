@@ -6,9 +6,9 @@ import pytest
 from sqlalchemy import delete, select
 
 from whatfrom import cli
-from whatfrom.cli import build_parser, run_collect, run_index
+from whatfrom.cli import _format_collect_summary, build_parser, run_collect, run_index
 from whatfrom.collect.hub import HubClient
-from whatfrom.collect.sync import OFFICIAL_REPOSITORIES
+from whatfrom.collect.sync import OFFICIAL_REPOSITORIES, CollectOutcome
 from whatfrom.core.db import session_scope
 from whatfrom.core.embed import FakeEmbedder
 from whatfrom.core.models import (
@@ -178,3 +178,18 @@ def test_cmd_index_all_uses_official_repositories_and_exits_on_failure(monkeypat
 
     assert exc_info.value.code == 1
     assert recorded["repositories"] == OFFICIAL_REPOSITORIES
+
+
+def test_format_collect_summary_lists_repositories_reasons_and_errors():
+    outcomes = [
+        CollectOutcome("cli-ok", "end", 3, 10, 2, 1.5, None),
+        CollectOutcome("cli-bad", "error", 1, 5, 0, 0.2, "HTTPStatusError: boom"),
+    ]
+
+    summary = _format_collect_summary(outcomes)
+
+    assert "cli-ok" in summary
+    assert "cli-bad" in summary
+    assert "end" in summary
+    assert "error" in summary
+    assert any("HTTPStatusError: boom" in line for line in summary.splitlines())

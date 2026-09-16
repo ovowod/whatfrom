@@ -129,6 +129,38 @@ def test_reaching_the_last_page_completes_with_end(engine, cleanup):
     assert (run.pages, run.tags_seen, run.tags_written) == (1, 2, 2)
 
 
+def test_collecting_the_same_page_again_writes_nothing(engine, cleanup):
+    """같은 페이로드를 다시 받으면 두 번째 실행은 아무것도 새로 쓰지 않는다."""
+    cleanup.append("sync-repeat")
+    hub = FakeHub()
+    hub.repository("sync-repeat")
+    hub.pages("sync-repeat", [page("sync-repeat", [tag("a"), tag("b")], 1, last=True)])
+
+    collect_repository(engine, hub.client(), "sync-repeat", None, NOW)
+    outcome = collect_repository(engine, hub.client(), "sync-repeat", None, NOW)
+
+    assert (outcome.tags_seen, outcome.tags_written) == (2, 0)
+    [_, second_run] = runs(engine, "sync-repeat")
+    assert (second_run.tags_seen, second_run.tags_written) == (2, 0)
+
+
+def test_collecting_again_still_writes_a_tag_missing_its_digest(engine, cleanup):
+    """digest 없는 태그는 이미지가 같은지 알 수 없으니 다시 받아도 변경으로 센다."""
+    cleanup.append("sync-repeat-nodigest")
+    hub = FakeHub()
+    hub.repository("sync-repeat-nodigest")
+    tags = [tag("a"), tag("b")]
+    del tags[0]["digest"]
+    hub.pages("sync-repeat-nodigest", [page("sync-repeat-nodigest", tags, 1, last=True)])
+
+    collect_repository(engine, hub.client(), "sync-repeat-nodigest", None, NOW)
+    outcome = collect_repository(engine, hub.client(), "sync-repeat-nodigest", None, NOW)
+
+    assert outcome.tags_written == 1
+    [_, second_run] = runs(engine, "sync-repeat-nodigest")
+    assert second_run.tags_written == 1
+
+
 def test_the_offset_limit_completes_without_retrying(engine, cleanup):
     cleanup.append("sync-offset")
     hub = FakeHub()
@@ -295,6 +327,26 @@ def test_collect_all_isolates_a_failing_repository(engine, cleanup):
     ]
     assert outcomes[0].error is not None
     assert stored_tags(engine, "sync-all-ok") == ["a"]
+
+
+def test_collect_all_reports_partial_counts_for_a_failed_repository(engine, cleanup):
+    """실패해도 성공한 페이지의 카운트는 실행 행에서 읽어 보고한다."""
+    cleanup.append("sync-all-partial")
+    hub = FakeHub()
+    hub.repository("sync-all-partial")
+    hub.pages(
+        "sync-all-partial",
+        [
+            page("sync-all-partial", [tag("a"), tag("b")], 1, last=False),
+            httpx2.Response(403, json={"message": "forbidden"}),
+        ],
+    )
+
+    [outcome] = collect_all(engine, hub.client(), ["sync-all-partial"], None, NOW)
+
+    assert outcome.stop_reason == STOP_ERROR
+    assert outcome.pages == 1
+    assert outcome.tags_seen == 2
 
 
 def fail_start_for(monkeypatch, name: str) -> None:
