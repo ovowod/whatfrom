@@ -39,7 +39,7 @@ def search_candidates(
     embedder: Embedder,
     question: str,
     chunk_k: int = 5,
-    tags_per_repo: int = 5,
+    tags_per_repo: int = 20,
 ) -> list[Candidate]:
     """질문을 임베딩한 뒤 후보를 만든다. 요청 경로는 search_candidates_by_vector를 쓴다."""
     return search_candidates_by_vector(
@@ -51,7 +51,7 @@ def search_candidates_by_vector(
     session: Session,
     vector: list[float],
     chunk_k: int = 5,
-    tags_per_repo: int = 5,
+    tags_per_repo: int = 20,
 ) -> list[Candidate]:
     """벡터 검색으로 리포와 근거를 찾고, 그 리포의 태그 중에서 후보를 세운다.
 

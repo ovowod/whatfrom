@@ -222,3 +222,14 @@ def test_search_candidates_skips_prereleases_and_folds_aliases(session):
     assert tags == ["3.14-slim", "3.14-alpine"]
     # 후보끼리 같은 이미지를 가리키지 않는다.
     assert len({c.digest for c in candidates}) == len(candidates)
+
+
+def test_both_candidate_entry_points_share_the_same_default_limit():
+    """한쪽만 바꾸면 호출 경로마다 후보 수가 달라진다."""
+    import inspect
+
+    from whatfrom.search.retrieval import search_candidates_by_vector
+
+    by_question = inspect.signature(search_candidates).parameters["tags_per_repo"].default
+    by_vector = inspect.signature(search_candidates_by_vector).parameters["tags_per_repo"].default
+    assert by_question == by_vector == 20
