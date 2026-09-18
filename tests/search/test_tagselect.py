@@ -254,6 +254,36 @@ def test_lines_take_turns_up_to_the_limit():
     assert [t.tag for t in select_tags(tags, limit=3)] == ["26", "24", "22"]
 
 
+def test_the_limit_can_stop_a_round_midway():
+    """줄기가 상한보다 많으면 한 바퀴를 다 돌기 전에 멈춘다."""
+    tags = [ref(1, "26"), ref(2, "24"), ref(3, "22")]
+    assert [t.tag for t in select_tags(tags, limit=2)] == ["26", "24"]
+
+
+def test_patch_pins_do_not_outvote_a_single_minor_line():
+    """패치 고정 태그 둘은 두 줄기가 아니라 한 줄기의 스냅샷이다.
+
+    둘을 줄기로 세면 자릿수 3이 뽑혀 별칭이 빠지고 3.14.7, 3.14.6만 남는다.
+    """
+    tags = [
+        ref(1, "3.14-alpine"),
+        ref(2, "3.14-slim"),
+        ref(3, "3.14.7"),
+        ref(4, "3.14.6"),
+    ]
+    assert [t.tag for t in select_tags(tags, limit=10)] == ["3.14-slim", "3.14-alpine"]
+
+
+def test_patch_lines_are_used_when_no_shorter_alias_exists():
+    """별칭이 패치 자릿수에만 있으면 그 자릿수를 줄기로 쓴다. 폴백이면 latest가 섞인다."""
+    tags = [
+        ref(1, "latest", pushed=NOW),
+        ref(2, "1.2.3", pushed=NOW - DAY),
+        ref(3, "1.2.4", pushed=NOW - 2 * DAY),
+    ]
+    assert [t.tag for t in select_tags(tags, limit=10)] == ["1.2.4", "1.2.3"]
+
+
 def test_a_date_snapshot_is_not_a_release_line():
     """alpine의 20260805는 edge 스냅샷이다. 버전처럼 보여도 줄기로 세면 단위가 메이저로 틀어진다."""
     tags = [

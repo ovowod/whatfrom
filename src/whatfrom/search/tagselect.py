@@ -114,6 +114,9 @@ def _line_depth(tags: list[TagRef]) -> int | None:
     자릿수를 쓴다. python은 메이저 3 하나뿐이라 마이너 단위가 되고, node는 26·24·22가
     있어 메이저 단위가 된다. 지원 판정을 여기에 섞으면, 지원 줄기가 하나뿐인
     리포지토리가 폴백으로 떨어져 끝난 줄기까지 되살아난다.
+
+    패치 자릿수는 "둘 이상" 규칙에 넣지 않는다. 3.14.7과 3.14.6은 한 줄기의
+    스냅샷인데, 둘로 세면 마이너 줄기가 하나뿐인 리포지토리에서 별칭이 빠진다.
     """
     alias_lines: dict[int, set[str]] = {}
     for depth in range(1, MAX_LINE_DEPTH + 1):
@@ -123,10 +126,12 @@ def _line_depth(tags: list[TagRef]) -> int | None:
             if line is not None and _is_alias(ref.tag, line):
                 found.add(line)
         alias_lines[depth] = found
-    for needed in (2, 1):
-        for depth in range(1, MAX_LINE_DEPTH + 1):
-            if len(alias_lines[depth]) >= needed:
-                return depth
+    for depth in range(1, MAX_LINE_DEPTH):
+        if len(alias_lines[depth]) >= 2:
+            return depth
+    for depth in range(1, MAX_LINE_DEPTH + 1):
+        if alias_lines[depth]:
+            return depth
     return None
 
 
