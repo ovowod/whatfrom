@@ -56,6 +56,32 @@ def constant_baseline(cases: list[GoldenCase]) -> ConstantBaseline:
 
 
 @dataclass(frozen=True)
+class RandomBaseline:
+    """후보 중 하나를 무작위로 고르는 대조군의 기대 정확도.
+
+    후보에 정답이 많으면 질문을 읽지 않고 골라도 자주 맞는다. 추천 정확도가
+    후보 구성 덕인지 판단하려면 이 값과 나란히 봐야 한다.
+    """
+
+    # 측정 문항이 없으면 None. 0%가 아니라 미측정이다.
+    expected: float | None
+    total: int
+
+
+def random_baseline(scores: list[CaseScore] | list[RetrievalScore]) -> RandomBaseline:
+    """문항마다 "후보 중 정답 수 ÷ 후보 수"를 구해 평균한다.
+
+    후보를 모두 합쳐 나누지 않는다. 무작위 선택은 문항마다 따로 일어나므로, 합치면
+    후보가 많은 문항이 결과를 좌우한다. 후보가 없는 문항은 맞힐 수 없으니 0으로 센다.
+    분모는 전체 후보다. 정답 리포지토리의 후보로 좁히지 않는다.
+    """
+    if not scores:
+        return RandomBaseline(expected=None, total=0)
+    ratios = [s.accepted_count / s.candidate_count if s.candidate_count else 0.0 for s in scores]
+    return RandomBaseline(expected=sum(ratios) / len(ratios), total=len(ratios))
+
+
+@dataclass(frozen=True)
 class Skipped:
     case_id: str
     missing: list[str]
@@ -132,6 +158,15 @@ def _format_baseline(baseline: ConstantBaseline) -> str:
     )
 
 
+def _format_random_baseline(baseline: RandomBaseline) -> str:
+    if baseline.expected is None:
+        return "※ 무작위 선택 대조군: 측정 문항이 없어 계산할 수 없다 (지표 아님)"
+    return (
+        f"※ 무작위 선택 대조군 — 후보 중 하나를 무작위로 고르면 기대 정확도 "
+        f"{baseline.expected:.1%} (측정 {baseline.total}문항, 지표 아님)"
+    )
+
+
 def _failure_line(score: CaseScore, case: GoldenCase | None, width: int) -> str:
     """실패 문항을 출력한다. width는 목록에서 가장 긴 문항 ID의 표시 너비다."""
     case_id = _pad(score.case_id, width)
@@ -154,6 +189,7 @@ def render_summary(
     total_cases: int,
     meta: dict,
     baseline: ConstantBaseline | None = None,
+    random: RandomBaseline | None = None,
 ) -> str:
     by_id = {case.id: case for case in cases}
     missing_repos = sorted({repo for s in skipped for repo in s.missing})
@@ -178,6 +214,9 @@ def render_summary(
         headline += f" · {tag_filtered}문항 태그 필터 제외"
     lines += [headline, ""]
     lines += [_format_metric(m) for m in metrics]
+    # 후보만 있으면 계산되므로 고정답 대조군과 달리 검색 전용 모드에도 나온다.
+    if random is not None:
+        lines += ["", _format_random_baseline(random)]
     # 추천 정확도를 읽기 위한 기준선이므로 그것이 없는 실행(--retrieval-only)에는
     # 놓일 자리가 없다. 호출자가 넘겨도 여기서 걸러 둘이 어긋나지 않게 한다.
     if baseline is not None and any(m.label == "추천 정확도" for m in metrics):
@@ -198,6 +237,7 @@ def result_document(
     skipped: list[Skipped],
     meta: dict,
     baseline: ConstantBaseline | None = None,
+    random: RandomBaseline | None = None,
 ) -> dict:
     """저장용 JSON. 실행 메타가 없으면 나중에 점수를 비교할 수 없다."""
     document: dict = {
@@ -209,4 +249,6 @@ def result_document(
     # 전달받은 대조군을 저장한다. 검색 전용 실행에서는 호출자가 None을 넘긴다.
     if baseline is not None:
         document["constant_baseline"] = asdict(baseline) | {"ratio": baseline.ratio}
+    if random is not None:
+        document["random_baseline"] = asdict(random)
     return document

@@ -177,6 +177,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
         aggregate_full,
         aggregate_retrieval,
         constant_baseline,
+        random_baseline,
         render_summary,
         result_document,
     )
@@ -277,19 +278,21 @@ def cmd_eval(args: argparse.Namespace) -> None:
     # 전체 모드의 추천 정확도와 비교할 고정답 기준선을 계산한다.
     # 측정 문항의 accept 목록만 사용하며 추가 DB 조회나 모델 호출은 없다.
     baseline = None if args.retrieval_only else constant_baseline(measured)
+    # 후보 기록만으로 계산하므로 두 모드 모두 구한다.
+    random = random_baseline(scores)
 
     print()
-    if args.retrieval_only:
-        print(render_summary(metrics, [], measured, skipped, len(goldenset.cases), meta))
-    else:
-        print(
-            render_summary(metrics, scores, measured, skipped, len(goldenset.cases), meta, baseline)
+    failures = [] if args.retrieval_only else scores
+    print(
+        render_summary(
+            metrics, failures, measured, skipped, len(goldenset.cases), meta, baseline, random
         )
+    )
 
     out = results_dir / f"{started_at.strftime('%Y-%m-%dT%H-%M-%S')}.json"
     out.write_text(
         json.dumps(
-            result_document(metrics, scores, skipped, meta, baseline),
+            result_document(metrics, scores, skipped, meta, baseline, random),
             ensure_ascii=False,
             indent=2,
         ),

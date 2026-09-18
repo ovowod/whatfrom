@@ -376,3 +376,35 @@ def test_max_size_condition_uses_the_smallest_matching_platform() -> None:
     )
 
     assert conditions_satisfied(Conditions(max_size_mb=200), candidate) is True
+
+
+def test_score_retrieval_records_the_offered_candidates() -> None:
+    """후보 목록과 그중 정답 수를 남겨야 무작위 선택 기대값을 다시 구할 수 있다."""
+    case = make_case(accept=["python:3.13-slim", "python:3.13"])
+    candidates = [make_candidate("3.13-slim"), make_candidate("3.13"), make_candidate("3.14")]
+
+    score = score_retrieval(case, candidates, [])
+
+    assert score.candidate_count == 3
+    assert score.accepted_count == 2
+    assert score.candidate_images == ["python:3.13-slim", "python:3.13", "python:3.14"]
+
+
+def test_score_retrieval_records_zero_when_there_are_no_candidates() -> None:
+    score = score_retrieval(make_case(), [], [])
+
+    assert score.candidate_count == 0
+    assert score.accepted_count == 0
+    assert score.candidate_images == []
+
+
+def test_score_full_propagates_the_candidate_record() -> None:
+    """전체 모드 JSON은 CaseScore를 저장한다. 여기에 옮기지 않으면 기록이 사라진다."""
+    case = make_case(accept=["python:3.13-slim"])
+    candidates = [make_candidate("3.13-slim"), make_candidate("3.14")]
+
+    score = score_full(case, make_response("python:3.13-slim", candidates), [], True)
+
+    assert score.candidate_count == 2
+    assert score.accepted_count == 1
+    assert score.candidate_images == ["python:3.13-slim", "python:3.14"]

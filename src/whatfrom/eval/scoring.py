@@ -11,6 +11,11 @@ class RetrievalScore:
 
     case_id: str
     candidate_hit: bool
+    # 무작위 선택 대조군과 사후 분석에 쓴다. 결과 JSON에 후보가 없으면
+    # 같은 DB와 임베딩 모델로 검색을 다시 돌려야 알 수 있다.
+    candidate_count: int
+    accepted_count: int
+    candidate_images: list[str]
     hit_declared: bool
     hit_at5: bool
 
@@ -48,9 +53,14 @@ def score_retrieval(
 ) -> RetrievalScore:
     """sections는 상위 청크의 (리포, 섹션 제목) 쌍이다. 러너가 문서에서 뽑아 넘긴다."""
     declared = bool(case.expected_sections)
+    images = [c.image for c in candidates]
+    accept = set(case.accept)
     return RetrievalScore(
         case_id=case.id,
         candidate_hit=_candidate_hit(case, candidates),
+        candidate_count=len(images),
+        accepted_count=sum(image in accept for image in images),
+        candidate_images=images,
         hit_declared=declared,
         hit_at5=declared and _hit_at5(case, sections),
     )
@@ -120,6 +130,9 @@ class CaseScore:
     # 지표가 아니라 경보다. 리포트의 실패 목록에 표시된다.
     rejected_pick: bool
     candidate_hit: bool
+    candidate_count: int
+    accepted_count: int
+    candidate_images: list[str]
     # 추천이 없으면 None. 분모에서 빠진다.
     tag_real: bool | None
     conditions_declared: bool
@@ -174,6 +187,9 @@ def score_full(
         accurate=image is not None and image in case.accept,
         rejected_pick=image is not None and image in case.reject,
         candidate_hit=retrieval.candidate_hit,
+        candidate_count=retrieval.candidate_count,
+        accepted_count=retrieval.accepted_count,
+        candidate_images=retrieval.candidate_images,
         # 추천이 없으면 호출자가 무엇을 넘겼든 None이다. 답하지 않은 것을
         # "환각하지 않았음"으로 세면 저하가 잦을수록 점수가 오른다.
         tag_real=recommended_image_exists if image is not None else None,

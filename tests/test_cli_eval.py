@@ -49,19 +49,23 @@ def shared_engine(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli, "make_engine", lambda _url: engine)
 
 
-def run(goldenset: Path, results_dir: Path) -> dict:
+def run_document(goldenset: Path, results_dir: Path, retrieval_only: bool = True) -> dict:
     args = argparse.Namespace(
         goldenset=str(goldenset),
         results_dir=str(results_dir),
         tags="",
-        retrieval_only=True,
+        retrieval_only=retrieval_only,
         embedder="fake",
         llm_provider="fake",
         database_url="",
     )
     cmd_eval(args)
     result = next(iter(results_dir.glob("*.json")))
-    return json.loads(result.read_text(encoding="utf-8"))["meta"]
+    return json.loads(result.read_text(encoding="utf-8"))
+
+
+def run(goldenset: Path, results_dir: Path) -> dict:
+    return run_document(goldenset, results_dir)["meta"]
 
 
 def test_run_metadata_records_the_goldenset_content_hash(tmp_path: Path) -> None:
@@ -101,6 +105,23 @@ def test_run_metadata_records_when_the_goldenset_was_verified(tmp_path: Path) ->
     meta = run(goldenset, tmp_path / "results")
 
     assert meta["goldenset_verified_on"] == "2026-09-12"
+
+
+@pytest.mark.parametrize("retrieval_only", [True, False])
+def test_both_modes_report_and_save_the_random_baseline(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], retrieval_only: bool
+) -> None:
+    """무작위 선택 대조군은 후보만 있으면 계산되므로 두 모드가 각자 출력하고 저장한다.
+
+    측정 문항이 없으면 0%가 아니라 미측정이다.
+    """
+    goldenset = tmp_path / "goldenset.yaml"
+    goldenset.write_text(GOLDENSET, encoding="utf-8")
+
+    document = run_document(goldenset, tmp_path / "results", retrieval_only)
+
+    assert document["random_baseline"] == {"expected": None, "total": 0}
+    assert "무작위 선택 대조군" in capsys.readouterr().out
 
 
 def _repository(name: str) -> Repository:
