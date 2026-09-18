@@ -19,8 +19,12 @@
 # 3.14와 3.13 계열을 허용한다. 3.12 이하는 버전이 명시된 문항에서만 허용한다.
 # 이 정책과 아래 라벨의 시점은 verified_on을 기준으로 해석한다.
 version: 1
-# 아래 라벨들이 인용한 출처를 마지막으로 열어 확인한 날이다. latest가 무엇인지,
+# 아래 라벨들이 인용한 출처를 마지막으로 전부 열어 확인한 날이다. latest가 무엇인지,
 # 어느 버전이 LTS인지, 최신 패치가 몇인지는 시간이 지나면 낡는다.
+# 2026-09-18에는 네 문항만 다시 검토했다. python-arm64-only·node-arm64-graviton은
+# 질문에 런타임을, postgres-ci-ephemeral·redis-cache-sidecar는 질문에 제품명을
+# 넣고 허용 목록과 근거를 고쳤다. 나머지 문항의 출처는 다시 열지 않았으므로
+# 이 날짜는 전체 검토일로 둔다. 두 문항의 근거 안에 판단 기준일을 따로 적었다.
 verified_on: 2026-09-12
 cases:
   - id: python-numpy-arm64
@@ -403,8 +407,8 @@ cases:
 
   - id: python-arm64-only
     question: |
-      AWS Graviton 인스턴스에서만 돌릴 거라 ARM64만 지원되면 돼.
-      x86 빌드는 아예 필요 없어. 멀티아키 이미지여도 상관없고 arm64에서
+      파이썬 서비스를 AWS Graviton 인스턴스에서만 돌릴 거라 ARM64만
+      지원되면 돼. x86 빌드는 아예 필요 없어. 멀티아키 이미지여도 상관없고 arm64에서
       확실히 도는 태그를 알려줘.
     requires_repositories: [python]
     tags: [arch]
@@ -738,8 +742,8 @@ cases:
 
   - id: node-arm64-graviton
     question: |
-      AWS Graviton 노드풀에만 배포할 거라 arm64에서만 돌면 돼. 크기 때문에
-      alpine으로 가려고 했는데 괜찮을까?
+      Node.js 서비스를 AWS Graviton 노드풀에만 배포할 거라 arm64에서만
+      돌면 돼. 크기 때문에 alpine으로 가려고 했는데 괜찮을까?
     requires_repositories: [node]
     tags: [arch, distro]
     accept:
@@ -941,7 +945,7 @@ cases:
 
   - id: postgres-ci-ephemeral
     question: |
-      CI 통합테스트에서 잡마다 새로 띄우고 끝나면 버리는 DB야. 확장은
+      PostgreSQL을 CI 통합테스트에서 잡마다 새로 띄우고 끝나면 버리는 DB로 써. 확장은
       안 쓰고 데이터도 안 남겨. 테스트는 정렬 순서나 문자열 비교 결과에
       의존하지 않아서 ORDER BY 결과를 단정하는 단언은 없어. 러너가 매번
       pull 하니까 가벼웠으면 좋겠어.
@@ -956,6 +960,15 @@ cases:
       - postgres:16-alpine
       - postgres:18.6-alpine3.24
       - postgres:16-alpine3.24
+      - postgres:18-alpine3.23
+      - postgres:17-alpine3.23
+      - postgres:16-alpine3.23
+      - postgres:15-alpine
+      - postgres:15-alpine3.24
+      - postgres:15-alpine3.23
+      - postgres:14-alpine
+      - postgres:14-alpine3.24
+      - postgres:14-alpine3.23
     reject:
       - postgres:19beta3-alpine
       - postgres:latest
@@ -976,7 +989,18 @@ cases:
         이 문항에서 alpine이 답이 되는 근거는 "데이터를 안 남긴다"가 아니라
         질문이 명시한 "테스트가 정렬 순서나 문자열 비교에 의존하지 않는다"
         쪽이다. 그 전제가 없으면 collation 차이는 그대로 위험이다.
-        CI는 재현성이 생명이라 beta나 이동 태그를 기준으로 삼을 수 없다.
+        CI가 매번 다른 메이저를 받으면 재현성이 깨지므로 프리릴리스인 beta와
+        메이저가 바뀔 수 있는 latest는 뺀다. `18-alpine` 같은 메이저 별칭도
+        패치와 alpine 버전은 따라 움직이지만 메이저는 고정된다. 이미지까지
+        완전히 고정하려면 digest로 받아야 하며, 그것은 태그 선택과 별개다.
+        메이저는 좁히지 않는다. 질문에 버전도 사용 기간도 없어서, 판단
+        기준일(2026-09-18)에 지원 중인 18·17·16·15·14는 모두 요구를
+        만족한다. 다만 14는 2026-11-12에 마지막 마이너를 받고 끝나므로
+        새로 고정한다면 더 뒤까지 지원되는 메이저가 낫다. 덜 권장될 뿐
+        틀린 답은 아니라 accept에 둔다. 15 미만 alpine이 ICU 로케일을
+        지원하지 않는다는 제약은 위의 전제 때문에 걸리지 않는다.
+        alpine3.23 고정 태그도 넣는다. alpine 3.23은 지원 중인 브랜치이고
+        공식 이미지가 3.24와 나란히 계속 발행한다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/postgres/README.md
         - https://hub.docker.com/_/postgres
@@ -985,7 +1009,7 @@ cases:
 
   - id: redis-cache-sidecar
     question: |
-      웹앱 세션이랑 조회 결과만 담아두는 캐시야. 날아가도 다시 채우면 되고
+      Redis에 웹앱 세션이랑 조회 결과만 담아두는 캐시야. 날아가도 다시 채우면 되고
       영속성은 필요 없어. 파드에 사이드카로 붙일 거라 작을수록 좋아.
     requires_repositories: [redis]
     tags: [size]
@@ -997,6 +1021,13 @@ cases:
       - redis:7-alpine
       - redis:7.4-alpine
       - redis:8.10-alpine3.23
+      - redis:8.8-alpine
+      - redis:8.6-alpine
+      - redis:8.4-alpine
+      - redis:8.2-alpine
+      - redis:7.2-alpine
+      - redis:6-alpine
+      - redis:6.2-alpine
     reject:
       - redis:8
       - redis:8-trixie
@@ -1009,10 +1040,18 @@ cases:
         런타임처럼 의존성 설치를 흔들 지점이 없다. 공식 README가 alpine
         변형을 최종 이미지 크기가 최우선일 때의 선택지로 명시하고 그 베이스는
         약 5MB다. 크기가 요구의 1순위이므로 데비안 기본 태그는 어긋난다.
+        줄기는 좁히지 않는다. 질문에 버전 제약이 없고, 판단 기준일
+        (2026-09-18)에 Redis 버전 관리 문서가 8.10·8.8·8.6·8.4·8.2·7.4·7.2·6.2를
+        모두 지원 중으로 표시한다. 6.2는 Extended 릴리스로 2027-04-01까지,
+        7.2는 2029-12-01까지 지원되고, 보안 정책도 6.2.x를 연장 지원으로
+        적는다. 그래서 지금 발행되는 이 줄기들의 alpine 별칭을 모두 accept에
+        둔다. 8.0은 지원 중이지만 공식 이미지가 더는 발행하지 않아 넣지 않는다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/redis/README.md
         - https://hub.docker.com/_/redis
         - https://docs.docker.com/build/building/best-practices/
+        - https://redis.io/docs/latest/operate/oss_and_stack/install/version-mgmt/
+        - https://github.com/redis/redis/security/policy
 
   - id: redis-version-pinned-7
     question: |
