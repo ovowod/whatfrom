@@ -43,6 +43,7 @@
 # 정답이며, 답이 지켜야 할 조건(conditions)과 다르다. conditions에는 문서 지식에서 나온
 # 조건(torch → alpine 제외)도 있지만 expected_plan에는 질문에 적힌 것만 적는다.
 #   - 묻기만 한 것("alpine으로 가도 괜찮아?", "a와 b가 뭐가 달라?")은 조건이 아니다.
+#     비교하려고 적은 태그의 버전("python:3.14랑 3.14-slim")도 요구가 아니다.
 #   - 사용자가 안 된다고 말한 것("alpine에서 깨진다")은 제외 조건이다.
 #   - 지정과 제외가 함께 나오면 둘 다 적는다.
 #   - 다른 이미지의 베이스로 적힌 우분투 릴리스는 코드네임으로 적는다(22.04 → jammy).
@@ -60,7 +61,9 @@ version: 1
 # 고쳤다. 9-19에는 위 버전 원칙을 모든 문항에 적용해 허용 목록을 넓히고, 근거와
 # 어긋난 exclude_distributions 조건 4개를 빼고, 제품이 드러나지 않던 질문 7개에
 # 제품명을 넣었다. 버전 원칙의 출처는 9-19에 확인했지만 나머지 근거의 출처는 다시
-# 열지 않았으므로 이 날짜는 전체 검토일로 둔다.
+# 열지 않았으므로 이 날짜는 전체 검토일로 둔다. 9-19 뒤에 node-alpine-vs-slim의 허용
+# 목록을 위 버전 원칙대로 넓히고 nginx-stable-branch의 버전 조건을 되살렸지만, 근거의
+# 출처를 다시 열지 않아 날짜는 그대로다.
 verified_on: 2026-09-12
 cases:
   - id: python-numpy-arm64
@@ -1078,6 +1081,16 @@ cases:
       - node:lts-alpine
       - node:lts-bookworm
       - node:lts-bookworm-slim
+      - node:26
+      - node:26-bookworm
+      - node:26-slim
+      - node:26-bookworm-slim
+      - node:26-alpine
+      - node:22
+      - node:22-bookworm
+      - node:22-slim
+      - node:22-bookworm-slim
+      - node:22-alpine
     reject:
       - node:latest
     expected_sections: [Image Variants]
@@ -1089,11 +1102,14 @@ cases:
         buildpack-deps 기반이라 흔한 데비안 패키지를 대량 포함하고(그래서
         크다), slim은 node 실행에 필요한 최소 패키지만 담고, alpine은
         glibc 대신 musl libc를 쓰는 약 5MB 베이스 위에 올라간다. 셋을
-        비교한 질문이므로 셋 다 accept다.
+        비교한 질문이므로 셋 다 accept다. 질문의 24는 비교하려고 적은
+        태그일 뿐 요구가 아니므로, 버전 원칙대로 지원 중인 26·24·22 줄기를
+        모두 허용한다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/node/README.md
         - https://raw.githubusercontent.com/nodejs/docker-node/main/README.md
         - https://hub.docker.com/_/node
+        - https://github.com/nodejs/Release
 
   - id: postgres-prod-default
     question: |
@@ -1494,6 +1510,8 @@ cases:
       - nginx:1.31.5
       - nginx:mainline
       - nginx:latest
+    conditions:
+      version_prefix: "1.30"
     expected_sections: [Supported tags]
     expected_plan: {}
     rationale:
@@ -1503,16 +1521,16 @@ cases:
         따로 켜는 구조다. 공식 이미지의 태그 목록에서 `stable`/`1.30`이
         stable 브랜치를, `mainline`/`1`/`latest`가 1.31.5를 가리킨다.
         규정이 stable을 못 박았으므로 latest는 요구를 정면으로 어긴다.
-        version_prefix "1.30"을 뺐다. 이 요구가 못 박은 것은 숫자 버전이
-        아니라 브랜치이고, 공식 README의 태그 목록은 `1.30.4`·`stable`·
-        `1.30`을 한 줄에, `1.30.4-trixie`·`stable-trixie`·`1.30-trixie`를
-        다음 줄에, `1.30.4-alpine`·`stable-alpine`·`1.30-alpine`을 또
-        다음 줄에 묶는다. 즉 `stable` 계열은 1.30.4와 같은 이미지의 다른
-        이름이다. 그런데 조건 판정은 태그 문자열의 숫자 접두만 보므로
-        같은 이미지인데 이름이 stable이라는 이유로 조건 위반이 된다.
-        정답이라고 적어 둔 답이 같은 문항의 요구를 어긴다고도 적히는
-        모순이라, 별칭을 accept에서 빼는 대신 이 요구를 표현하지 못하는
-        조건 쪽을 뺐다. 브랜치 요구를 담을 필드가 Conditions에 없다.
+        공식 README의 태그 목록은 `1.30.4`·`stable`·`1.30`을 한 줄에,
+        `1.30.4-trixie`·`stable-trixie`·`1.30-trixie`를 다음 줄에,
+        `1.30.4-alpine`·`stable-alpine`·`1.30-alpine`을 또 다음 줄에
+        묶는다. 즉 `stable` 계열은 1.30.4와 같은 이미지의 다른 이름이다.
+        조건 version_prefix "1.30"을 둔다. 조건은 태그의 파생 값으로
+        판정하므로 `stable` 계열은 같은 이미지인 `1.30`에서 버전 1.30을
+        물려받아 통과하고, `mainline`·`latest`는 1.31이라 걸린다. 태그
+        이름으로만 판정하던 때는 `stable`이 조건 위반이 되는 모순 때문에
+        이 조건을 뺐었다. expected_plan에는 버전을 적지 않는다. 질문이
+        못 박은 것은 번호가 아니라 브랜치다.
       sources:
         - https://nginx.org/en/download.html
         - https://nginx.org/en/linux_packages.html
@@ -1964,15 +1982,14 @@ cases:
         고정한다. 주의할 것은 지금 `latest`와 `rolling`이 둘 다 26.04
         (resolute)를 가리킨다는 점이다. "latest는 LTS니까 안전하다"는 통념에
         기대면 24.04 전용 저장소를 쓰는 이 요구는 그대로 깨진다.
-        version_prefix "24.04"를 뺐다. 공식 README의 태그 목록이
-        `24.04`·`noble-20260905`·`noble`을 한 줄에 묶으므로 셋은 같은
-        이미지이고, 사용자가 코드네임으로 써야 하느냐고 물은 문항에서
-        코드네임 답은 오답일 수 없다. 그런데 조건 판정은 태그 문자열이
-        "24.04"로 시작하는지만 보므로 `noble`과 `noble-20260905`가 같은
-        이미지인데도 조건 위반으로 떨어진다. 정답과 조건 위반이 같은
-        답에 동시에 붙는 모순이라, 별칭을 accept에서 빼는 대신 조건을
-        뺐다. 별칭이 어느 릴리스를 가리키는지는 태그 문자열이 아니라
-        README의 묶음이 정하는 것이고 Conditions에는 그 필드가 없다.
+        conditions에 version_prefix "24.04"를 두지 않는다. 조건은 태그의
+        파생 값으로 판정하므로 `noble`은 같은 이미지인 `24.04`에서 버전을
+        물려받아 통과한다. 그러나 날짜 태그는 새 빌드가 나오면 `24.04`와
+        digest가 갈라진다. 2026-09-19 수집 기준 `noble-20260905`는 이전
+        빌드라 같은 이미지의 번호 태그가 없어 파생 버전이 비어 있고,
+        태그 이름으로 판정하면 "24.04"로 시작하지 않아 조건 위반이 된다.
+        빌드까지 고정한 올바른 답을 accept에서 빼는 대신 조건을 두지
+        않는다. 24.04 밖의 답은 허용 목록 밖이라 추천 정확도에서 오답이다.
       sources:
         - https://hub.docker.com/_/ubuntu
         - https://raw.githubusercontent.com/docker-library/docs/master/ubuntu/README.md

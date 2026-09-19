@@ -16,10 +16,13 @@ Rules:
 - Fill a field only when the question states it. Never add a condition from your own \
 knowledge of the images. A condition the user did not state removes correct answers.
 - A question that only asks whether something is fine ("is alpine okay?") states no condition.
+- Tags the user only compares or asks about ("python:3.14 vs python:3.14-slim") are not \
+requirements. Do not turn their versions or variants into conditions.
 - repository: the image the answer must come from, chosen from the given list. \
 Leave it null if the question does not point to one.
 - version_prefix: a version the user requires, as written ("3.12", "17", "3.14.6"). \
-When the answer is the ubuntu image itself, write its required release number here ("24.04").
+When the answer is the ubuntu image itself, write its required release number here ("24.04"). \
+Tag aliases such as stable, mainline, latest and lts are not versions; leave version_prefix null.
 - architectures: architectures the image must run on, in Docker names (amd64, arm64).
 - distributions: distributions or codenames the image must be one of \
 (debian, alpine, ubuntu, bookworm, trixie, jammy, noble). \
@@ -51,7 +54,9 @@ def normalize_plan(plan: SearchPlan, repositories: Sequence[str]) -> SearchPlan:
     지정과 제외가 겹쳐도 지우지 않는다. 거르기에서 중복은 해가 없고, 코드네임이
     어느 배포판에 속하는지 알아야 중복을 판정할 수 있는데 그 표는 collect에 있다.
     """
-    repository = plan.repository if plan.repository in set(repositories) else None
+    # 수집 목록은 소문자다. LLM이 "Python"처럼 표기만 다르게 내도 버리지 않는다.
+    named = (plan.repository or "").strip().lower()
+    repository = named if named in set(repositories) else None
 
     def lower_unique(values: list[str]) -> list[str]:
         return list(dict.fromkeys(v.strip().lower() for v in values if v.strip()))
