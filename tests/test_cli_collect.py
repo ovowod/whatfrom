@@ -38,6 +38,19 @@ def repository_payload(name: str) -> httpx2.Response:
     )
 
 
+def readmes(texts: dict[str, str]):
+    """README 원본 받기를 흉내 낸다. 없는 리포는 GitHub 404처럼 실패한다."""
+
+    def fetch(repository: str) -> str:
+        if repository not in texts:
+            raise httpx2.HTTPStatusError(
+                "404", request=httpx2.Request("GET", repository), response=httpx2.Response(404)
+            )
+        return texts[repository]
+
+    return fetch
+
+
 @pytest.fixture
 def cleanup(engine):
     names: list[str] = []
@@ -108,7 +121,13 @@ def test_run_index_keeps_going_and_reports_failure(engine, cleanup):
     cleanup.extend(["cli-index-bad", "cli-index-ok"])
     client = hub({"/v2/repositories/library/cli-index-ok/": repository_payload("cli-index-ok")})
 
-    code = run_index(engine, client, FakeEmbedder(), ["cli-index-bad", "cli-index-ok"])
+    code = run_index(
+        engine,
+        client,
+        FakeEmbedder(),
+        ["cli-index-bad", "cli-index-ok"],
+        readmes({"cli-index-bad": "# A\n\na.\n", "cli-index-ok": "# A\n\na.\n"}),
+    )
 
     assert code == 1
     with session_scope(engine) as session:
@@ -116,6 +135,64 @@ def test_run_index_keeps_going_and_reports_failure(engine, cleanup):
             select(Document.id).where(Document.repository == "cli-index-ok")
         )
         assert list(documents.scalars())
+
+
+def test_run_index_indexes_the_docs_readme_not_the_hub_description(engine, cleanup):
+    """Hub 본문은 25,000자에서 잘린다. 본문은 원본에서 받고 출처도 원본 문서다."""
+    cleanup.append("cli-index-docs")
+    client = hub({"/v2/repositories/library/cli-index-docs/": repository_payload("cli-index-docs")})
+    full = "# Quick reference\n\nlinks.\n\n# License\n\nMIT.\n"
+
+    code = run_index(
+        engine, client, FakeEmbedder(), ["cli-index-docs"], readmes({"cli-index-docs": full})
+    )
+
+    assert code == 0
+    with session_scope(engine) as session:
+        rows = session.execute(
+            select(Document.section_title, Document.source_url).where(
+                Document.repository == "cli-index-docs"
+            )
+        ).all()
+    assert {title for title, _ in rows} == {"Quick reference", "License"}
+    assert {url for _, url in rows} == {
+        "https://github.com/docker-library/docs/blob/master/cli-index-docs/README.md"
+    }
+
+
+def test_run_index_fails_a_repository_whose_readme_cannot_be_fetched(engine, cleanup):
+    """잘린 Hub 본문으로 대신하지 않는다. 그 리포만 실패로 세고 이전 색인은 남긴다."""
+    cleanup.extend(["cli-index-kept", "cli-index-next"])
+    client = hub(
+        {
+            "/v2/repositories/library/cli-index-kept/": repository_payload("cli-index-kept"),
+            "/v2/repositories/library/cli-index-next/": repository_payload("cli-index-next"),
+        }
+    )
+    run_index(
+        engine,
+        client,
+        FakeEmbedder(),
+        ["cli-index-kept"],
+        readmes({"cli-index-kept": "# A\n\na.\n"}),
+    )
+
+    code = run_index(
+        engine,
+        client,
+        FakeEmbedder(),
+        ["cli-index-kept", "cli-index-next"],
+        readmes({"cli-index-next": "# B\n\nb.\n"}),
+    )
+
+    assert code == 1
+    with session_scope(engine) as session:
+        titles = session.execute(
+            select(Document.repository, Document.section_title).where(
+                Document.repository.in_(["cli-index-kept", "cli-index-next"])
+            )
+        ).all()
+    assert sorted(titles) == [("cli-index-kept", "A"), ("cli-index-next", "B")]
 
 
 def test_max_pages_rejects_values_below_one():
@@ -165,7 +242,7 @@ def test_cmd_index_all_uses_official_repositories_and_exits_on_failure(monkeypat
     args = build_parser().parse_args(["index", "--all"])
     recorded = {}
 
-    def fake_run_index(engine, client, embedder, repositories):
+    def fake_run_index(engine, client, embedder, repositories, fetch_readme):
         recorded["repositories"] = repositories
         return 1
 

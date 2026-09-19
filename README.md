@@ -91,6 +91,10 @@ uv run uvicorn whatfrom.api:app
 digest가 없는 오래된 태그는 같은 이미지인지 판단할 수 없어 매번 다시 쓴다.
 하나의 리포지토리만 다룰 때는 `--all` 대신 이름을 넘긴다(`collect python`).
 
+`index`는 README 본문을 Docker Hub가 아니라 GitHub의 [docker-library/docs](https://github.com/docker-library/docs) 원본에서 받는다.
+Hub 본문은 25,000자에서 잘려 postgres는 Image Variants 절이 빠지고 eclipse-temurin은 태그 목록이 줄어든다.
+원본을 받지 못한 리포지토리는 실패로 표시하고 이전 색인을 그대로 둔다. 근거 청크의 출처 URL도 이 원본 문서다.
+
 수집을 마치면 태그의 버전·배포판·코드네임·변형을 파생 컬럼에 채운다. 이름에 없는 값은 같은 이미지를 가리키는 다른 태그에서 가져온다.
 예를 들어 `python:3.14`는 Linux 이미지가 `3.14-trixie`와 같아서 debian trixie가 된다.
 이미 수집된 DB는 Docker Hub를 다시 부르지 않고 채울 수 있다.
