@@ -112,6 +112,10 @@ def aggregate_full(scores: list[CaseScore]) -> list[Metric]:
             sum(s.hit_at5 for s in scores if s.hit_declared),
             sum(s.hit_declared for s in scores),
         ),
+        # 검색 조건 추출(LLM #1)의 품질. 추출에 실패한 문항은 실패로 센다.
+        Metric("리포 추출 일치율", sum(s.repository_extracted for s in scores), len(scores)),
+        # 분모가 전체다. 조건이 없는 문항에서 없는 조건을 만들어내는 것도 실패다.
+        Metric("조건 추출 일치율", sum(s.plan_matched for s in scores), len(scores)),
     ]
 
 
@@ -136,8 +140,8 @@ def _pad(text: str, width: int) -> str:
     return text + " " * max(width - _display_width(text), 0)
 
 
-# 지표 라벨 중 가장 넓은 "추천 정확도"가 11칸이다. 여유 한 칸을 더 둔다.
-_LABEL_WIDTH = 12
+# 지표 라벨 중 가장 넓은 "조건 추출 일치율"이 16칸이다. 여유 두 칸을 더 둔다.
+_LABEL_WIDTH = 18
 
 
 def _format_metric(metric: Metric) -> str:

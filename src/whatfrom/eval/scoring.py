@@ -1,9 +1,9 @@
 # src/whatfrom/eval/scoring.py
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from whatfrom.core.contracts import Candidate, Platform, RecommendResponse
+from whatfrom.core.contracts import Candidate, Platform, RecommendResponse, SearchPlan
 from whatfrom.core.versions import extends_version
-from whatfrom.eval.goldenset import Conditions, GoldenCase
+from whatfrom.eval.goldenset import Conditions, ExpectedPlan, GoldenCase
 
 
 @dataclass(frozen=True)
@@ -147,7 +147,7 @@ def conditions_satisfied(conditions: Conditions, candidate: Candidate) -> bool:
 
 @dataclass(frozen=True)
 class CaseScore:
-    """문항 하나의 전체 채점 결과. 지표 6종이 이 레코드에서 집계된다."""
+    """문항 하나의 전체 채점 결과. 지표 8종이 이 레코드에서 집계된다."""
 
     case_id: str
     recommended_image: str | None
@@ -168,6 +168,28 @@ class CaseScore:
     hit_declared: bool
     hit_at5: bool
     degraded_note: str | None
+    # 검색 조건 추출(LLM #1). 추출에 실패했으면 plan과 plan_fields가 None이다.
+    plan: dict | None = None
+    repository_extracted: bool = False
+    plan_fields: dict[str, bool] | None = None
+    plan_matched: bool = False
+    # 조건 완화, 추출 실패 같은 응답 알림 전부.
+    notes: list[str] = field(default_factory=list)
+
+
+PLAN_LIST_FIELDS = ("architectures", "distributions", "exclude_distributions")
+PLAN_VALUE_FIELDS = ("version_prefix", "max_size_mb")
+
+
+def plan_field_matches(expected: ExpectedPlan, plan: SearchPlan) -> dict[str, bool]:
+    """필드별로 추출이 정답과 같은가. 목록은 순서와 중복을 보지 않는다."""
+    matches = {
+        name: set(getattr(plan, name)) == set(getattr(expected, name)) for name in PLAN_LIST_FIELDS
+    }
+    matches.update(
+        {name: getattr(plan, name) == getattr(expected, name) for name in PLAN_VALUE_FIELDS}
+    )
+    return matches
 
 
 def _sources_ok(response: RecommendResponse) -> bool:
@@ -193,7 +215,7 @@ def score_full(
     recommended_image_exists: bool | None,
     accepted_digests: frozenset[str] = frozenset(),
 ) -> CaseScore:
-    """지표 6종을 한 문항에 대해 채점한다.
+    """지표 8종을 한 문항에 대해 채점한다.
 
     recommended_image_exists는 러너가 DB에서 조회해 넘긴다. 응답만 보고 판정하면
     verify가 통과시킨 것을 그대로 다시 믿는 셈이라 불변식(스펙 §2)을 독립적으로
@@ -212,6 +234,10 @@ def score_full(
     by_name = image is not None and image in case.accept
     accurate = by_name or (
         recommended is not None and _is_accepted(case, recommended, accepted_digests)
+    )
+
+    fields = (
+        plan_field_matches(case.expected_plan, response.plan) if response.plan is not None else None
     )
 
     return CaseScore(
@@ -237,5 +263,13 @@ def score_full(
         sources_ok=_sources_ok(response),
         hit_declared=retrieval.hit_declared,
         hit_at5=retrieval.hit_at5,
-        degraded_note=response.notes[0] if recommendation is None and response.notes else None,
+        # 추천을 못 한 사유는 API가 맨 뒤에 붙인다. 앞에는 검색 단계의 알림이 올 수 있다.
+        degraded_note=response.notes[-1] if recommendation is None and response.notes else None,
+        plan=response.plan.model_dump() if response.plan is not None else None,
+        repository_extracted=(
+            response.plan is not None and response.plan.repository in case.requires_repositories
+        ),
+        plan_fields=fields,
+        plan_matched=fields is not None and all(fields.values()),
+        notes=list(response.notes),
     )

@@ -39,6 +39,18 @@
 # Express, Java 17, PostGIS 등)를 넣는다. "베이스를 최대한 작게"처럼 요구가
 # 제품을 정하는 경우는 예외로 둔다.
 #
+# 추출 정답: expected_plan은 질문에 **명시된** 검색 조건이다. 검색 조건 추출(LLM #1)의
+# 정답이며, 답이 지켜야 할 조건(conditions)과 다르다. conditions에는 문서 지식에서 나온
+# 조건(torch → alpine 제외)도 있지만 expected_plan에는 질문에 적힌 것만 적는다.
+#   - 묻기만 한 것("alpine으로 가도 괜찮아?", "a와 b가 뭐가 달라?")은 조건이 아니다.
+#   - 사용자가 안 된다고 말한 것("alpine에서 깨진다")은 제외 조건이다.
+#   - 지정과 제외가 함께 나오면 둘 다 적는다.
+#   - 다른 이미지의 베이스로 적힌 우분투 릴리스는 코드네임으로 적는다(22.04 → jammy).
+#     ubuntu 이미지 자체의 버전은 version_prefix에 번호로 적는다.
+#   - 크기는 숫자가 있을 때만 적는다. 40문항에는 없다.
+#   - 리포지토리는 적지 않는다. requires_repositories가 정답이다.
+#   - 모든 문항이 키를 가진다. 조건이 없으면 expected_plan: {}다.
+#
 # 조건: conditions는 필수 요구만 담는다. 근거가 "가능하지만 권하지 않는다"고 적은
 # 선택지는 accept에서 빼는 것으로만 표현하고, 조건으로 위반 처리하지 않는다.
 version: 1
@@ -87,6 +99,8 @@ cases:
     conditions:
       architectures: [arm64]
     expected_sections: [Image Variants]
+    expected_plan:
+      architectures: [arm64]
     rationale:
       note: |
         alpine을 reject에서 뺐다. python-scientific-stack과 같은 전제를
@@ -157,6 +171,7 @@ cases:
     conditions:
       max_size_mb: 100
     expected_sections: [Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         질문의 전제를 고쳤다. 전에는 "순수 파이썬이고 C 확장이 하나도
@@ -210,6 +225,8 @@ cases:
     conditions:
       version_prefix: "3.12"
     expected_sections: [Supported tags]
+    expected_plan:
+      version_prefix: "3.12"
     rationale:
       note: |
         3.12는 devguide 버전 표에서 security 단계이고 EOL이 2028-10이라
@@ -264,6 +281,7 @@ cases:
       - python:3.15.0b1-slim
       - python:3.15.0a8-slim
     expected_sections: [Image Variants, How to use this image]
+    expected_plan: {}
     rationale:
       note: |
         FastAPI 공식 배포 문서가 별도 베이스 이미지를 쓰지 말고 공식 python
@@ -318,6 +336,7 @@ cases:
       - python:3.15.0a8-slim
       - python:latest
     expected_sections: [Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         여기서 alpine을 reject에 넣지 않았다. pandas와 scipy는 지금 PyPI에
@@ -358,6 +377,7 @@ cases:
       - python:3.10-bookworm
     reject: []
     expected_sections: [Image Variants, How to use this image]
+    expected_plan: {}
     rationale:
       note: |
         기본 태그는 buildpack-deps 기반이라 흔한 데비안 개발 패키지를 이미
@@ -416,6 +436,7 @@ cases:
     conditions:
       version_prefix: "3.14"
     expected_sections: [Supported tags]
+    expected_plan: {}
     rationale:
       note: |
         devguide 버전 표에서 3.15는 prerelease이고 정식 릴리스가 아직
@@ -469,6 +490,8 @@ cases:
       - python:3.14
       - python:3.14-bookworm
     expected_sections: [Image Variants]
+    expected_plan:
+      distributions: [alpine]
     rationale:
       note: |
         사용자가 배포판을 조직 정책으로 못 박았으므로 여기서 알려줄 것은
@@ -507,6 +530,9 @@ cases:
     conditions:
       exclude_distributions: [alpine, trixie]
     expected_sections: [Image Variants, Supported tags]
+    expected_plan:
+      distributions: [bookworm]
+      exclude_distributions: [trixie]
     rationale:
       note: |
         공식 README가 bookworm/trixie는 데비안 릴리스의 suite 코드네임이고
@@ -564,6 +590,8 @@ cases:
     conditions:
       architectures: [arm64]
     expected_sections: [Quick reference]
+    expected_plan:
+      architectures: [arm64]
     rationale:
       note: |
         공식 python 이미지의 지원 아키텍처 목록에 arm64v8이 들어 있어서
@@ -615,6 +643,7 @@ cases:
     conditions:
       max_size_mb: 100
     expected_sections: [Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         click은 순수 파이썬이라 컴파일할 확장이 없고, 그러면 alpine의 musl
@@ -670,6 +699,7 @@ cases:
     conditions:
       exclude_distributions: [alpine]
     expected_sections: [Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         torch는 PyPI에 manylinux_2_28(x86_64/aarch64)·macOS·Windows 휠만
@@ -725,6 +755,7 @@ cases:
       - python:3.14-alpine
       - python:3.14-windowsservercore
     expected_sections: [Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         이 문항이 재는 것은 추천 자체보다 근거 문서를 제대로 끌어왔는지다.
@@ -781,6 +812,8 @@ cases:
     conditions:
       exclude_distributions: [alpine]
     expected_sections: [Image Variants]
+    expected_plan:
+      exclude_distributions: [alpine]
     rationale:
       note: |
         원인은 libc다. alpine은 glibc가 아니라 musl을 쓰는 별개의 표준 C
@@ -844,6 +877,7 @@ cases:
       - node:current
       - node:latest
     expected_sections: [Supported tags]
+    expected_plan: {}
     rationale:
       note: |
         Node.js 릴리스 표에서 24(krypton)가 Active LTS, 22(jod)가
@@ -895,6 +929,7 @@ cases:
       - node:lts
       - node:latest
     expected_sections: [Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         네이티브 애드온이 없으면 musl과 glibc의 차이가 설치 단계에 걸릴
@@ -942,6 +977,8 @@ cases:
     conditions:
       exclude_distributions: [alpine]
     expected_sections: [Image Variants]
+    expected_plan:
+      exclude_distributions: [alpine]
     rationale:
       note: |
         node-gyp이 유닉스에서 요구하는 것은 파이썬, make, 그리고 제대로 된
@@ -996,6 +1033,8 @@ cases:
       architectures: [arm64]
       exclude_distributions: [alpine]
     expected_sections: [Quick reference, Image Variants]
+    expected_plan:
+      architectures: [arm64]
     rationale:
       note: |
         공식 이미지의 지원 아키텍처에 arm64v8이 있으므로 arm64 자체는
@@ -1042,6 +1081,7 @@ cases:
     reject:
       - node:latest
     expected_sections: [Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         이 문항이 재는 것은 추천보다 근거 문서를 끌어왔는지다. 답은 공식
@@ -1083,6 +1123,7 @@ cases:
       - postgres:14
       - postgres:latest
     expected_sections: [Supported tags]
+    expected_plan: {}
     rationale:
       note: |
         PostgreSQL은 메이저를 최초 릴리스 후 5년 지원한다. 18이 현재 최신
@@ -1132,6 +1173,7 @@ cases:
     conditions:
       exclude_distributions: [alpine]
     expected_sections: [Additional Extensions, Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         공식 README의 Additional Extensions 절이 이 질문에 직접 답한다.
@@ -1177,6 +1219,8 @@ cases:
     conditions:
       version_prefix: "16"
     expected_sections: [Supported tags]
+    expected_plan:
+      version_prefix: "16"
     rationale:
       note: |
         메이저가 다르면 데이터 디렉터리 포맷이 호환되지 않아 덤프·복원이나
@@ -1218,6 +1262,7 @@ cases:
       - postgres:19beta3-alpine
       - postgres:latest
     expected_sections: [Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         alpine 변형의 실질적인 제약은 contrib 밖의 확장을 직접 컴파일해야
@@ -1278,6 +1323,7 @@ cases:
       - redis:8-trixie
       - redis:latest
     expected_sections: [Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         redis 이미지가 담는 것은 배포판 패키지 스택이 아니라 소스에서 빌드한
@@ -1323,6 +1369,8 @@ cases:
     conditions:
       version_prefix: "7"
     expected_sections: [Supported tags]
+    expected_plan:
+      version_prefix: "7"
     rationale:
       note: |
         공식 이미지가 7.4와 7.2 계열을 데비안·alpine 양쪽으로 지금도 계속
@@ -1371,6 +1419,7 @@ cases:
     reject:
       - redis:latest
     expected_sections: [How to use this image]
+    expected_plan: {}
     rationale:
       note: |
         이 문항이 재는 것은 태그 선택이 아니라 영속성 질문에서 공식 README의
@@ -1411,6 +1460,7 @@ cases:
       - nginx:1.31-otel
       - nginx:latest
     expected_sections: [Image Variants, How to use this image]
+    expected_plan: {}
     rationale:
       note: |
         nginx 이미지는 배포판 패키지 스택 위에 도는 애플리케이션 런타임이
@@ -1445,6 +1495,7 @@ cases:
       - nginx:mainline
       - nginx:latest
     expected_sections: [Supported tags]
+    expected_plan: {}
     rationale:
       note: |
         nginx.org 다운로드 페이지가 1.31.5를 Mainline, 1.30.4를 Stable로
@@ -1491,6 +1542,7 @@ cases:
       - nginx:1.31-perl
       - nginx:latest
     expected_sections: [Supported tags, Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         ngx_otel_module은 기본 nginx에 내장된 기능이 아니라 설정에서
@@ -1524,6 +1576,7 @@ cases:
     reject:
       - golang:latest
     expected_sections: [Image Variants, How to use this image]
+    expected_plan: {}
     rationale:
       note: |
         공식 README가 alpine 변형에 대해 "highly experimental, and not
@@ -1571,6 +1624,7 @@ cases:
       - golang:1.27-windowsservercore-ltsc2025
       - golang:1.27-nanoserver-ltsc2025
     expected_sections: [Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         go-sqlite3는 cgo 패키지라 CGO_ENABLED=1과 경로상의 gcc를 요구한다고
@@ -1620,6 +1674,7 @@ cases:
       - golang:1.27-nanoserver-ltsc2025
       - golang:windowsservercore
     expected_sections: [How to use this image, Quick reference]
+    expected_plan: {}
     rationale:
       note: |
         cgo를 안 쓰면 GOOS/GOARCH 환경변수만 바꿔도 크로스 컴파일이 되므로
@@ -1662,6 +1717,7 @@ cases:
     reject:
       - eclipse-temurin:latest
     expected_sections: ["Do you provide JRE (Java Runtime Environment) Images?"]
+    expected_plan: {}
     rationale:
       note: |
         컨테이너 안에서 컴파일하지 않으면 javac를 비롯한 개발 도구가 런타임
@@ -1717,6 +1773,7 @@ cases:
       - eclipse-temurin:25-jre
       - eclipse-temurin:21-jre-alpine
     expected_sections: [How to use this Image, Image Variants]
+    expected_plan: {}
     rationale:
       note: |
         컴파일과 jlink는 JDK 쪽 도구다. README의 jlink 예시도 빌드 스테이지를
@@ -1755,6 +1812,9 @@ cases:
     conditions:
       version_prefix: "17"
     expected_sections: [Image Variants, Supported tags]
+    expected_plan:
+      version_prefix: "17"
+      distributions: [jammy]
     rationale:
       note: |
         temurin의 베이스는 데비안이 아니라 우분투이고 jammy·noble·resolute가
@@ -1788,6 +1848,8 @@ cases:
       - debian:testing-slim
       - debian:latest
     expected_sections: [Image Variants, About this image]
+    expected_plan:
+      distributions: [debian]
     rationale:
       note: |
         debian 이미지는 원래 minbase 변형이라 이미 작지만, `-slim` 태그는
@@ -1824,6 +1886,7 @@ cases:
       - debian:sid
       - debian:latest
     expected_sections: [About this image, Supported tags]
+    expected_plan: {}
     rationale:
       note: |
         `13`과 `trixie`는 같은 이미지다. 공식 README가 stable 릴리스는 버전
@@ -1858,6 +1921,8 @@ cases:
       - ubuntu:rolling
       - ubuntu:latest
     expected_sections: ["What's in this image?", Supported tags]
+    expected_plan:
+      distributions: [ubuntu]
     rationale:
       note: |
         우분투는 2년마다 LTS를 내고 LTS는 5년의 표준 보안 유지보수를 받는
@@ -1890,6 +1955,8 @@ cases:
       - ubuntu:rolling
       - ubuntu:latest
     expected_sections: [Supported tags]
+    expected_plan:
+      version_prefix: "24.04"
     rationale:
       note: |
         `24.04`와 `noble`은 태그 목록에서 한 줄에 묶인 같은 이미지라 어느
@@ -1931,6 +1998,7 @@ cases:
       - alpine:20260805
       - alpine:latest
     expected_sections: ["What is Alpine Linux?", Supported tags]
+    expected_plan: {}
     rationale:
       note: |
         alpine은 musl libc와 BusyBox로 구성한 약 5MB 이미지라 정적 바이너리에

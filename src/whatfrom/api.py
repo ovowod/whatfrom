@@ -4,18 +4,20 @@ from contextlib import AbstractContextManager, contextmanager
 
 from fastapi import FastAPI
 from pydantic import BaseModel, field_validator
-from sqlalchemy import Engine
+from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from whatfrom.core.config import settings
-from whatfrom.core.contracts import RecommendResponse
+from whatfrom.core.contracts import RecommendResponse, SearchPlan
 from whatfrom.core.db import make_engine
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.httpclient import RemoteCallError
+from whatfrom.core.models import Repository
 from whatfrom.recommend.advisor import advise
 from whatfrom.recommend.llm import LLMProvider, get_provider
+from whatfrom.recommend.planner import extract_plan
 from whatfrom.recommend.verify import verify_recommendation
-from whatfrom.search.retrieval import search_candidates_by_vector
+from whatfrom.search.retrieval import search_candidates_by_vector, search_candidates_with_plan
 
 
 class RecommendRequest(BaseModel):
@@ -42,8 +44,12 @@ def recommend_for_question(
     DB 커넥션이 트랜잭션을 연 채로 묶인다. 동시 요청이 조금만 늘어도 LLM
     용량보다 커넥션 풀이 먼저 마른다 — collector에서 이미 한 번 고친 결함이다.
     그래서 DB를 만지는 구간만 짧게 열고, 외부 호출은 그 밖에서 한다.
+
+    LLM은 두 번 부른다. 먼저 질문에서 검색 조건을 뽑고(#1), 그 조건으로 만든 후보에서
+    추천을 받는다(#2). #1이 실패하면 벡터 검색만으로 계속한다(스펙 §8의 1단계 저하).
     """
     notes: list[str] = []
+    degraded = False
 
     # 임베딩도 HTTP 호출이라 실패한다. 매 요청마다 부르므로 LLM보다 자주 실패한다.
     try:
@@ -58,8 +64,26 @@ def recommend_for_question(
             notes=notes,
         )
 
+    # 추출 프롬프트에 줄 목록이자 추출 결과를 대조할 목록이다.
     with open_session() as session:
-        candidates = search_candidates_by_vector(session, vector)
+        repositories = sorted(session.execute(select(Repository.name)).scalars())
+
+    plan: SearchPlan | None
+    try:
+        plan = extract_plan(provider, question, repositories)
+    except RemoteCallError as exc:
+        plan = None
+        degraded = True
+        notes.append(f"검색 조건 추출에 실패해 벡터 검색만 사용했습니다: {exc}")
+
+    with open_session() as session:
+        if plan is None:
+            candidates = search_candidates_by_vector(session, vector)
+        else:
+            planned = search_candidates_with_plan(session, vector, plan)
+            candidates = planned.candidates
+            notes += planned.notes
+            degraded = degraded or planned.degraded
 
     if not candidates:
         notes.append("검색된 후보가 없습니다. 수집·인덱싱이 되어 있는지 확인하세요.")
@@ -69,6 +93,7 @@ def recommend_for_question(
             candidates=[],
             degraded=True,
             notes=notes,
+            plan=plan,
         )
 
     try:
@@ -81,6 +106,7 @@ def recommend_for_question(
             candidates=candidates,
             degraded=True,
             notes=notes,
+            plan=plan,
         )
 
     with open_session() as session:
@@ -101,6 +127,7 @@ def recommend_for_question(
             candidates=candidates,
             degraded=True,
             notes=notes,
+            plan=plan,
         )
 
     if verdict.unverifiable_dockerfile_refs:
@@ -130,8 +157,9 @@ def recommend_for_question(
         question=question,
         recommendation=recommendation,
         candidates=candidates,
-        degraded=False,
+        degraded=degraded,
         notes=notes,
+        plan=plan,
     )
 
 

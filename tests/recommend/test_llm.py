@@ -3,9 +3,9 @@ import json
 import httpx2
 import pytest
 
-from whatfrom.core.contracts import Recommendation
+from whatfrom.core.contracts import Recommendation, SearchPlan
 from whatfrom.core.httpclient import RemoteCallError
-from whatfrom.recommend.llm import OpenAICompatibleProvider, strict_json_schema
+from whatfrom.recommend.llm import FakeLLMProvider, OpenAICompatibleProvider, strict_json_schema
 
 VALID_CONTENT = (
     '{"image": "python:3.13-slim", "reason": "glibc", '
@@ -92,3 +92,56 @@ def test_provider_raises_llm_error_on_a_malformed_envelope():
 
     with pytest.raises(RemoteCallError, match="malformed completion response"):
         _provider(handler).recommend("sys", "prompt")
+
+
+PLAN_CONTENT = (
+    '{"repository": "python", "version_prefix": "3.12", "architectures": ["arm64"], '
+    '"distributions": [], "exclude_distributions": ["alpine"], "max_size_mb": null}'
+)
+
+
+def test_plan_requests_a_strict_search_plan_schema():
+    """검색 조건도 추천과 같은 방식으로 JSON 스키마를 강제해 받는다."""
+    seen: dict = {}
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        seen["body"] = json.loads(request.content)
+        return httpx2.Response(200, json={"choices": [{"message": {"content": PLAN_CONTENT}}]})
+
+    plan = _provider(handler).plan("sys", "prompt")
+
+    json_schema = seen["body"]["response_format"]["json_schema"]
+    assert json_schema["name"] == "search_plan"
+    assert json_schema["schema"]["additionalProperties"] is False
+    assert set(json_schema["schema"]["required"]) == set(json_schema["schema"]["properties"])
+    assert plan == SearchPlan(
+        repository="python",
+        version_prefix="3.12",
+        architectures=["arm64"],
+        exclude_distributions=["alpine"],
+    )
+
+
+def test_plan_raises_llm_error_when_the_response_is_not_a_search_plan():
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(
+            200, json={"choices": [{"message": {"content": '{"image": "python:3"}'}}]}
+        )
+
+    with pytest.raises(RemoteCallError, match="did not match SearchPlan schema"):
+        _provider(handler).plan("sys", "prompt")
+
+
+def test_fake_provider_returns_an_empty_plan_unless_configured():
+    """plan을 신경 쓰지 않는 테스트가 예전과 같은 후보를 받도록, 기본은 조건 없음이다."""
+    assert FakeLLMProvider().plan("sys", "prompt") == SearchPlan()
+    configured = SearchPlan(repository="node")
+    assert FakeLLMProvider(plan=configured).plan("sys", "prompt") == configured
+
+
+def test_fake_provider_can_fail_only_the_plan():
+    provider = FakeLLMProvider(plan_error=RemoteCallError("boom"))
+
+    with pytest.raises(RemoteCallError, match="boom"):
+        provider.plan("sys", "prompt")
+    assert provider.plan_calls == [("sys", "prompt")]

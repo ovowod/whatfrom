@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
-from whatfrom.search.tagselect import TagRef, select_tags
+from whatfrom.search.tagselect import TagRef, select_tags, stale_pinned_lines
 
 
 def ref(
@@ -448,3 +448,145 @@ def test_the_variant_check_uses_its_own_lines_latest_push_not_the_repos():
         ref(3, "19", pushed=NOW),
     ]
     assert [t.tag for t in select_tags(tags, limit=10)] == ["19", "18", "18-alpine"]
+
+
+def ids(tags: list[TagRef], *names: str) -> frozenset[int]:
+    return frozenset(t.id for t in tags if t.tag in names)
+
+
+def test_allowed_ids_do_not_revive_an_unsupported_line():
+    """buster로 먼저 거른 태그만 넘기면 3.9가 유일한 최신 줄기가 되어 살아난다.
+
+    지원 판정은 거르기 전 태그 전체로 해야 한다.
+    """
+    tags = [
+        ref(1, "3.14-trixie", pushed=NOW),
+        ref(2, "3.9-buster", pushed=NOW - 300 * DAY),
+    ]
+
+    assert select_tags(tags, limit=10, allowed_ids=ids(tags, "3.9-buster")) == []
+
+
+def test_allowed_ids_that_leave_only_prereleases_do_not_trigger_the_fallback():
+    """프리릴리스 폴백은 리포지토리에 안정 태그가 하나도 없을 때만이다."""
+    tags = [
+        ref(1, "3.14-trixie", pushed=NOW),
+        ref(2, "3.15.0rc2-bookworm", pushed=NOW),
+    ]
+
+    assert select_tags(tags, limit=10, allowed_ids=ids(tags, "3.15.0rc2-bookworm")) == []
+
+
+def test_allowed_ids_keep_only_allowed_tags_of_supported_lines():
+    tags = [
+        ref(1, "3.14-trixie", pushed=NOW),
+        ref(2, "3.14-bookworm", pushed=NOW),
+        ref(3, "3.13-bookworm", pushed=NOW),
+        ref(4, "3.13-alpine", pushed=NOW),
+    ]
+
+    picked = select_tags(tags, limit=10, allowed_ids=ids(tags, "3.14-bookworm", "3.13-bookworm"))
+
+    assert [t.tag for t in picked] == ["3.14-bookworm", "3.13-bookworm"]
+
+
+def test_allowed_ids_are_applied_before_folding_same_digest_tags():
+    """같은 이미지의 짧은 이름이 허용되지 않았다고 허용된 긴 이름까지 사라지면 안 된다."""
+    tags = [
+        ref(1, "3.14", digest="sha256:same", pushed=NOW),
+        ref(2, "3.14-trixie", digest="sha256:same", pushed=NOW),
+    ]
+
+    picked = select_tags(tags, limit=10, allowed_ids=ids(tags, "3.14-trixie"))
+
+    assert [t.tag for t in picked] == ["3.14-trixie"]
+
+
+def test_a_pinned_version_revives_its_unsupported_line():
+    """사용자가 3.9를 명시했으면 지원이 끝난 줄기라도 후보다."""
+    tags = [
+        ref(1, "3.14", pushed=NOW),
+        ref(2, "3.9", pushed=NOW - 300 * DAY),
+        ref(3, "3.9-slim", pushed=NOW - 300 * DAY),
+    ]
+
+    picked = select_tags(
+        tags, limit=10, allowed_ids=ids(tags, "3.9", "3.9-slim"), pinned_version="3.9"
+    )
+
+    assert [t.tag for t in picked] == ["3.9", "3.9-slim"]
+    assert stale_pinned_lines(tags, "3.9", picked) == ["3.9"]
+
+
+def test_a_pinned_major_does_not_revive_every_minor_line():
+    """ "3"은 3.x 줄기 전체를 되살리지 않는다. 줄기가 요구 버전의 앞부분일 때만이다."""
+    tags = [
+        ref(1, "3.14", pushed=NOW),
+        ref(2, "3.9", pushed=NOW - 300 * DAY),
+    ]
+
+    picked = select_tags(tags, limit=10, allowed_ids=ids(tags, "3.14", "3.9"), pinned_version="3")
+
+    assert [t.tag for t in picked] == ["3.14"]
+    assert stale_pinned_lines(tags, "3", picked) == []
+
+
+def test_a_pinned_version_still_drops_stale_variants_of_its_line():
+    tags = [
+        ref(1, "3.14", pushed=NOW),
+        ref(2, "3.9", pushed=NOW - 300 * DAY),
+        ref(3, "3.9-stretch", pushed=NOW - 900 * DAY),
+    ]
+
+    picked = select_tags(
+        tags, limit=10, allowed_ids=ids(tags, "3.9", "3.9-stretch"), pinned_version="3.9"
+    )
+
+    assert [t.tag for t in picked] == ["3.9"]
+
+
+def test_a_supported_pinned_line_is_not_reported_as_stale():
+    tags = [ref(1, "3.14", pushed=NOW), ref(2, "3.13", pushed=NOW)]
+
+    assert stale_pinned_lines(tags, "3.13", tags) == []
+
+
+def test_a_pinned_version_finer_than_the_line_picks_its_fixed_tags():
+    """3.14.6을 요구했는데 줄기 단위는 3.14다.
+
+    별칭 3.14는 3.14.7을 가리키므로 고정 태그를 고른다.
+    """
+    tags = [
+        ref(1, "3.14", digest="sha256:a", pushed=NOW),
+        ref(2, "3.14.7", digest="sha256:a", pushed=NOW),
+        ref(3, "3.14.6", digest="sha256:b", pushed=NOW - 30 * DAY),
+        ref(4, "3.14.6-slim", digest="sha256:c", pushed=NOW - 30 * DAY),
+        ref(5, "3.13", pushed=NOW),
+    ]
+
+    picked = select_tags(
+        tags, limit=10, allowed_ids=ids(tags, "3.14.6", "3.14.6-slim"), pinned_version="3.14.6"
+    )
+
+    assert [t.tag for t in picked] == ["3.14.6", "3.14.6-slim"]
+
+
+def test_a_pinned_version_equal_to_a_line_still_picks_aliases():
+    """요구 버전과 같은 줄기가 있으면 지금처럼 이동 별칭에서 고른다."""
+    tags = [
+        ref(1, "3.14", pushed=NOW),
+        ref(2, "3.14.7", pushed=NOW),
+        ref(3, "3.13", pushed=NOW),
+    ]
+
+    picked = select_tags(
+        tags, limit=10, allowed_ids=ids(tags, "3.14", "3.14.7"), pinned_version="3.14"
+    )
+
+    assert [t.tag for t in picked] == ["3.14"]
+
+
+def test_a_stale_line_not_in_the_chosen_tags_is_not_reported():
+    tags = [ref(1, "3.14", pushed=NOW), ref(2, "3.9", pushed=NOW - 300 * DAY)]
+
+    assert stale_pinned_lines(tags, "3.9", [tags[0]]) == []

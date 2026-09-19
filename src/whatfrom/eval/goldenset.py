@@ -19,10 +19,10 @@ class GoldenSetError(ValueError):
 
 
 class Conditions(BaseModel):
-    """추천 이미지의 아키텍처·배포판·버전·크기 조건을 저장한다.
+    """추천 이미지가 지켜야 할 아키텍처·배포판·버전·크기 조건. 조건 일치율을 채점한다.
 
-    향후 질문에서 추출할 검색 조건(SearchPlan)의 기대값으로 재사용할 수 있도록
-    필드 구조를 맞췄다. 현재는 평가용이며 추천 요청에는 전달하지 않는다.
+    질문에 적힌 조건과 다를 수 있다. torch에 musl 휠이 없다는 지식에서 나온 alpine
+    제외처럼 문서가 근거인 조건도 있다. 검색 조건 추출의 정답은 ExpectedPlan이다.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -41,6 +41,24 @@ class Conditions(BaseModel):
             or self.version_prefix is not None
             or self.max_size_mb is not None
         )
+
+
+class ExpectedPlan(BaseModel):
+    """질문에 명시된 검색 조건. 검색 조건 추출(LLM #1)의 정답이다.
+
+    Conditions와 다르다. 추출기는 질문에 적힌 것만 뽑아야 하므로, 문서 지식에서 나온
+    조건은 여기에 적지 않는다. 적지 않은 필드는 비어 있다는 뜻이고 그대로 비교한다.
+    모델이 질문에 없는 크기 상한을 만들어내면 실패로 잡아야 하기 때문이다.
+    리포지토리는 적지 않는다. requires_repositories가 정답이다.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    version_prefix: str | None = None
+    architectures: list[str] = Field(default_factory=list)
+    distributions: list[str] = Field(default_factory=list)
+    exclude_distributions: list[str] = Field(default_factory=list)
+    max_size_mb: float | None = None
 
 
 class Rationale(BaseModel):
@@ -79,6 +97,8 @@ class GoldenCase(BaseModel):
     # 명시적 오답. 지표에는 들어가지 않고 리포트에 경보로 표시된다.
     reject: list[str] = Field(default_factory=list)
     conditions: Conditions = Field(default_factory=Conditions)
+    # 기본값을 두지 않는다. 빠뜨린 문항이 조용히 "조건 없음"으로 채점되면 안 된다.
+    expected_plan: ExpectedPlan
     expected_sections: list[str] = Field(default_factory=list)
     rationale: Rationale
 

@@ -1,12 +1,12 @@
 import time
 from collections.abc import Callable
-from typing import Protocol
+from typing import Protocol, TypeVar
 
 import httpx2
 from pydantic import BaseModel, ValidationError
 
 from whatfrom.core.config import settings
-from whatfrom.core.contracts import Recommendation
+from whatfrom.core.contracts import Recommendation, SearchPlan
 from whatfrom.core.httpclient import RemoteCallError, post_json
 
 
@@ -28,8 +28,13 @@ def strict_json_schema(model: type[BaseModel]) -> dict:
     return schema
 
 
+T = TypeVar("T", bound=BaseModel)
+
+
 class LLMProvider(Protocol):
     def recommend(self, system: str, prompt: str) -> Recommendation: ...
+
+    def plan(self, system: str, prompt: str) -> SearchPlan: ...
 
 
 class FakeLLMProvider:
@@ -37,14 +42,25 @@ class FakeLLMProvider:
 
     error를 주면 실패를, recommendation을 주면 그 값을 그대로 돌려준다.
     후보에 없는 image를 담은 Recommendation을 주면 환각 시나리오가 된다.
+
+    plan을 주지 않으면 조건이 하나도 없는 SearchPlan을 돌려준다. 조건이 없으면
+    후보를 거르지 않으므로, plan을 신경 쓰지 않는 테스트는 예전과 같은 후보를 받는다.
+    plan_error를 주면 검색 조건 추출만 실패한다.
     """
 
     def __init__(
-        self, recommendation: Recommendation | None = None, error: Exception | None = None
+        self,
+        recommendation: Recommendation | None = None,
+        error: Exception | None = None,
+        plan: SearchPlan | None = None,
+        plan_error: Exception | None = None,
     ) -> None:
         self._recommendation = recommendation
         self._error = error
+        self._plan = plan
+        self._plan_error = plan_error
         self.calls: list[tuple[str, str]] = []
+        self.plan_calls: list[tuple[str, str]] = []
 
     def recommend(self, system: str, prompt: str) -> Recommendation:
         self.calls.append((system, prompt))
@@ -53,6 +69,12 @@ class FakeLLMProvider:
         if self._recommendation is None:
             raise RemoteCallError("FakeLLMProvider has no recommendation configured")
         return self._recommendation
+
+    def plan(self, system: str, prompt: str) -> SearchPlan:
+        self.plan_calls.append((system, prompt))
+        if self._plan_error is not None:
+            raise self._plan_error
+        return self._plan if self._plan is not None else SearchPlan()
 
 
 class OpenAICompatibleProvider:
@@ -93,6 +115,13 @@ class OpenAICompatibleProvider:
         self._sleep = sleep
 
     def recommend(self, system: str, prompt: str) -> Recommendation:
+        return self._complete(system, prompt, Recommendation, "recommendation")
+
+    def plan(self, system: str, prompt: str) -> SearchPlan:
+        return self._complete(system, prompt, SearchPlan, "search_plan")
+
+    def _complete(self, system: str, prompt: str, model: type[T], name: str) -> T:
+        """JSON 스키마를 강제해 부르고, 응답을 model로 다시 검증한다."""
         body = post_json(
             self._client,
             f"{self._base_url}/chat/completions",
@@ -105,9 +134,9 @@ class OpenAICompatibleProvider:
                 "response_format": {
                     "type": "json_schema",
                     "json_schema": {
-                        "name": "recommendation",
+                        "name": name,
                         "strict": True,
-                        "schema": strict_json_schema(Recommendation),
+                        "schema": strict_json_schema(model),
                     },
                 },
             },
@@ -124,9 +153,9 @@ class OpenAICompatibleProvider:
         # json_schema 강제 수준은 서버마다 다르다 — 무시하는 서버도 있다.
         # 그래서 스키마 준수를 서버에 맡기지 않고 항상 여기서 다시 검증한다.
         try:
-            return Recommendation.model_validate_json(content)
+            return model.model_validate_json(content)
         except ValidationError as exc:
-            raise RemoteCallError(f"response did not match Recommendation schema: {exc}") from exc
+            raise RemoteCallError(f"response did not match {model.__name__} schema: {exc}") from exc
 
 
 def get_provider(name: str) -> LLMProvider:

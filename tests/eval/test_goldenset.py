@@ -19,6 +19,8 @@ cases:
     conditions:
       architectures: [arm64]
       exclude_distributions: [alpine]
+    expected_plan:
+      architectures: [arm64]
     expected_sections: [Image Variants]
     rationale:
       note: musl에는 manylinux 휠이 없다
@@ -42,6 +44,8 @@ def test_loads_a_valid_case(tmp_path: Path) -> None:
     assert case.accept == ["python:3.13-slim"]
     assert case.conditions.architectures == ["arm64"]
     assert case.conditions.declared is True
+    assert case.expected_plan.architectures == ["arm64"]
+    assert case.expected_plan.exclude_distributions == []
 
 
 def test_optional_fields_default_to_empty(tmp_path: Path) -> None:
@@ -52,6 +56,7 @@ cases:
     question: 뭐 쓰지
     requires_repositories: [python]
     accept: [python:3.13-slim]
+    expected_plan: {}
     rationale:
       note: 근거
       sources: [https://hub.docker.com/_/python]
@@ -71,6 +76,7 @@ cases:
     question: 근거가 없다
     requires_repositories: [python]
     accept: [python:3.13-slim]
+    expected_plan: {}
     rationale:
       note: 근거를 못 찾았다
       sources: []
@@ -145,3 +151,21 @@ def test_version_prefix_alone_declares_conditions() -> None:
 
 def test_max_size_alone_declares_conditions() -> None:
     assert Conditions(max_size_mb=200).declared is True
+
+
+def test_a_case_without_expected_plan_is_rejected(tmp_path: Path) -> None:
+    """빠뜨린 문항이 조용히 "조건 없음"으로 채점되면 안 된다."""
+    missing = VALID.replace("    expected_plan:\n      architectures: [arm64]\n", "")
+
+    with pytest.raises(GoldenSetError):
+        load_goldenset(write(tmp_path, missing))
+
+
+def test_expected_plan_rejects_an_unknown_key(tmp_path: Path) -> None:
+    typo = VALID.replace(
+        "      architectures: [arm64]\n    expected_sections",
+        "      architecture: [arm64]\n    expected_sections",
+    )
+
+    with pytest.raises(GoldenSetError):
+        load_goldenset(write(tmp_path, typo))

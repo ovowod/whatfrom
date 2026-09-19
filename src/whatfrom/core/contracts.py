@@ -69,9 +69,35 @@ class Recommendation(BaseModel):
     alternatives: list[str] = Field(default_factory=list)
 
 
+class SearchPlan(BaseModel):
+    """질문에서 뽑은 검색 조건 (스펙 §7). LLM #1이 채우고 백엔드가 SQL로 옮긴다.
+
+    답이 아니라 검색 조건이다. 이미지 이름을 담지 않으므로 LLM이 이미지를 지어낼
+    경로가 늘지 않는다. repository는 수집된 목록과 대조해 없으면 버린다.
+
+    extra="forbid"의 이유는 Recommendation과 같다. 지어낸 필드를 거부하고,
+    strict json_schema가 받아들이는 스키마(additionalProperties: false)를 만든다.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    repository: str | None = None
+    version_prefix: str | None = None
+    architectures: list[str] = Field(default_factory=list)
+    # 이 중 하나여야 하는 배포판이나 코드네임. "bookworm이어야 한다".
+    distributions: list[str] = Field(default_factory=list)
+    exclude_distributions: list[str] = Field(default_factory=list)
+    # 질문이 숫자로 준 크기 상한. "작을수록"은 조건이 아니다.
+    max_size_mb: float | None = None
+
+
 class RecommendResponse(BaseModel):
     question: str
     recommendation: Recommendation | None
     candidates: list[Candidate]
+    # 스펙 §8의 정상 경로가 아닌 단계로 답했는가. 추천이 있어도 True일 수 있다
+    # (검색 조건 추출 실패, 조건 완화). 이유는 notes에 있다.
     degraded: bool = False
     notes: list[str] = Field(default_factory=list)
+    # 질문을 어떻게 해석했는지. 추출에 실패했거나 부르지 않았으면 None이다.
+    plan: SearchPlan | None = None
