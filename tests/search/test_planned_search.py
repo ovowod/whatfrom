@@ -96,6 +96,19 @@ def test_a_repository_without_documents_is_not_forced(session):
     assert any("버전 조건(1.0)을 쓰지 않았습니다" in note for note in result.notes)
 
 
+def test_a_repository_without_tags_is_not_forced(session):
+    """문서가 있어도 태그가 없으면 후보를 낼 수 없어 강제하지 않는다."""
+    seed(session)
+    add_repository(session, "empty", "# Image Variants\n\npython slim alpine bookworm.\n")
+    v = vector("python slim alpine bookworm")
+
+    result = search_candidates_with_plan(session, v, SearchPlan(repository="empty"))
+
+    assert images(result)
+    assert result.degraded is True
+    assert any("empty의 문서나 태그가 없어" in note for note in result.notes)
+
+
 def test_a_version_without_a_repository_is_not_applied(session):
     seed(session)
 

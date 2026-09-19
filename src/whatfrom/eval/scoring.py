@@ -263,7 +263,8 @@ def score_full(
         sources_ok=_sources_ok(response),
         hit_declared=retrieval.hit_declared,
         hit_at5=retrieval.hit_at5,
-        degraded_note=response.notes[0] if recommendation is None and response.notes else None,
+        # 추천을 못 한 사유는 API가 맨 뒤에 붙인다. 앞에는 검색 단계의 알림이 올 수 있다.
+        degraded_note=response.notes[-1] if recommendation is None and response.notes else None,
         plan=response.plan.model_dump() if response.plan is not None else None,
         repository_extracted=(
             response.plan is not None and response.plan.repository in case.requires_repositories

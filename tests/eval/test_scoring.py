@@ -170,6 +170,19 @@ def test_degraded_counts_as_inaccurate() -> None:
     assert score.degraded_note == "LLM 실패"
 
 
+def test_degraded_note_is_the_last_note_when_there_is_no_recommendation() -> None:
+    """검색 단계의 알림이 앞에 오고, 추천을 못 한 사유는 API가 맨 뒤에 붙인다."""
+    response = make_response(
+        None,
+        [make_candidate("3.13-slim")],
+        notes=["조건에 맞는 태그가 없어 버전 조건(stable)을 풀었습니다.", "LLM 실패"],
+    )
+
+    score = score_full(make_case(), response, [], None)
+
+    assert score.degraded_note == "LLM 실패"
+
+
 def test_degraded_leaves_tag_reality_undecided() -> None:
     """답하지 않은 것을 '환각 안 함'으로 세면 저하가 잦을수록 점수가 오른다."""
     score = score_full(make_case(), make_response(None, []), [], None)
