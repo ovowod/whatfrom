@@ -8,6 +8,8 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+from whatfrom.core.versions import extends_version
+
 # 프리릴리스. 파이썬은 PEP 440 표기라 3.15.0a8, 3.15.0b1처럼 숫자 뒤에 알파벳이
 # 바로 붙는다. redis는 -m03 마일스톤, postgres는 19beta3, golang은 tip,
 # debian은 sid·testing·backports, alpine은 edge로 개발 판을 낸다.
@@ -38,7 +40,12 @@ class TagRef:
     last_pushed_at: datetime | None
 
 
-def select_tags(tags: list[TagRef], limit: int) -> list[TagRef]:
+def select_tags(
+    tags: list[TagRef],
+    limit: int,
+    allowed_ids: frozenset[int] | None = None,
+    pinned_version: str | None = None,
+) -> list[TagRef]:
     """후보로 쓸 태그를 고른다.
 
     tags는 한 리포지토리의 태그여야 한다. 줄기 단위와 지원 여부를 리포지토리
@@ -52,16 +59,78 @@ def select_tags(tags: list[TagRef], limit: int) -> list[TagRef]:
     4. 줄기를 최신순으로 번갈아 돌며 limit까지 채운다. 한 줄기로 몰아 채우면
        최신 줄기의 변형만 들어가 LTS 줄기가 빠진다.
     5. 줄기가 없으면 최근 푸시 순으로 고른다.
+
+    allowed_ids를 주면 그 태그만 고른다. 검색 조건을 통과한 태그다. 1~3단계의
+    판정은 allowed_ids와 무관하게 tags 전체로 한다. 조건으로 먼저 거른 태그만 넘기면
+    가장 최근 줄기가 바뀌어 지원이 끝난 줄기가 살아나고, 거른 결과가 프리릴리스뿐이면
+    프리릴리스 폴백까지 작동한다. 폴백은 리포지토리 전체의 성질로만 정한다.
+
+    pinned_version과 맞는 줄기는 지원이 끝났어도 고를 수 있다. 사용자가 그 버전을
+    명시했다. 줄기 안의 낡은 변형 별칭은 그대로 뺀다.
+
+    pinned_version이 줄기 단위보다 상세하면(줄기는 3.14인데 요구는 3.14.6) 이동 별칭이
+    아니라 그 버전으로 시작하는 고정 태그에서 고른다. 별칭 3.14는 3.14.7을 가리키므로
+    3.14.6을 요구한 사람에게 줄 수 없고, 별칭만 고르면 존재하는 3.14.6을 버리게 된다.
     """
     linux = [ref for ref in tags if not WINDOWS_ONLY.search(ref.tag)]
     stable = _exclude_prerelease(linux)
     if not stable:
-        return _by_recent_push(_fold_by_digest(linux))[:limit]
+        return _by_recent_push(_fold_by_digest(_allowed(linux, allowed_ids)))[:limit]
 
-    lines = _supported_release_lines(stable)
-    if not lines:
-        return _by_recent_push(_fold_by_digest(stable))[:limit]
-    return _interleave(lines, limit)
+    depth = _line_depth(stable)
+    if (
+        pinned_version is not None
+        and depth is not None
+        and _finer_than_lines(pinned_version, set(_aliases_by_line(stable, depth)[0]))
+    ):
+        fixed = [
+            ref for ref in _allowed(stable, allowed_ids) if extends_version(pinned_version, ref.tag)
+        ]
+        return sorted(_fold_by_digest(fixed), key=lambda ref: (len(ref.tag), ref.tag))[:limit]
+
+    kept = [] if depth is None else _supported_aliases(stable, depth, pinned_version)
+    if not kept:
+        return _by_recent_push(_fold_by_digest(_allowed(stable, allowed_ids)))[:limit]
+    # 같은 digest를 접기 전에 거른다. 접은 뒤에 거르면, 허용된 긴 이름이 허용되지 않은
+    # 짧은 이름에 흡수되어 함께 사라진다.
+    assert depth is not None
+    return _interleave(_group_lines(_fold_by_digest(_allowed(kept, allowed_ids)), depth), limit)
+
+
+def stale_pinned_lines(tags: list[TagRef], pinned_version: str, chosen: list[TagRef]) -> list[str]:
+    """pinned_version 때문에 되살렸고, chosen에 실제로 들어간 줄기.
+
+    지원 판정은 현재 시각이 아니라 리포지토리의 가장 최근 줄기와의 차이로 한다.
+    후보에 없는 줄기는 알리지 않는다.
+    """
+    stable = _exclude_prerelease([ref for ref in tags if not WINDOWS_ONLY.search(ref.tag)])
+    depth = _line_depth(stable)
+    if depth is None:
+        return []
+    aliases, latest_push = _aliases_by_line(stable, depth)
+    supported = _supported({line: latest_push.get(line) for line in aliases})
+    chosen_lines = {_line_of(ref.tag, depth) for ref in chosen}
+    return sorted(
+        line
+        for line in aliases
+        if line not in supported and extends_version(line, pinned_version) and line in chosen_lines
+    )
+
+
+def _finer_than_lines(pinned_version: str, lines: set[str]) -> bool:
+    """요구 버전이 어떤 줄기를 더 상세히 적은 것인가. 3.14 줄기에 3.14.6, 8 줄기에 8u502.
+
+    줄기와 같거나("3.14") 줄기보다 굵으면("3") 아니다. 그때는 이동 별칭에서 고른다.
+    """
+    return pinned_version not in lines and any(
+        extends_version(line, pinned_version) for line in lines
+    )
+
+
+def _allowed(refs: list[TagRef], allowed_ids: frozenset[int] | None) -> list[TagRef]:
+    if allowed_ids is None:
+        return refs
+    return [ref for ref in refs if ref.id in allowed_ids]
 
 
 def _exclude_prerelease(tags: list[TagRef]) -> list[TagRef]:
@@ -135,12 +204,10 @@ def _line_depth(tags: list[TagRef]) -> int | None:
     return None
 
 
-def _supported_release_lines(tags: list[TagRef]) -> list[list[TagRef]]:
-    """지원 중인 줄기별 후보 목록. 줄기는 버전 내림차순, 줄기 안은 이름 짧은 순."""
-    depth = _line_depth(tags)
-    if depth is None:
-        return []
-
+def _aliases_by_line(
+    tags: list[TagRef], depth: int
+) -> tuple[dict[str, list[TagRef]], dict[str, datetime | None]]:
+    """줄기별 별칭 태그와, 줄기에 속한 태그 전체의 가장 늦은 푸시 시각."""
     latest_push: dict[str, datetime | None] = {}
     aliases: dict[str, list[TagRef]] = {}
     for ref in tags:
@@ -155,16 +222,28 @@ def _supported_release_lines(tags: list[TagRef]) -> list[list[TagRef]]:
             latest_push.setdefault(line, None)
         if _is_alias(ref.tag, line):
             aliases.setdefault(line, []).append(ref)
+    return aliases, latest_push
 
+
+def _supported_aliases(tags: list[TagRef], depth: int, pinned_version: str | None) -> list[TagRef]:
+    """지원 중인 줄기의 별칭 태그. 명시한 버전의 줄기는 지원이 끝났어도 넣는다."""
+    aliases, latest_push = _aliases_by_line(tags, depth)
     supported = _supported({line: latest_push.get(line) for line in aliases})
-    kept_aliases = [
+    if pinned_version is not None:
+        # 줄기가 요구 버전의 앞부분일 때만 되살린다. "3.12"는 3.12 줄기를 되살리지만
+        # "3"은 3.x 줄기 전체를 되살리지 않는다.
+        supported |= {line for line in aliases if extends_version(line, pinned_version)}
+    return [
         ref
-        for line in supported
+        for line in sorted(supported)
         for ref in _drop_stale_variants(aliases[line], latest_push.get(line))
     ]
-    folded = _fold_by_digest(kept_aliases)
+
+
+def _group_lines(refs: list[TagRef], depth: int) -> list[list[TagRef]]:
+    """줄기별로 묶는다. 줄기는 버전 내림차순, 줄기 안은 이름 짧은 순."""
     by_line: dict[str, list[TagRef]] = {}
-    for ref in folded:
+    for ref in refs:
         line = _line_of(ref.tag, depth)
         assert line is not None
         by_line.setdefault(line, []).append(ref)
