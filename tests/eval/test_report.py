@@ -21,6 +21,7 @@ def make_score(**overrides: object) -> CaseScore:
         "case_id": "case",
         "recommended_image": "python:3.13-slim",
         "accurate": True,
+        "accurate_by_digest": False,
         "rejected_pick": False,
         "candidate_hit": True,
         "candidate_count": 1,
@@ -531,3 +532,26 @@ def test_result_document_records_the_candidates_of_each_case() -> None:
     assert case["candidate_count"] == 1
     assert case["accepted_count"] == 1
     assert case["candidate_images"] == ["python:3.13-slim"]
+
+
+def test_render_summary_lists_the_cases_accepted_by_digest() -> None:
+    """이름이 맞은 것과 digest로 맞은 것을 구분해 보여 준다."""
+    scores = [
+        make_score(case_id="temurin-jdk", accurate_by_digest=True),
+        make_score(case_id="plain"),
+    ]
+
+    output = render_summary(aggregate_full(scores), scores, [], [], 2, {})
+
+    assert "digest" in output
+    assert "1문항" in output
+    assert "temurin-jdk" in output
+    assert "plain" not in output
+
+
+def test_render_summary_omits_the_digest_line_when_every_match_is_by_name() -> None:
+    scores = [make_score()]
+
+    output = render_summary(aggregate_full(scores), scores, [], [], 1, {})
+
+    assert "digest" not in output

@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx2
-from sqlalchemy import Engine, inspect, select, text
+from sqlalchemy import Engine, inspect, select, text, tuple_
 from sqlalchemy.orm import Session, sessionmaker
 
 from whatfrom.api import recommend_for_question
@@ -168,6 +168,24 @@ def indexed_repositories(session: Session) -> set[str]:
     )
 
 
+def accepted_digests(session: Session, accept: list[str]) -> frozenset[str]:
+    """문항 accept 태그들의 digest를 모은다. 채점이 이름만 다른 같은 이미지를 알아보게 한다.
+
+    측정 시점 DB 기준이다. 수집되지 않았거나 digest가 없는 태그는 빠진다.
+    """
+    pairs = [tuple(image.split(":", 1)) for image in accept if ":" in image]
+    if not pairs:
+        return frozenset()
+    return frozenset(
+        session.execute(
+            select(ImageTag.manifest_digest).where(
+                tuple_(ImageTag.repository, ImageTag.tag).in_(pairs),
+                ImageTag.manifest_digest.is_not(None),
+            )
+        ).scalars()
+    )
+
+
 def cmd_eval(args: argparse.Namespace) -> None:
     # eval은 dev 의존성인 PyYAML을 쓴다. 모듈 최상단에서 가져오면 PyYAML이 없는
     # 환경에서 collect·index 같은 다른 명령까지 import 단계에서 실패한다.
@@ -229,7 +247,8 @@ def cmd_eval(args: argparse.Namespace) -> None:
         if args.retrieval_only:
             with open_session() as session:
                 candidates = search_candidates_by_vector(session, vector)
-            scores.append(score_retrieval(case, candidates, sections))
+                digests = accepted_digests(session, case.accept)
+            scores.append(score_retrieval(case, candidates, sections, digests))
             continue
 
         # Hit@5는 두 모드 모두 후보 선택 전의 상위 5개 청크로 계산한다.
@@ -249,7 +268,9 @@ def cmd_eval(args: argparse.Namespace) -> None:
                     ).scalar_one_or_none()
                     is not None
                 )
-        scores.append(score_full(case, response, sections, exists))
+        with open_session() as session:
+            digests = accepted_digests(session, case.accept)
+        scores.append(score_full(case, response, sections, exists, digests))
 
     meta = {
         "started_at": started_at.isoformat(timespec="seconds"),

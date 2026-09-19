@@ -222,6 +222,14 @@ def render_summary(
     if baseline is not None and any(m.label == "추천 정확도" for m in metrics):
         lines += ["", _format_baseline(baseline)]
 
+    by_digest = [s.case_id for s in scores if s.accurate_by_digest]
+    if by_digest:
+        lines += [
+            "",
+            f"※ 이름은 달라도 정답과 digest가 같아 정답으로 인정: {len(by_digest)}문항 "
+            f"({', '.join(by_digest)})",
+        ]
+
     failures = [s for s in scores if not s.accurate]
     if failures:
         width = max(_display_width(s.case_id) for s in failures)

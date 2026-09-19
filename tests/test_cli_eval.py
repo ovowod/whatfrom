@@ -19,8 +19,8 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
 from whatfrom import cli
-from whatfrom.cli import cmd_eval, indexed_repositories
-from whatfrom.core.models import Document, DocumentChunk, Repository
+from whatfrom.cli import accepted_digests, cmd_eval, indexed_repositories
+from whatfrom.core.models import Document, DocumentChunk, ImageTag, Repository
 
 NOW = datetime(2026, 9, 12, tzinfo=UTC)
 
@@ -175,3 +175,24 @@ def test_cli_imports_without_pyyaml() -> None:
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
 
     assert result.returncode == 0, result.stderr
+
+
+def test_accepted_digests_reads_the_digests_of_the_accepted_tags(session: Session) -> None:
+    """accept에 없는 태그, 수집되지 않은 태그, digest가 없는 태그는 집합에 들어가지 않는다."""
+    session.add(_repository("temurin"))
+    session.flush()
+    for tag, digest in [
+        ("25-jdk-noble", "sha256:jdk"),
+        ("25-jre", "sha256:jre"),
+        ("24", None),
+    ]:
+        session.add(
+            ImageTag(repository="temurin", tag=tag, manifest_digest=digest, collected_at=NOW)
+        )
+    session.flush()
+
+    digests = accepted_digests(
+        session, ["temurin:25-jdk-noble", "temurin:24", "temurin:not-collected"]
+    )
+
+    assert digests == frozenset({"sha256:jdk"})

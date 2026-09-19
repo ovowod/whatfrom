@@ -408,3 +408,88 @@ def test_score_full_propagates_the_candidate_record() -> None:
     assert score.candidate_count == 2
     assert score.accepted_count == 1
     assert score.candidate_images == ["python:3.13-slim", "python:3.14"]
+
+
+def digest_candidate(tag: str, digest: str | None) -> Candidate:
+    return make_candidate(tag).model_copy(update={"digest": digest})
+
+
+def test_a_recommendation_with_an_accepted_digest_is_accurate() -> None:
+    """eclipse-temurin:25-noble과 25-jdk-noble은 이름만 다르고 같은 이미지다."""
+    case = make_case(accept=["python:3.13-slim"])
+    candidates = [digest_candidate("3.13-slim-trixie", "sha256:same")]
+
+    score = score_full(
+        case,
+        make_response("python:3.13-slim-trixie", candidates),
+        [],
+        True,
+        accepted_digests=frozenset({"sha256:same"}),
+    )
+
+    assert score.accurate is True
+    assert score.accurate_by_digest is True
+
+
+def test_a_name_match_is_not_reported_as_a_digest_match() -> None:
+    case = make_case(accept=["python:3.13-slim"])
+    candidates = [digest_candidate("3.13-slim", "sha256:same")]
+
+    score = score_full(
+        case,
+        make_response("python:3.13-slim", candidates),
+        [],
+        True,
+        accepted_digests=frozenset({"sha256:same"}),
+    )
+
+    assert score.accurate is True
+    assert score.accurate_by_digest is False
+
+
+def test_an_explicitly_rejected_name_stays_wrong_even_with_an_accepted_digest() -> None:
+    """postgres:latest는 지금 18과 같은 이미지지만, 메이저가 바뀔 수 있어 오답으로 지정했다."""
+    case = make_case(accept=["python:3.13-slim"], reject=["python:latest"])
+    candidates = [digest_candidate("latest", "sha256:same")]
+
+    score = score_full(
+        case,
+        make_response("python:latest", candidates),
+        [],
+        True,
+        accepted_digests=frozenset({"sha256:same"}),
+    )
+
+    assert score.accurate is False
+    assert score.accurate_by_digest is False
+    assert score.rejected_pick is True
+
+
+def test_a_candidate_without_a_digest_is_judged_by_name_only() -> None:
+    case = make_case(accept=["python:3.13-slim"])
+    candidates = [digest_candidate("3.13-slim-trixie", None)]
+
+    score = score_full(
+        case,
+        make_response("python:3.13-slim-trixie", candidates),
+        [],
+        True,
+        accepted_digests=frozenset({"sha256:same"}),
+    )
+
+    assert score.accurate is False
+
+
+def test_a_digest_match_counts_toward_candidate_hit_and_accepted_count() -> None:
+    """정확도에만 적용하면 상한이어야 할 후보 포함률보다 정확도가 높아질 수 있다."""
+    case = make_case(accept=["python:3.13-slim"], reject=["python:latest"])
+    candidates = [
+        digest_candidate("3.13-slim-trixie", "sha256:same"),
+        digest_candidate("latest", "sha256:same"),
+        digest_candidate("3.14", "sha256:other"),
+    ]
+
+    score = score_retrieval(case, candidates, [], accepted_digests=frozenset({"sha256:same"}))
+
+    assert score.candidate_hit is True
+    assert score.accepted_count == 1
