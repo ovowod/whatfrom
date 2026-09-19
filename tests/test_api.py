@@ -6,14 +6,16 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from whatfrom.api import create_app
 from whatfrom.collect.hub import TagRow, VariantRow, parse_repository
 from whatfrom.collect.store import upsert_repository, upsert_tags
-from whatfrom.core.contracts import Recommendation
+from whatfrom.core.contracts import Recommendation, SearchPlan
 from whatfrom.core.embed import FakeEmbedder
 from whatfrom.core.httpclient import RemoteCallError
+from whatfrom.core.models import ImageTag
 from whatfrom.index.indexer import index_readme
 from whatfrom.recommend.llm import FakeLLMProvider
 
@@ -220,3 +222,106 @@ def test_recommend_rejects_an_empty_question(session):
     response = _client(session, provider).post("/recommend", json={"question": "  "})
 
     assert response.status_code == 422
+
+
+def _seed_with_alpine(session) -> None:
+    """3.13-slim(debian trixie)과 3.13-alpine(alpine) 두 태그. 파생 값을 직접 채운다."""
+    _seed(session)
+    upsert_tags(
+        session,
+        "python",
+        [
+            TagRow(
+                tag="3.13-alpine",
+                manifest_digest="sha256:ddd",
+                last_pushed_at=datetime(2026, 9, 2, tzinfo=UTC),
+                variants=(VariantRow("linux", "amd64", "", "", "sha256:eee", 18500000),),
+            )
+        ],
+        NOW,
+    )
+    for tag, distribution, codename in (
+        ("3.13-slim", "debian", "trixie"),
+        ("3.13-alpine", "alpine", "3.24"),
+    ):
+        session.execute(
+            update(ImageTag)
+            .where(ImageTag.tag == tag)
+            .values(language_version="3.13.9", distribution=distribution, distro_codename=codename)
+        )
+    session.flush()
+
+
+SLIM = Recommendation(
+    image="python:3.13-slim", reason="glibc", dockerfile="FROM python:3.13-slim\n"
+)
+
+
+def test_recommend_filters_candidates_by_the_extracted_plan(session):
+    _seed_with_alpine(session)
+    plan = SearchPlan(repository="python", exclude_distributions=["alpine"])
+    provider = FakeLLMProvider(recommendation=SLIM, plan=plan)
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    assert [c["image"] for c in body["candidates"]] == ["python:3.13-slim"]
+    assert body["plan"] == plan.model_dump()
+    assert body["degraded"] is False
+    assert body["recommendation"]["image"] == "python:3.13-slim"
+
+
+def test_recommend_gives_the_plan_prompt_the_collected_repositories(session):
+    _seed(session)
+    provider = FakeLLMProvider(recommendation=SLIM)
+
+    _client(session, provider).post("/recommend", json={"question": QUESTION})
+
+    [(_system, prompt)] = provider.plan_calls
+    assert QUESTION in prompt
+    assert "python" in prompt
+
+
+def test_recommend_keeps_answering_when_plan_extraction_fails(session):
+    """스펙 §8의 1단계 저하. 벡터 검색 후보로 추천하되 저하로 표시한다."""
+    _seed_with_alpine(session)
+    provider = FakeLLMProvider(recommendation=SLIM, plan_error=RemoteCallError("planner 500"))
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    assert body["recommendation"]["image"] == "python:3.13-slim"
+    assert body["plan"] is None
+    assert body["degraded"] is True
+    assert {c["image"] for c in body["candidates"]} == {"python:3.13-slim", "python:3.13-alpine"}
+    assert any("검색 조건 추출에 실패" in note and "planner 500" in note for note in body["notes"])
+
+
+def test_recommend_marks_a_relaxed_answer_degraded_but_keeps_the_recommendation(session):
+    """스펙 §8의 2단계 저하. 추천이 있어도 degraded는 True다."""
+    _seed_with_alpine(session)
+    provider = FakeLLMProvider(
+        recommendation=SLIM, plan=SearchPlan(repository="python", distributions=["bookworm"])
+    )
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    assert body["recommendation"]["image"] == "python:3.13-slim"
+    assert body["degraded"] is True
+    assert any("배포판 조건(bookworm)을 풀었습니다" in note for note in body["notes"])
+
+
+def test_recommend_does_not_extract_a_plan_when_embedding_fails(session):
+    """싼 호출을 먼저 한다. 어차피 실패할 요청에 LLM을 쓰지 않는다."""
+    _seed(session)
+    provider = FakeLLMProvider(recommendation=SLIM)
+
+    class DeadEmbedder:
+        dimension = 1024
+
+        def embed(self, texts):
+            raise RemoteCallError("embedder down")
+
+    _client(session, provider, embedder=DeadEmbedder()).post(
+        "/recommend", json={"question": QUESTION}
+    )
+
+    assert provider.plan_calls == []
