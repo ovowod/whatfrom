@@ -1,7 +1,13 @@
 # tests/eval/test_scoring.py
 from datetime import UTC, datetime
 
-from whatfrom.core.contracts import Candidate, Platform, Recommendation, RecommendResponse
+from whatfrom.core.contracts import (
+    Candidate,
+    Platform,
+    Recommendation,
+    RecommendResponse,
+    SearchPlan,
+)
 from whatfrom.eval.goldenset import Conditions, GoldenCase, Rationale
 from whatfrom.eval.scoring import conditions_satisfied, score_full, score_retrieval
 
@@ -14,6 +20,7 @@ def make_case(**overrides: object) -> GoldenCase:
         "question": "질문",
         "requires_repositories": ["python"],
         "accept": ["python:3.13-slim"],
+        "expected_plan": {},
         "rationale": Rationale(note="근거", sources=["https://example.invalid/doc"]),
     }
     base.update(overrides)
@@ -556,3 +563,79 @@ def test_a_temurin_build_number_extends_the_version_prefix() -> None:
     candidate = derived_candidate("21", version="21.0.12_8")
 
     assert conditions_satisfied(Conditions(version_prefix="21.0.12"), candidate) is True
+
+
+def planned_response(plan: SearchPlan | None, notes: list[str] | None = None) -> RecommendResponse:
+    return make_response("python:3.13-slim", [make_candidate("3.13-slim")], notes).model_copy(
+        update={"plan": plan}
+    )
+
+
+def test_a_plan_matching_the_expected_conditions_passes():
+    case = make_case(expected_plan={"architectures": ["arm64"], "distributions": ["bookworm"]})
+    plan = SearchPlan(repository="python", architectures=["arm64"], distributions=["bookworm"])
+
+    score = score_full(case, planned_response(plan), [], True)
+
+    assert score.repository_extracted is True
+    assert score.plan_matched is True
+    assert score.plan == plan.model_dump()
+
+
+def test_list_fields_are_compared_as_sets():
+    case = make_case(expected_plan={"exclude_distributions": ["alpine", "trixie"]})
+    plan = SearchPlan(repository="python", exclude_distributions=["trixie", "alpine"])
+
+    assert score_full(case, planned_response(plan), [], True).plan_matched is True
+
+
+def test_an_invented_condition_fails_extraction():
+    """질문에 없는 조건을 만들면 정답 후보가 지워진다. 조건 없는 문항에서도 실패다."""
+    case = make_case(expected_plan={})
+    plan = SearchPlan(repository="python", exclude_distributions=["alpine"])
+
+    score = score_full(case, planned_response(plan), [], True)
+
+    assert score.plan_matched is False
+    assert score.plan_fields["exclude_distributions"] is False
+    assert score.plan_fields["architectures"] is True
+
+
+def test_an_invented_size_limit_fails_extraction():
+    """크기는 골든셋에 적지 않았어도 비어 있어야 한다는 뜻으로 비교한다."""
+    case = make_case(expected_plan={})
+    plan = SearchPlan(repository="python", max_size_mb=100)
+
+    score = score_full(case, planned_response(plan), [], True)
+
+    assert score.plan_matched is False
+    assert score.plan_fields["max_size_mb"] is False
+
+
+def test_a_missing_condition_fails_extraction():
+    case = make_case(expected_plan={"version_prefix": "3.12"})
+
+    score = score_full(case, planned_response(SearchPlan(repository="python")), [], True)
+
+    assert score.plan_matched is False
+    assert score.plan_fields["version_prefix"] is False
+
+
+def test_a_wrong_repository_fails_repository_extraction_only():
+    case = make_case(expected_plan={})
+
+    score = score_full(case, planned_response(SearchPlan(repository="node")), [], True)
+
+    assert score.repository_extracted is False
+    assert score.plan_matched is True
+
+
+def test_a_failed_extraction_fails_both_and_keeps_the_notes():
+    case = make_case(expected_plan={})
+    notes = ["검색 조건 추출에 실패해 벡터 검색만 사용했습니다: boom"]
+
+    score = score_full(case, planned_response(None, notes), [], True)
+
+    assert (score.plan, score.plan_fields) == (None, None)
+    assert (score.repository_extracted, score.plan_matched) == (False, False)
+    assert score.notes == notes

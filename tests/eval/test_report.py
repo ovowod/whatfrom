@@ -45,6 +45,7 @@ def make_case(**overrides: object) -> GoldenCase:
         "question": "질문",
         "requires_repositories": ["python"],
         "accept": ["python:3.13-slim"],
+        "expected_plan": {},
         "rationale": Rationale(note="근거", sources=["https://example.invalid/doc"]),
     }
     base.update(overrides)
@@ -555,3 +556,44 @@ def test_render_summary_omits_the_digest_line_when_every_match_is_by_name() -> N
     output = render_summary(aggregate_full(scores), scores, [], [], 1, {})
 
     assert "digest" not in output
+
+
+def test_the_extraction_metrics_count_every_measured_case():
+    scores = [
+        make_score(repository_extracted=True, plan_matched=True),
+        make_score(case_id="b", repository_extracted=True, plan_matched=False),
+        make_score(case_id="c"),  # 추출 실패: 기본값 False
+    ]
+
+    metrics = aggregate_full(scores)
+
+    assert metric(metrics, "리포 추출 일치율") == Metric("리포 추출 일치율", 2, 3)
+    assert metric(metrics, "조건 추출 일치율") == Metric("조건 추출 일치율", 1, 3)
+    assert [m.label for m in metrics][-2:] == ["리포 추출 일치율", "조건 추출 일치율"]
+
+
+def test_retrieval_only_has_no_extraction_metrics():
+    labels = [m.label for m in aggregate_retrieval([])]
+
+    assert "리포 추출 일치율" not in labels
+    assert "조건 추출 일치율" not in labels
+
+
+def test_render_summary_aligns_the_longest_extraction_label():
+    metrics = [Metric("추천 정확도", 1, 2), Metric("조건 추출 일치율", 1, 2)]
+
+    output = render_summary(metrics, [], [], [], 0, {})
+
+    columns = [
+        _display_width(line.split("1/2")[0]) for line in output.splitlines() if "1/2" in line
+    ]
+    assert columns[0] == columns[1]
+
+
+def test_result_document_records_the_plan_and_notes_of_each_case():
+    score = make_score(plan={"repository": "python"}, notes=["조건을 풀었습니다."])
+
+    case = result_document(aggregate_full([score]), [score], [], {})["cases"][0]
+
+    assert case["plan"] == {"repository": "python"}
+    assert case["notes"] == ["조건을 풀었습니다."]

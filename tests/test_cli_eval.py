@@ -32,6 +32,7 @@ cases:
     question: 색인되지 않은 리포를 요구해 미측정으로 빠진다
     requires_repositories: [there-is-no-such-repository]
     accept: [there-is-no-such-repository:1]
+    expected_plan: {}
     rationale:
       note: 근거
       sources: [https://example.invalid/doc]
