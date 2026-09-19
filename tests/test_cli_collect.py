@@ -182,13 +182,15 @@ def test_cmd_index_all_uses_official_repositories_and_exits_on_failure(monkeypat
 
 def test_format_collect_summary_lists_repositories_reasons_and_errors():
     outcomes = [
-        CollectOutcome("cli-ok", "end", 3, 10, 2, 1.5, None),
+        CollectOutcome("cli-ok", "end", 3, 10, 2, 1.5, None, 7),
         CollectOutcome("cli-bad", "error", 1, 5, 0, 0.2, "HTTPStatusError: boom"),
     ]
 
     summary = _format_collect_summary(outcomes)
 
     assert "cli-ok" in summary
+    assert "derived" in summary.splitlines()[0]
+    assert summary.splitlines()[1].split()[4] == "7"
     assert "cli-bad" in summary
     assert "end" in summary
     assert "error" in summary

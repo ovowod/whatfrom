@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 
 from whatfrom.core.contracts import Candidate, Platform, RecommendResponse
+from whatfrom.core.versions import extends_version
 from whatfrom.eval.goldenset import Conditions, GoldenCase
 
 
@@ -107,26 +108,28 @@ def _linux_platforms(candidate: Candidate, architecture: str | None = None) -> l
 def conditions_satisfied(conditions: Conditions, candidate: Candidate) -> bool:
     """추천 이미지가 선언된 조건을 전부 만족하는가.
 
-    버전과 배포판은 현재 태그 문자열로만 판정한다. 별칭이 가리키는 실제 버전이나
-    태그에 드러나지 않는 배포판은 판별하지 못한다. 이를 판별하려면 후보에
-    정규화된 이미지 메타데이터를 전달하도록 확장해야 한다.
+    버전과 배포판은 후보의 파생 값으로 판정한다. python:3.14처럼 이름에 배포판이
+    없는 태그도 같은 이미지의 3.14-trixie에서 물려받은 값으로 판정된다.
+    파생 값이 없으면(수집 직후 실패, 충돌, 오래된 태그) 태그 이름으로 판정한다.
     """
     for architecture in conditions.architectures:
         if not _linux_platforms(candidate, architecture):
             return False
 
-    # 제한: 배포판 문자열이 없는 태그는 실제 배포판과 무관하게 통과한다.
-    # 예를 들어 "3.13"만으로는 Debian 제외 조건을 검증할 수 없다.
-    for distribution in conditions.exclude_distributions:
-        if distribution in candidate.tag:
+    # 골든셋은 배포판(alpine)과 코드네임(trixie)을 둘 다 제외 값으로 쓴다.
+    derived = {candidate.distribution, candidate.distro_codename} - {None}
+    for excluded in conditions.exclude_distributions:
+        if derived:
+            violated = excluded in derived
+        else:
+            violated = excluded in candidate.tag
+        if violated:
             return False
 
     if conditions.version_prefix is not None:
-        # "2"가 "20-alpine"과 일치하지 않도록 버전 경계를 확인한다.
-        # 태그 전체가 접두사와 같거나, 접두사 다음에 "." 또는 "-"가 있어야 한다.
-        prefix = conditions.version_prefix
-        tag = candidate.tag
-        if not (tag == prefix or tag.startswith(prefix + ".") or tag.startswith(prefix + "-")):
+        # "2"가 "20-alpine"과 일치하지 않도록 버전 경계를 확인한다. 경계는 별칭 해석과 같다.
+        # 8-jdk의 파생 버전 8u502-b07도 "8"로 시작하는 것으로 본다.
+        if not extends_version(conditions.version_prefix, candidate.version or candidate.tag):
             return False
 
     if conditions.max_size_mb is not None:

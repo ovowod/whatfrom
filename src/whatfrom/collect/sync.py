@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from sqlalchemy import Engine, update
 from sqlalchemy.orm import Session
 
+from whatfrom.collect.derive import derive_repository
 from whatfrom.collect.hub import HubClient, OffsetLimitReached, parse_repository, parse_tag_page
 from whatfrom.collect.store import upsert_repository, upsert_tags
 from whatfrom.core.db import session_scope
@@ -49,6 +50,8 @@ class CollectOutcome:
     tags_written: int
     elapsed_seconds: float
     error: str | None
+    # 수집을 끝까지 마친 뒤 파생 값이 바뀐 태그 수. 실패한 수집은 파생을 돌리지 않아 0이다.
+    tags_derived: int = 0
 
 
 def collect_repository(
@@ -69,6 +72,10 @@ def collect_repository(
 
     실패하면 기록하고 원래 예외를 다시 올린다. 기록 자체가 실패해도 실행 행의
     finished_at이 NULL로 남아 미완료로 보인다.
+
+    스캔을 다 마친 뒤에도 파생 값 채우기(derive_repository)가 실패하면 실행은
+    스캔 자신의 중단 사유가 아니라 error로 기록된다. 이미 커밋된 페이지는 그대로
+    남으므로 derive 명령으로 나중에 다시 채울 수 있다.
     """
     run_id = _start_run(engine, repository)
     return _collect_run(engine, client, repository, max_pages, now, run_id)
@@ -105,6 +112,10 @@ def _collect_run(
                     break
         except OffsetLimitReached:
             stop_reason = STOP_OFFSET_LIMIT
+
+        # 별칭은 다른 페이지의 태그에서 값을 물려받으므로 태그를 다 받은 뒤에 채운다.
+        with session_scope(engine) as session:
+            derived = derive_repository(session, repository).changed
     except Exception as exc:
         with suppress(Exception):
             _finish_run(engine, run_id, STOP_ERROR, None, f"{type(exc).__name__}: {exc}")
@@ -115,7 +126,7 @@ def _collect_run(
         raise
 
     _finish_run(engine, run_id, stop_reason, datetime.now(UTC), None)
-    return CollectOutcome(repository, stop_reason, pages, seen, written, 0.0, None)
+    return CollectOutcome(repository, stop_reason, pages, seen, written, 0.0, None, derived)
 
 
 def collect_all(

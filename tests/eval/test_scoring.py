@@ -493,3 +493,66 @@ def test_a_digest_match_counts_toward_candidate_hit_and_accepted_count() -> None
 
     assert score.candidate_hit is True
     assert score.accepted_count == 1
+
+
+def derived_candidate(tag: str, **derived: str | None) -> Candidate:
+    return make_candidate(tag).model_copy(update=derived)
+
+
+def test_a_derived_codename_violates_the_exclusion_even_when_the_tag_hides_it() -> None:
+    """python:3.14는 이름에 배포판이 없지만 3.14-trixie와 같은 이미지다."""
+    candidate = derived_candidate("3.14", distribution="debian", distro_codename="trixie")
+
+    assert conditions_satisfied(Conditions(exclude_distributions=["trixie"]), candidate) is False
+    assert conditions_satisfied(Conditions(exclude_distributions=["alpine"]), candidate) is True
+
+
+def test_a_derived_distribution_violates_the_exclusion() -> None:
+    candidate = derived_candidate("3.14-alpine", distribution="alpine", distro_codename="3.24")
+
+    assert conditions_satisfied(Conditions(exclude_distributions=["alpine"]), candidate) is False
+
+
+def test_derived_values_override_a_word_that_only_looks_like_a_distribution() -> None:
+    """파생 값이 있으면 태그 문자열은 보지 않는다. 판정 근거가 하나여야 한다."""
+    candidate = derived_candidate(
+        "alpine-lookalike", distribution="debian", distro_codename="trixie"
+    )
+
+    assert conditions_satisfied(Conditions(exclude_distributions=["alpine"]), candidate) is True
+
+
+def test_the_tag_name_decides_the_exclusion_when_nothing_was_derived() -> None:
+    candidate = derived_candidate("3.14-alpine")
+
+    assert conditions_satisfied(Conditions(exclude_distributions=["alpine"]), candidate) is False
+
+
+def test_a_derived_version_satisfies_a_prefix_the_alias_name_does_not_show() -> None:
+    """nginx:stable은 이름에 버전이 없지만 1.30이다."""
+    candidate = derived_candidate("stable", version="1.30")
+
+    assert conditions_satisfied(Conditions(version_prefix="1.30"), candidate) is True
+
+
+def test_a_derived_version_keeps_the_separator_boundary() -> None:
+    candidate = derived_candidate("latest", version="3.14.7")
+
+    assert conditions_satisfied(Conditions(version_prefix="3.1"), candidate) is False
+    assert conditions_satisfied(Conditions(version_prefix="3.14"), candidate) is True
+
+
+def test_a_java8_version_prefix_holds_before_and_after_derivation() -> None:
+    """8-jdk는 태그 이름으로 "8"을 통과한다. 파생 버전 8u502-b07로 바뀌어도 통과해야 한다."""
+    before = derived_candidate("8-jdk")
+    after = derived_candidate("8-jdk", version="8u502-b07")
+
+    assert conditions_satisfied(Conditions(version_prefix="8"), before) is True
+    assert conditions_satisfied(Conditions(version_prefix="8"), after) is True
+    assert conditions_satisfied(Conditions(version_prefix="80"), after) is False
+
+
+def test_a_temurin_build_number_extends_the_version_prefix() -> None:
+    candidate = derived_candidate("21", version="21.0.12_8")
+
+    assert conditions_satisfied(Conditions(version_prefix="21.0.12"), candidate) is True

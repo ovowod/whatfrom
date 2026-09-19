@@ -8,6 +8,15 @@ from sqlalchemy.orm import Session
 from whatfrom.collect.hub import RepositoryRow, TagRow
 from whatfrom.core.models import ImageTag, ImageVariant, Repository
 
+# 이미지가 바뀐 태그의 파생 값을 비울 때 쓴다. derive가 다시 채운다.
+DERIVED_CLEARED = {
+    "language_version": None,
+    "version_major_minor": None,
+    "distribution": None,
+    "distro_codename": None,
+    "variant": None,
+}
+
 
 def upsert_repository(session: Session, row: RepositoryRow, collected_at: datetime) -> Repository:
     repo = session.get(Repository, row.name)
@@ -116,6 +125,9 @@ def upsert_tags(
                     "manifest_digest": row.manifest_digest,
                     "last_pushed_at": row.last_pushed_at,
                     "collected_at": collected_at,
+                    # 이미지가 바뀌었으니 옛 파생 값은 틀릴 수 있다. 수집이 도중에 실패하면
+                    # derive가 돌지 않으므로, 비워 두어 태그 이름으로 판정하게 한다.
+                    **DERIVED_CLEARED,
                 }
                 for tag_id, row in changes.changed
             ],
