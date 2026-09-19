@@ -2,9 +2,12 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+from sqlalchemy import update
+
 from whatfrom.collect.hub import TagRow, VariantRow, parse_repository
 from whatfrom.collect.store import upsert_repository, upsert_tags
 from whatfrom.core.embed import FakeEmbedder
+from whatfrom.core.models import ImageTag
 from whatfrom.index.indexer import index_readme
 from whatfrom.search.retrieval import search_candidates, search_chunks
 
@@ -233,3 +236,31 @@ def test_both_candidate_entry_points_share_the_same_default_limit():
     by_question = inspect.signature(search_candidates).parameters["tags_per_repo"].default
     by_vector = inspect.signature(search_candidates_by_vector).parameters["tags_per_repo"].default
     assert by_question == by_vector == 20
+
+
+def test_search_candidates_carry_the_derived_tag_values(session):
+    """후보가 image_tags의 파생 컬럼을 싣는다. version은 language_version에서 온다."""
+    _seed(session)
+    session.execute(
+        update(ImageTag)
+        .where(ImageTag.tag == "3.13-slim")
+        .values(
+            language_version="3.13.9",
+            version_major_minor="3.13",
+            distribution="debian",
+            distro_codename="trixie",
+            variant="slim",
+        )
+    )
+
+    candidates = search_candidates(session, FakeEmbedder(), "alpine musl libc", tags_per_repo=5)
+
+    slim = next(c for c in candidates if c.tag == "3.13-slim")
+    assert (slim.version, slim.distribution, slim.distro_codename, slim.variant) == (
+        "3.13.9",
+        "debian",
+        "trixie",
+        "slim",
+    )
+    alpine = next(c for c in candidates if c.tag == "3.13-alpine")
+    assert (alpine.version, alpine.distribution) == (None, None)

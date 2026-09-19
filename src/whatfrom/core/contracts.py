@@ -27,6 +27,17 @@ class Platform(BaseModel):
 
 
 class Candidate(BaseModel):
+    """후보 태그 하나.
+
+    version·distribution·distro_codename·variant는 태그 이름과 같은 이미지의 다른
+    태그에서 규칙으로 읽은 값이다(collect.derive). 모르면 None이다.
+    version은 image_tags.language_version이다. python이 아닌 이미지에도 쓰므로
+    계약에서는 version이라 부른다.
+    distribution과 distro_codename은 태그의 Linux 이미지 기준이다. Windows 이미지도
+    함께 담은 python:3.14의 distribution은 debian이다. Windows 이미지만 담은 태그만
+    windows다. 플랫폼별 OS는 platforms가 보여 준다.
+    """
+
     image: str  # "repository:tag"
     repository: str
     tag: str
@@ -36,6 +47,10 @@ class Candidate(BaseModel):
     source_url: str
     collected_at: datetime
     evidence: list[Evidence] = Field(default_factory=list)
+    version: str | None = None
+    distribution: str | None = None
+    distro_codename: str | None = None
+    variant: str | None = None
 
 
 class Recommendation(BaseModel):

@@ -145,6 +145,10 @@ def search_candidates_by_vector(
                     source_url=repo.source_url,
                     collected_at=tag.collected_at,
                     evidence=_dedupe_evidence(evidence),
+                    version=tag.language_version,
+                    distribution=tag.distribution,
+                    distro_codename=tag.distro_codename,
+                    variant=tag.variant,
                 )
             )
     return candidates
