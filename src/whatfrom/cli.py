@@ -2,7 +2,7 @@
 import argparse
 import hashlib
 import json
-from collections.abc import Generator, Sequence
+from collections.abc import Callable, Generator, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -12,6 +12,7 @@ from sqlalchemy import Engine, inspect, select, text, tuple_
 from sqlalchemy.orm import Session, sessionmaker
 
 from whatfrom.api import recommend_for_question
+from whatfrom.collect import docs
 from whatfrom.collect.derive import DeriveOutcome, derive_repository
 from whatfrom.collect.hub import HubClient, parse_repository
 from whatfrom.collect.store import upsert_repository
@@ -125,16 +126,23 @@ def run_index(
     client: HubClient,
     embedder: Embedder,
     repositories: Sequence[str],
+    fetch_readme: Callable[[str], str],
 ) -> int:
+    """README 본문은 fetch_readme(원본)에서 받는다. Hub 본문은 25,000자에서 잘린다.
+
+    원본을 받지 못하면 잘린 Hub 본문으로 대신하지 않고 그 리포를 실패로 센다.
+    이전 색인은 그대로 남는다.
+    """
     failed = 0
     for repository in repositories:
         try:
             repo_row = parse_repository(client.fetch_repository(repository))
+            readme = fetch_readme(repository)
             now = datetime.now(UTC)
             with session_scope(engine) as session:
                 upsert_repository(session, repo_row, now)
                 created = index_readme(
-                    session, repository, repo_row.readme, repo_row.source_url, embedder, now
+                    session, repository, readme, docs.docs_page_url(repository), embedder, now
                 )
             print(f"{repository:<16} indexed {created} chunks")
         except Exception as exc:
@@ -149,7 +157,13 @@ def cmd_index(args: argparse.Namespace) -> None:
     engine = make_engine(args.database_url)
     embedder = get_embedder(args.embedder)
     with httpx2.Client(timeout=30.0) as http:
-        code = run_index(engine, HubClient(http), embedder, repositories)
+        code = run_index(
+            engine,
+            HubClient(http),
+            embedder,
+            repositories,
+            lambda repository: docs.fetch_readme(http, repository),
+        )
     if code:
         raise SystemExit(code)
 
