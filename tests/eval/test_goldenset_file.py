@@ -8,6 +8,7 @@
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+from whatfrom.collect.tagparse import parse_tag
 from whatfrom.core.contracts import Candidate
 from whatfrom.eval.goldenset import Conditions, load_goldenset
 from whatfrom.eval.scoring import conditions_satisfied
@@ -52,6 +53,10 @@ def test_every_accepted_tag_satisfies_its_tag_string_conditions() -> None:
     채점기의 conditions_satisfied를 그대로 부르는 이유는, 베껴 쓰면 감시하려던
     그 함수와 따로 놀게 되기 때문이다. 접두 앵커링 규칙이 바뀌면 이 테스트도
     같이 바뀌어야 한다.
+
+    이름에 버전이 없는 별칭(nginx:stable)은 같은 이미지의 다른 태그에서 버전을
+    물려받아 채점된다. 그 값은 DB에만 있어 파일로는 판정할 수 없으므로 이런
+    태그는 버전 조건을 보지 않는다.
     """
     for case in load_goldenset(GOLDENSET).cases:
         judgeable = Conditions(
@@ -62,6 +67,9 @@ def test_every_accepted_tag_satisfies_its_tag_string_conditions() -> None:
             continue
         for image in case.accept:
             repository, _, tag = image.partition(":")
+            checked = judgeable
+            if parse_tag(tag, repository).version is None:
+                checked = judgeable.model_copy(update={"version_prefix": None})
             candidate = Candidate(
                 image=image,
                 repository=repository,
@@ -69,7 +77,7 @@ def test_every_accepted_tag_satisfies_its_tag_string_conditions() -> None:
                 source_url="https://example.invalid/",
                 collected_at=datetime(2026, 9, 12, tzinfo=UTC),
             )
-            assert conditions_satisfied(judgeable, candidate), (
+            assert conditions_satisfied(checked, candidate), (
                 f"{case.id}: accept의 {image}가 같은 문항의 조건을 만족하지 않는다"
             )
 

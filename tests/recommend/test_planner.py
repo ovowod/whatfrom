@@ -54,6 +54,29 @@ def test_a_repository_in_the_list_is_kept():
     assert plan.repository == "eclipse-temurin"
 
 
+def test_a_repository_is_matched_regardless_of_case_and_spaces():
+    """수집 목록은 소문자다. LLM이 표기만 다르게 내도 버리지 않는다."""
+    plan = extract_plan(
+        FakeLLMProvider(plan=SearchPlan(repository=" Eclipse-Temurin ")), "q", REPOSITORIES
+    )
+
+    assert plan.repository == "eclipse-temurin"
+
+
+def test_the_system_prompt_says_compared_tags_are_not_requirements():
+    """ "python:3.14랑 3.14-slim이 뭐가 달라?"의 3.14는 비교 대상이지 요구가 아니다.
+
+    골든셋 라벨과 같은 규칙이다.
+    """
+    assert "Tags the user only compares or asks about" in PLAN_SYSTEM
+    assert "are not requirements" in PLAN_SYSTEM
+
+
+def test_the_system_prompt_says_tag_aliases_are_not_versions():
+    """nginx:stable의 stable은 브랜치 별칭이다. 버전으로 거르면 맞는 태그가 없어 조건을 푼다."""
+    assert "Tag aliases such as stable, mainline, latest and lts are not versions" in PLAN_SYSTEM
+
+
 @pytest.mark.parametrize(
     ("given", "expected"),
     [
