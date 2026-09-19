@@ -11,19 +11,41 @@ class RetrievalScore:
 
     case_id: str
     candidate_hit: bool
+    # 무작위 선택 대조군과 사후 분석에 쓴다. 결과 JSON에 후보가 없으면
+    # 같은 DB와 임베딩 모델로 검색을 다시 돌려야 알 수 있다.
+    candidate_count: int
+    accepted_count: int
+    candidate_images: list[str]
     hit_declared: bool
     hit_at5: bool
 
 
-def _candidate_hit(case: GoldenCase, candidates: list[Candidate]) -> bool:
+def _is_accepted(case: GoldenCase, candidate: Candidate, accepted_digests: frozenset[str]) -> bool:
+    """후보가 정답과 같은 이미지인가.
+
+    이름이 accept에 있거나, digest가 accept 태그의 digest와 같으면 같은 이미지다.
+    eclipse-temurin:25-noble과 25-jdk-noble처럼 이름만 다른 별칭을 accept에 전부
+    적을 수는 없다. 다만 이름이 reject에 있으면 digest가 같아도 오답이다.
+    postgres:latest는 지금 18과 같은 이미지지만 메이저가 바뀔 수 있어 오답으로 지정했다.
+    digest는 모든 플랫폼을 묶은 index의 digest라 같으면 모든 아키텍처에서 같다.
+    """
+    if candidate.image in case.reject:
+        return False
+    if candidate.image in case.accept:
+        return True
+    return candidate.digest is not None and candidate.digest in accepted_digests
+
+
+def _candidate_hit(
+    case: GoldenCase, candidates: list[Candidate], accepted_digests: frozenset[str]
+) -> bool:
     """허용 집합 중 하나라도 후보에 있는가.
 
     추천은 후보 안에서만 선택하므로 후보에 정답이 없으면 최종 추천도 맞출 수 없다.
     이 값을 추천 정확도와 비교하면 후보 검색과 최종 선택 중 어느 단계에서
-    정답을 놓쳤는지 파악하는 데 도움이 된다.
+    정답을 놓쳤는지 파악하는 데 도움이 된다. 정확도와 같은 판정을 써야 상한이 된다.
     """
-    offered = {c.image for c in candidates}
-    return any(image in offered for image in case.accept)
+    return any(_is_accepted(case, c, accepted_digests) for c in candidates)
 
 
 def _hit_at5(case: GoldenCase, sections: list[tuple[str, str]]) -> bool:
@@ -44,13 +66,23 @@ def _hit_at5(case: GoldenCase, sections: list[tuple[str, str]]) -> bool:
 
 
 def score_retrieval(
-    case: GoldenCase, candidates: list[Candidate], sections: list[tuple[str, str]]
+    case: GoldenCase,
+    candidates: list[Candidate],
+    sections: list[tuple[str, str]],
+    accepted_digests: frozenset[str] = frozenset(),
 ) -> RetrievalScore:
-    """sections는 상위 청크의 (리포, 섹션 제목) 쌍이다. 러너가 문서에서 뽑아 넘긴다."""
+    """sections는 상위 청크의 (리포, 섹션 제목) 쌍이다. 러너가 문서에서 뽑아 넘긴다.
+
+    accepted_digests는 accept 태그들의 digest다. 러너가 DB에서 조회해 넘긴다.
+    """
     declared = bool(case.expected_sections)
+    images = [c.image for c in candidates]
     return RetrievalScore(
         case_id=case.id,
-        candidate_hit=_candidate_hit(case, candidates),
+        candidate_hit=_candidate_hit(case, candidates, accepted_digests),
+        candidate_count=len(images),
+        accepted_count=sum(_is_accepted(case, c, accepted_digests) for c in candidates),
+        candidate_images=images,
         hit_declared=declared,
         hit_at5=declared and _hit_at5(case, sections),
     )
@@ -117,9 +149,14 @@ class CaseScore:
     case_id: str
     recommended_image: str | None
     accurate: bool
+    # 이름은 accept에 없지만 digest가 같아 정답으로 인정했는가.
+    accurate_by_digest: bool
     # 지표가 아니라 경보다. 리포트의 실패 목록에 표시된다.
     rejected_pick: bool
     candidate_hit: bool
+    candidate_count: int
+    accepted_count: int
+    candidate_images: list[str]
     # 추천이 없으면 None. 분모에서 빠진다.
     tag_real: bool | None
     conditions_declared: bool
@@ -151,6 +188,7 @@ def score_full(
     response: RecommendResponse,
     sections: list[tuple[str, str]],
     recommended_image_exists: bool | None,
+    accepted_digests: frozenset[str] = frozenset(),
 ) -> CaseScore:
     """지표 6종을 한 문항에 대해 채점한다.
 
@@ -158,7 +196,7 @@ def score_full(
     verify가 통과시킨 것을 그대로 다시 믿는 셈이라 불변식(스펙 §2)을 독립적으로
     검증하지 못한다. 추천이 없으면 None이고 태그 실재율 분모에서 빠진다.
     """
-    retrieval = score_retrieval(case, response.candidates, sections)
+    retrieval = score_retrieval(case, response.candidates, sections, accepted_digests)
     recommendation = response.recommendation
     image = recommendation.image if recommendation is not None else None
 
@@ -168,12 +206,21 @@ def score_full(
         else None
     )
 
+    by_name = image is not None and image in case.accept
+    accurate = by_name or (
+        recommended is not None and _is_accepted(case, recommended, accepted_digests)
+    )
+
     return CaseScore(
         case_id=case.id,
         recommended_image=image,
-        accurate=image is not None and image in case.accept,
+        accurate=accurate,
+        accurate_by_digest=accurate and not by_name,
         rejected_pick=image is not None and image in case.reject,
         candidate_hit=retrieval.candidate_hit,
+        candidate_count=retrieval.candidate_count,
+        accepted_count=retrieval.accepted_count,
+        candidate_images=retrieval.candidate_images,
         # 추천이 없으면 호출자가 무엇을 넘겼든 None이다. 답하지 않은 것을
         # "환각하지 않았음"으로 세면 저하가 잦을수록 점수가 오른다.
         tag_real=recommended_image_exists if image is not None else None,

@@ -3,11 +3,13 @@ from whatfrom.eval.goldenset import GoldenCase, Rationale
 from whatfrom.eval.report import (
     ConstantBaseline,
     Metric,
+    RandomBaseline,
     Skipped,
     _display_width,  # 열 맞춤 검증에만 쓴다
     aggregate_full,
     aggregate_retrieval,
     constant_baseline,
+    random_baseline,
     render_summary,
     result_document,
 )
@@ -19,8 +21,12 @@ def make_score(**overrides: object) -> CaseScore:
         "case_id": "case",
         "recommended_image": "python:3.13-slim",
         "accurate": True,
+        "accurate_by_digest": False,
         "rejected_pick": False,
         "candidate_hit": True,
+        "candidate_count": 1,
+        "accepted_count": 1,
+        "candidate_images": ["python:3.13-slim"],
         "tag_real": True,
         "conditions_declared": True,
         "conditions_met": True,
@@ -141,8 +147,9 @@ def test_retrieval_and_full_aggregate_the_shared_metrics_identically() -> None:
         {"case_id": "b", "candidate_hit": False, "hit_declared": True, "hit_at5": False},
         {"case_id": "c", "candidate_hit": True, "hit_declared": False, "hit_at5": False},
     ]
+    record = {"candidate_count": 0, "accepted_count": 0, "candidate_images": []}
     case_scores = [make_score(**v) for v in values]
-    retrieval_scores = [RetrievalScore(**v) for v in values]  # type: ignore[arg-type]
+    retrieval_scores = [RetrievalScore(**v, **record) for v in values]  # type: ignore[arg-type]
 
     full = {m.label: m for m in aggregate_full(case_scores)}
     retrieval = {m.label: m for m in aggregate_retrieval(retrieval_scores)}
@@ -429,3 +436,122 @@ def test_render_summary_aligns_the_failure_column_for_a_long_case_id() -> None:
     ]
     assert len(columns) == 2
     assert columns[0] == columns[1]
+
+
+def make_retrieval(accepted: int, count: int) -> RetrievalScore:
+    return RetrievalScore(
+        case_id="case",
+        candidate_hit=accepted > 0,
+        candidate_count=count,
+        accepted_count=accepted,
+        candidate_images=[f"python:{i}" for i in range(count)],
+        hit_declared=False,
+        hit_at5=False,
+    )
+
+
+def test_random_baseline_averages_per_case_ratios_not_pooled_counts() -> None:
+    """문항마다 1/2, 0/8이면 평균은 0.25다. 후보를 모두 합쳐 나누면 1/10 = 0.1이 된다.
+
+    무작위 선택은 문항마다 따로 일어난다. 합쳐 나누면 후보가 많은 문항이 결과를 좌우한다.
+    """
+    baseline = random_baseline([make_retrieval(1, 2), make_retrieval(0, 8)])
+
+    assert baseline.expected == 0.25
+    assert baseline.total == 2
+
+
+def test_random_baseline_counts_a_case_without_candidates_as_zero() -> None:
+    """측정했는데 후보가 없으면 무작위로 골라도 맞힐 수 없다. 분모에서 빼면 기대값이 부푼다."""
+    baseline = random_baseline([make_retrieval(1, 1), make_retrieval(0, 0)])
+
+    assert baseline.expected == 0.5
+    assert baseline.total == 2
+
+
+def test_random_baseline_is_unmeasured_when_there_are_no_cases() -> None:
+    assert random_baseline([]) == RandomBaseline(expected=None, total=0)
+
+
+def test_random_baseline_reads_full_mode_scores_too() -> None:
+    baseline = random_baseline([make_score(candidate_count=4, accepted_count=1)])
+
+    assert baseline.expected == 0.25
+
+
+def test_render_summary_shows_the_random_baseline_in_retrieval_only_mode() -> None:
+    """고정답 대조군과 달리 후보만 있으면 계산되므로 검색 전용 모드에도 나온다."""
+    output = render_summary(
+        aggregate_retrieval([]), [], [], [], 1, {}, None, RandomBaseline(expected=0.083, total=40)
+    )
+
+    assert "무작위 선택 대조군" in output
+    assert "8.3%" in output
+    assert "40문항" in output
+
+
+def test_render_summary_shows_the_random_baseline_in_full_mode() -> None:
+    output = render_summary(
+        aggregate_full([make_score()]),
+        [],
+        [],
+        [],
+        1,
+        {},
+        ConstantBaseline(image="python:3.14-slim", hits=10, total=14),
+        RandomBaseline(expected=0.25, total=2),
+    )
+
+    assert "무작위 선택 대조군" in output
+    assert "25.0%" in output
+    assert "고정답 대조군" in output
+
+
+def test_render_summary_says_the_random_baseline_is_uncomputable_when_empty() -> None:
+    output = render_summary(
+        aggregate_retrieval([]), [], [], [], 0, {}, None, RandomBaseline(expected=None, total=0)
+    )
+
+    assert "무작위 선택 대조군" in output
+    assert "계산할 수 없다" in output
+
+
+def test_result_document_records_the_random_baseline() -> None:
+    document = result_document(
+        aggregate_retrieval([]), [], [], {}, None, RandomBaseline(expected=0.25, total=2)
+    )
+
+    assert document["random_baseline"] == {"expected": 0.25, "total": 2}
+    assert "constant_baseline" not in document
+
+
+def test_result_document_records_the_candidates_of_each_case() -> None:
+    document = result_document(aggregate_full([make_score()]), [make_score()], [], {})
+
+    case = document["cases"][0]
+    assert case["candidate_count"] == 1
+    assert case["accepted_count"] == 1
+    assert case["candidate_images"] == ["python:3.13-slim"]
+
+
+def test_render_summary_lists_the_cases_accepted_by_digest() -> None:
+    """이름이 맞은 것과 digest로 맞은 것을 구분해 보여 준다."""
+    scores = [
+        make_score(case_id="temurin-jdk", accurate_by_digest=True),
+        make_score(case_id="plain"),
+    ]
+
+    output = render_summary(aggregate_full(scores), scores, [], [], 2, {})
+
+    assert "digest" in output
+    assert "1문항" in output
+    assert "temurin-jdk" in output
+    assert "plain" not in output
+
+
+def test_render_summary_omits_the_digest_line_when_every_match_is_by_name() -> None:
+    scores = [make_score()]
+
+    output = render_summary(aggregate_full(scores), scores, [], [], 1, {})
+
+    assert "digest" not in output
