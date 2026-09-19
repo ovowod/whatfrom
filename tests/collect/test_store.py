@@ -1,11 +1,12 @@
 # tests/collect/test_store.py
 import json
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx2
 import pytest
-from sqlalchemy import delete, event, select
+from sqlalchemy import delete, event, select, update
 from sqlalchemy.orm import sessionmaker
 
 from whatfrom.collect.hub import HubClient, RepositoryRow, TagRow, VariantRow
@@ -73,7 +74,7 @@ def test_upsert_tags_writes_tag_and_its_architecture_variants(session):
     tag = session.execute(select(ImageTag)).scalars().one()
     assert tag.tag == "3.13-slim"
     assert tag.repository == "python"
-    # 파생 컬럼은 F6까지 비어 있다.
+    # 파생 컬럼은 저장할 때가 아니라 수집을 마친 뒤 derive가 채운다.
     assert tag.distribution is None
     assert tag.variant is None
 
@@ -276,3 +277,57 @@ def test_collect_repository_commits_completed_pages_before_a_later_page_fails(en
             session.execute(delete(ImageTag).where(ImageTag.repository == repo_name))
             session.execute(delete(Repository).where(Repository.name == repo_name))
             session.execute(delete(CollectionRun).where(CollectionRun.repository == repo_name))
+
+
+def _set_derived(session, tag: str) -> None:
+    session.execute(
+        update(ImageTag)
+        .where(ImageTag.tag == tag)
+        .values(
+            language_version="3.13.9",
+            version_major_minor="3.13",
+            distribution="debian",
+            distro_codename="bookworm",
+            variant="slim",
+        )
+    )
+
+
+def _derived(session, tag: str) -> tuple:
+    return session.execute(
+        select(
+            ImageTag.language_version,
+            ImageTag.version_major_minor,
+            ImageTag.distribution,
+            ImageTag.distro_codename,
+            ImageTag.variant,
+        ).where(ImageTag.tag == tag)
+    ).one()
+
+
+def test_a_changed_tag_loses_its_derived_values(session):
+    """새 이미지에 옛 배포판이 남으면 API와 eval이 틀린 값을 쓴다. 다시 채울 때까지 비워 둔다."""
+    upsert_repository(session, _repo_row(), NOW)
+    upsert_tags(session, "python", [_tag_row()], NOW)
+    _set_derived(session, "3.13-slim")
+
+    changed = replace(_tag_row(), manifest_digest="sha256:new")
+    upsert_tags(session, "python", [changed], NOW)
+
+    assert tuple(_derived(session, "3.13-slim")) == (None, None, None, None, None)
+
+
+def test_an_unchanged_tag_keeps_its_derived_values(session):
+    upsert_repository(session, _repo_row(), NOW)
+    upsert_tags(session, "python", [_tag_row()], NOW)
+    _set_derived(session, "3.13-slim")
+
+    upsert_tags(session, "python", [_tag_row()], NOW)
+
+    assert tuple(_derived(session, "3.13-slim")) == (
+        "3.13.9",
+        "3.13",
+        "debian",
+        "bookworm",
+        "slim",
+    )

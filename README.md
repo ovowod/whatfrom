@@ -88,6 +88,15 @@ uv run uvicorn whatfrom.api:app
 다시 실행하면 digest나 푸시 시각이 바뀐 태그만 다시 쓰고, 실행마다 결과를 `collection_runs` 테이블에 기록한다.
 digest가 없는 오래된 태그는 같은 이미지인지 판단할 수 없어 매번 다시 쓴다.
 하나의 리포지토리만 다룰 때는 `--all` 대신 이름을 넘긴다(`collect python`).
+
+수집을 마치면 태그의 버전·배포판·코드네임·변형을 파생 컬럼에 채운다. 이름에 없는 값은 같은 이미지를 가리키는 다른 태그에서 가져온다.
+예를 들어 `python:3.14`는 Linux 이미지가 `3.14-trixie`와 같아서 debian trixie가 된다.
+이미 수집된 DB는 Docker Hub를 다시 부르지 않고 채울 수 있다.
+
+```bash
+uv run python -m whatfrom.cli derive --all
+```
+
 서버가 실행되면 다른 터미널에서 추천을 요청할 수 있다.
 
 ```bash

@@ -43,7 +43,7 @@ class ImageTag(Base):
     last_pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     collected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
-    # 태그명에서 규칙으로 파생된다. F6까지는 비어 있다.
+    # 태그명과 같은 이미지의 다른 태그에서 규칙으로 파생된다. collect.derive가 채운다.
     language_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
     version_major_minor: Mapped[str | None] = mapped_column(String(20), nullable=True)
     distribution: Mapped[str | None] = mapped_column(String(30), nullable=True)

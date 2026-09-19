@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from sqlalchemy import Engine, update
 from sqlalchemy.orm import Session
 
+from whatfrom.collect.derive import derive_repository
 from whatfrom.collect.hub import HubClient, OffsetLimitReached, parse_repository, parse_tag_page
 from whatfrom.collect.store import upsert_repository, upsert_tags
 from whatfrom.core.db import session_scope
@@ -49,6 +50,8 @@ class CollectOutcome:
     tags_written: int
     elapsed_seconds: float
     error: str | None
+    # 수집을 끝까지 마친 뒤 파생 값이 바뀐 태그 수. 실패한 수집은 파생을 돌리지 않아 0이다.
+    tags_derived: int = 0
 
 
 def collect_repository(
@@ -105,6 +108,10 @@ def _collect_run(
                     break
         except OffsetLimitReached:
             stop_reason = STOP_OFFSET_LIMIT
+
+        # 별칭은 다른 페이지의 태그에서 값을 물려받으므로 태그를 다 받은 뒤에 채운다.
+        with session_scope(engine) as session:
+            derived = derive_repository(session, repository).changed
     except Exception as exc:
         with suppress(Exception):
             _finish_run(engine, run_id, STOP_ERROR, None, f"{type(exc).__name__}: {exc}")
@@ -115,7 +122,7 @@ def _collect_run(
         raise
 
     _finish_run(engine, run_id, stop_reason, datetime.now(UTC), None)
-    return CollectOutcome(repository, stop_reason, pages, seen, written, 0.0, None)
+    return CollectOutcome(repository, stop_reason, pages, seen, written, 0.0, None, derived)
 
 
 def collect_all(

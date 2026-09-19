@@ -449,3 +449,72 @@ def test_started_at_is_the_wall_clock_not_the_batch_time(engine, cleanup):
     [run] = runs(engine, "sync-clock")
     assert datetime.now(UTC) - run.started_at < timedelta(minutes=1)
     assert run.finished_at >= run.started_at
+
+
+def image_tag(name: str, image_digest: str) -> dict:
+    """image_digest가 같은 태그는 같은 Linux 이미지다. index digest는 태그마다 다르게 둔다."""
+    image = {"os": "linux", "architecture": "amd64", "digest": image_digest, "size": 1}
+    return {
+        "name": name,
+        "digest": f"sha256:index-{name}-{image_digest}",
+        "tag_last_pushed": "2026-09-01T00:00:00Z",
+        "images": [image],
+    }
+
+
+def derived(engine, name: str, tag_name: str) -> tuple:
+    with session_scope(engine) as session:
+        return tuple(
+            session.execute(
+                select(
+                    ImageTag.language_version,
+                    ImageTag.distribution,
+                    ImageTag.distro_codename,
+                    ImageTag.variant,
+                ).where(ImageTag.repository == name, ImageTag.tag == tag_name)
+            ).one()
+        )
+
+
+def test_a_finished_collection_fills_derived_values_across_pages(engine, cleanup):
+    """3.14는 둘째 페이지의 3.14-trixie에서 배포판을 물려받는다. 페이지 단위로는 못 한다."""
+    cleanup.append("sync-derive")
+    hub = FakeHub()
+    hub.repository("sync-derive")
+    hub.pages(
+        "sync-derive",
+        [
+            page("sync-derive", [image_tag("3.14", "sha256:t")], 1, last=False),
+            page("sync-derive", [image_tag("3.14-trixie", "sha256:t")], 2, last=True),
+        ],
+    )
+
+    outcome = collect_repository(engine, hub.client(), "sync-derive", None, NOW)
+
+    assert outcome.tags_derived == 2
+    assert derived(engine, "sync-derive", "3.14") == ("3.14", "debian", "trixie", "full")
+
+
+def test_a_failed_collection_leaves_a_changed_tag_without_stale_derived_values(engine, cleanup):
+    """첫 페이지에서 이미지가 바뀌고 다음 페이지에서 실패하면 derive가 돌지 않는다.
+
+    옛 배포판이 새 digest와 함께 남으면 안 된다. 저장할 때 비워 두어야 한다.
+    """
+    cleanup.append("sync-stale")
+    hub = FakeHub()
+    hub.repository("sync-stale")
+    hub.pages("sync-stale", [page("sync-stale", [image_tag("3.14-trixie", "sha256:old")], 1, True)])
+    collect_repository(engine, hub.client(), "sync-stale", None, NOW)
+    assert derived(engine, "sync-stale", "3.14-trixie")[1] == "debian"
+
+    hub.pages(
+        "sync-stale",
+        [
+            page("sync-stale", [image_tag("3.14-trixie", "sha256:new")], 1, last=False),
+            httpx2.ConnectError("boom"),
+        ],
+    )
+    with pytest.raises(httpx2.ConnectError):
+        collect_repository(engine, hub.client(), "sync-stale", None, NOW)
+
+    assert derived(engine, "sync-stale", "3.14-trixie") == (None, None, None, None)

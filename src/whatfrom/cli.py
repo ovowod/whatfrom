@@ -12,6 +12,7 @@ from sqlalchemy import Engine, inspect, select, text, tuple_
 from sqlalchemy.orm import Session, sessionmaker
 
 from whatfrom.api import recommend_for_question
+from whatfrom.collect.derive import DeriveOutcome, derive_repository
 from whatfrom.collect.hub import HubClient, parse_repository
 from whatfrom.collect.store import upsert_repository
 from whatfrom.collect.sync import (
@@ -64,13 +65,13 @@ def run_collect(
 
 def _format_collect_summary(outcomes: list[CollectOutcome]) -> str:
     lines = [
-        f"{'repository':<16} {'pages':>5} {'seen':>6} {'new_or_changed':>14}  "
+        f"{'repository':<16} {'pages':>5} {'seen':>6} {'new_or_changed':>14} {'derived':>7}  "
         f"{'stop':<12} {'seconds':>7}"
     ]
     for outcome in outcomes:
         lines.append(
             f"{outcome.repository:<16} {outcome.pages:>5} {outcome.tags_seen:>6} "
-            f"{outcome.tags_written:>14}  {outcome.stop_reason:<12} "
+            f"{outcome.tags_written:>14} {outcome.tags_derived:>7}  {outcome.stop_reason:<12} "
             f"{outcome.elapsed_seconds:>7.1f}"
         )
     for outcome in outcomes:
@@ -84,6 +85,37 @@ def cmd_collect(args: argparse.Namespace) -> None:
     engine = make_engine(args.database_url)
     with httpx2.Client(timeout=30.0) as http:
         code = run_collect(engine, HubClient(http), repositories, args.max_pages)
+    if code:
+        raise SystemExit(code)
+
+
+def run_derive(engine: Engine, repositories: Sequence[str]) -> int:
+    """이미 수집된 태그에 파생 값을 다시 채운다. Docker Hub를 부르지 않는다."""
+    failed = 0
+    for repository in repositories:
+        try:
+            with session_scope(engine) as session:
+                outcome = derive_repository(session, repository)
+            print(_format_derive_line(outcome))
+        except Exception as exc:
+            # 한 리포지토리의 실패가 나머지를 막지 않는다.
+            failed += 1
+            print(f"{repository:<16} failed: {type(exc).__name__}: {exc}")
+    return 1 if failed else 0
+
+
+def _format_derive_line(outcome: DeriveOutcome) -> str:
+    filled = outcome.with_distribution / outcome.total if outcome.total else 0.0
+    return (
+        f"{outcome.repository:<16} tags {outcome.total:>5}  changed {outcome.changed:>5}  "
+        f"conflicts {outcome.conflict_fields} fields / {outcome.conflict_tags} tags  "
+        f"distribution {filled:.1%}"
+    )
+
+
+def cmd_derive(args: argparse.Namespace) -> None:
+    repositories = OFFICIAL_REPOSITORIES if args.all else (args.repository,)
+    code = run_derive(make_engine(args.database_url), repositories)
     if code:
         raise SystemExit(code)
 
@@ -347,6 +379,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_collect.add_argument("--max-pages", type=_positive_int, default=None)
     p_collect.add_argument("--database-url", default=settings.database_url)
     p_collect.set_defaults(func=cmd_collect)
+
+    p_derive = sub.add_parser("derive", help="fill derived tag columns from collected tags")
+    derive_target = p_derive.add_mutually_exclusive_group(required=True)
+    derive_target.add_argument("repository", nargs="?")
+    derive_target.add_argument("--all", action="store_true", help="공식 이미지 10개를 모두 채움")
+    p_derive.add_argument("--database-url", default=settings.database_url)
+    p_derive.set_defaults(func=cmd_derive)
 
     p_index = sub.add_parser("index", help="fetch README, chunk it, embed it")
     index_target = p_index.add_mutually_exclusive_group(required=True)
