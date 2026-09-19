@@ -65,7 +65,12 @@ def parse_tag(tag: str, repository: str) -> TagFacts:
     variants: list[str] = []
 
     index = 0
-    if tokens and VERSION_TOKEN.match(tokens[0]) and not DATE_TOKEN.match(tokens[0]):
+    if (
+        tokens
+        and VERSION_TOKEN.match(tokens[0])
+        and not DATE_TOKEN.match(tokens[0])
+        and tokens[0] not in VARIANT_WORDS
+    ):
         version = tokens[0]
         index = 1
         # temurin 8의 8u502-b07. 빌드 번호까지가 버전이다.

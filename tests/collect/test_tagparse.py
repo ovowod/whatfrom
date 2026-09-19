@@ -47,6 +47,8 @@ CASES = [
     ("eclipse-temurin", "25-jdk", "25", None, None, "jdk"),
     ("redis", "5-32bit-buster", "5", "debian", "buster", "32bit"),
     ("redis", "6.0-rc1-32bit-buster", "6.0", "debian", "buster", "32bit"),
+    ("redis", "32bit-stretch", None, "debian", "stretch", "32bit"),
+    ("redis", "32bit", None, None, None, "32bit"),
     ("eclipse-temurin", "21-jre-ubi9-minimal", "21", "ubi", "9", "jre-minimal"),
     ("eclipse-temurin", "21-ubi10-minimal", "21", "ubi", "10", "minimal"),
     (

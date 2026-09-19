@@ -119,7 +119,11 @@ def conditions_satisfied(conditions: Conditions, candidate: Candidate) -> bool:
     # 골든셋은 배포판(alpine)과 코드네임(trixie)을 둘 다 제외 값으로 쓴다.
     derived = {candidate.distribution, candidate.distro_codename} - {None}
     for excluded in conditions.exclude_distributions:
-        if (excluded in derived) if derived else (excluded in candidate.tag):
+        if derived:
+            violated = excluded in derived
+        else:
+            violated = excluded in candidate.tag
+        if violated:
             return False
 
     if conditions.version_prefix is not None:

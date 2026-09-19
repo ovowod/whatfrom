@@ -72,6 +72,10 @@ def collect_repository(
 
     실패하면 기록하고 원래 예외를 다시 올린다. 기록 자체가 실패해도 실행 행의
     finished_at이 NULL로 남아 미완료로 보인다.
+
+    스캔을 다 마친 뒤에도 파생 값 채우기(derive_repository)가 실패하면 실행은
+    스캔 자신의 중단 사유가 아니라 error로 기록된다. 이미 커밋된 페이지는 그대로
+    남으므로 derive 명령으로 나중에 다시 채울 수 있다.
     """
     run_id = _start_run(engine, repository)
     return _collect_run(engine, client, repository, max_pages, now, run_id)

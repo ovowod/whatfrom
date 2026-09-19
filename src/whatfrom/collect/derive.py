@@ -16,7 +16,7 @@ from whatfrom.core.models import ImageTag, ImageVariant
 from whatfrom.core.versions import extends_version
 
 # 한 태그의 Linux 플랫폼 (architecture, arch_variant, digest) 집합.
-Fingerprint = frozenset[tuple[str, str | None, str | None]]
+Fingerprint = frozenset[tuple[str, str, str]]
 
 
 @dataclass(frozen=True)
@@ -139,7 +139,7 @@ def derive_repository(session: Session, repository: str) -> DeriveOutcome:
         ).where(ImageTag.repository == repository)
     ).all()
 
-    platforms: dict[int, set[tuple[str, str | None, str | None]]] = {}
+    platforms: dict[int, set[tuple[str, str, str]]] = {}
     for tag_id, architecture, arch_variant, digest in session.execute(
         select(
             ImageVariant.tag_id,
