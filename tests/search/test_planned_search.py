@@ -234,3 +234,50 @@ def test_no_stale_line_note_after_the_version_was_relaxed(session):
 
     assert "tem:8-jdk-jammy" not in images(result)
     assert result.notes == ["조건에 맞는 태그가 없어 버전 조건(8)을 풀었습니다."]
+
+
+def add_noisy_repository(session) -> None:
+    """청크가 여럿인 태그 목록 섹션과 짧은 섹션을 가진 리포지토리."""
+    tags = "java jdk jre temurin gradle build tag list. " * 150
+    add_repository(
+        session,
+        "noise",
+        f"# Supported tags\n\n{tags}\n\n# How to use this Image\n\njava jdk build.\n",
+    )
+    add_tag(session, "noise", "1.0", version="1.0", distribution="debian", codename="trixie")
+
+
+def test_a_long_section_does_not_crowd_out_other_repositories(session):
+    """태그 목록 섹션이 상위를 독차지하면 다른 리포지토리 후보가 사라진다."""
+    seed(session)
+    add_noisy_repository(session)
+
+    result = search_candidates_with_plan(
+        session, vector("java jdk jre temurin gradle build tag list"), SearchPlan()
+    )
+
+    assert len({i.split(":")[0] for i in images(result)}) > 1
+
+
+def test_a_forced_repository_not_in_the_search_gets_two_sections_as_evidence(session):
+    """근거를 따로 찾을 때는 서로 다른 섹션 두 개를 넘긴다."""
+    seed(session)
+    add_noisy_repository(session)
+
+    result = search_candidates_with_plan(
+        session, vector("python slim alpine bookworm"), SearchPlan(repository="noise"), chunk_k=1
+    )
+
+    titles = [e.section_title for e in result.candidates[0].evidence]
+    assert sorted(titles) == ["How to use this Image", "Supported tags"]
+
+
+def test_a_forced_repository_found_by_the_search_keeps_that_evidence(session):
+    """검색에 이미 있으면 따로 찾지 않는다. 섹션이 하나뿐일 수 있다."""
+    seed(session)
+
+    result = search_candidates_with_plan(
+        session, vector("java jdk build"), SearchPlan(repository="tem"), chunk_k=1
+    )
+
+    assert [e.section_title for e in result.candidates[0].evidence] == ["How to use this Image"]

@@ -1,7 +1,7 @@
 # src/whatfrom/search/retrieval.py
 from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from whatfrom.core.contracts import Candidate, Evidence, Platform, SearchPlan
@@ -30,19 +30,42 @@ def search_chunks_by_vector(
 ) -> list[tuple[DocumentChunk, float]]:
     """코사인 거리 기준 최근접 청크. 거리는 0(동일)~2(정반대).
 
+    한 섹션(documents 한 행)에서는 가장 가까운 청크 하나만 돌려준다. 태그 목록처럼
+    청크가 많은 섹션이 상위를 독차지하면 다른 리포지토리의 문서가 밀려나고,
+    LLM에 넘기는 근거도 같은 섹션 전문이 중복된다.
+
+    거리가 같으면 청크 id가 작은 쪽이 앞이다. 공식 이미지 README는 같은 틀에서
+    만들어져서 이미지 이름만 다른 청크가 있다. 그 거리가 같게 나오므로 규칙이
+    없으면 limit에 따라 순서가 달라진다.
+
     repository를 주면 그 리포지토리의 청크 안에서만 찾는다.
     """
     distance = DocumentChunk.embedding.cosine_distance(vector).label("distance")
-    query = (
-        select(DocumentChunk, distance)
-        .options(selectinload(DocumentChunk.document))
+    ranked = (
+        select(
+            DocumentChunk.id.label("chunk_id"),
+            distance,
+            func.row_number()
+            .over(
+                partition_by=DocumentChunk.document_id,
+                order_by=(distance, DocumentChunk.id),
+            )
+            .label("rank"),
+        )
+        .join(Document, Document.id == DocumentChunk.document_id)
         .where(DocumentChunk.embedding.is_not(None))
     )
     if repository is not None:
-        query = query.join(Document, Document.id == DocumentChunk.document_id).where(
-            Document.repository == repository
-        )
-    rows = session.execute(query.order_by(distance).limit(limit)).all()
+        ranked = ranked.where(Document.repository == repository)
+    best = ranked.subquery()
+    rows = session.execute(
+        select(DocumentChunk, best.c.distance)
+        .join(best, best.c.chunk_id == DocumentChunk.id)
+        .options(selectinload(DocumentChunk.document))
+        .where(best.c.rank == 1)
+        .order_by(best.c.distance, DocumentChunk.id)
+        .limit(limit)
+    ).all()
     return [(chunk, float(dist)) for chunk, dist in rows]
 
 
