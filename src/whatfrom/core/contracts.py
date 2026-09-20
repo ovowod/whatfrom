@@ -5,6 +5,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class Evidence(BaseModel):
+    # 제목만으로는 문서를 가릴 수 없다. 공식 이미지 README는 같은 틀에서 만들어져
+    # "Image Variants" 같은 제목이 리포지토리마다 있다.
+    repository: str
     section_title: str
     content: str
     source_url: str

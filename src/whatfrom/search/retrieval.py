@@ -202,6 +202,7 @@ def _evidence_by_repo(hits: list[tuple[DocumentChunk, float]]) -> dict[str, list
         document: Document = chunk.document
         evidence_by_repo.setdefault(document.repository, []).append(
             Evidence(
+                repository=document.repository,
                 section_title=document.section_title,
                 # 부모 문맥을 넘긴다: 검색은 청크로, 근거는 섹션 전문으로 (스펙 §6).
                 content=document.content,

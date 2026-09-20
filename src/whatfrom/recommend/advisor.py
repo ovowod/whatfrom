@@ -39,14 +39,17 @@ def build_prompt(question: str, candidates: list[Candidate]) -> str:
             f"- {candidate.image} | {_format_platforms(candidate.platforms)} | pushed: {pushed}"
         )
 
-    seen: set[str] = set()
+    # 리포지토리까지 봐야 한다. 제목만으로 지우면 python과 node의 "Image Variants" 중
+    # 하나가 사라진다. 제목에도 리포지토리를 적어 어느 제품 문서인지 드러낸다.
+    seen: set[tuple[str, str]] = set()
     lines += ["", "Evidence from the official README:"]
     for candidate in candidates:
         for item in candidate.evidence:
-            if item.section_title in seen:
+            key = (item.repository, item.section_title)
+            if key in seen:
                 continue
-            seen.add(item.section_title)
-            lines += [f"## {item.section_title}", item.content, ""]
+            seen.add(key)
+            lines += [f"## {item.repository} — {item.section_title}", item.content, ""]
     return "\n".join(lines)
 
 
