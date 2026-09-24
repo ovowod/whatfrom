@@ -1,0 +1,42 @@
+청크 344개 (id 460~803), 질문 40개
+청크 해시 0d8db712de4c06c2f031a3cc0a2c23a8bec4f8995434308169e69a4ea2eca2fb
+
+bge-m3             전역 Hit@5 31/40  필요 리포 포함 39/40  리포 안 Hit@2 32/40  고정 검색 조건 근거 Hit 31/40  질문 임베딩(단회 평균) 205ms
+                   소개문 적중 제외: 전역 Hit@5 31/40  근거 Hit 31/40
+                   (보조) 150자 미만 섹션 적중 제외: 전역 Hit@5 31/40  근거 Hit 31/40
+qwen3-0.6b         전역 Hit@5 31/40  필요 리포 포함 35/40  리포 안 Hit@2 31/40  고정 검색 조건 근거 Hit 34/40  질문 임베딩(단회 평균) 161ms
+                   소개문 적중 제외: 전역 Hit@5 27/40  근거 Hit 30/40
+                   (보조) 150자 미만 섹션 적중 제외: 전역 Hit@5 27/40  근거 Hit 30/40
+qwen3-0.6b-noinst  전역 Hit@5 31/40  필요 리포 포함 36/40  리포 안 Hit@2 31/40  고정 검색 조건 근거 Hit 33/40  질문 임베딩(단회 평균) 163ms
+                   소개문 적중 제외: 전역 Hit@5 24/40  근거 Hit 26/40
+                   (보조) 150자 미만 섹션 적중 제외: 전역 Hit@5 24/40  근거 Hit 26/40
+arctic-embed2      전역 Hit@5 34/40  필요 리포 포함 37/40  리포 안 Hit@2 31/40  고정 검색 조건 근거 Hit 35/40  질문 임베딩(단회 평균) 262ms
+                   소개문 적중 제외: 전역 Hit@5 30/40  근거 Hit 31/40
+                   (보조) 150자 미만 섹션 적중 제외: 전역 Hit@5 30/40  근거 Hit 31/40
+openai-3-small     전역 Hit@5 30/40  필요 리포 포함 34/40  리포 안 Hit@2 32/40  고정 검색 조건 근거 Hit 35/40  질문 임베딩(단회 평균) 251ms
+                   소개문 적중 제외: 전역 Hit@5 28/40  근거 Hit 33/40
+                   (보조) 150자 미만 섹션 적중 제외: 전역 Hit@5 28/40  근거 Hit 33/40
+openai-3-large     전역 Hit@5 32/40  필요 리포 포함 36/40  리포 안 Hit@2 34/40  고정 검색 조건 근거 Hit 34/40  질문 임베딩(단회 평균) 230ms
+                   소개문 적중 제외: 전역 Hit@5 30/40  근거 Hit 32/40
+                   (보조) 150자 미만 섹션 적중 제외: 전역 Hit@5 30/40  근거 Hit 32/40
+
+qwen3-0.6b         global_hit5                + ['node-alpine-vs-slim', 'postgres-ci-ephemeral', 'redis-cache-sidecar']  - ['python-fastapi-prod', 'node-native-addon', 'debian-slim-runtime']
+qwen3-0.6b         repo_included              + []  - ['python-fastapi-prod', 'node-lts-prod', 'node-native-addon', 'debian-slim-runtime']
+qwen3-0.6b         plan_evidence_hit          + ['node-alpine-vs-slim', 'postgres-ci-ephemeral', 'redis-cache-sidecar']  - []
+qwen3-0.6b         plan_evidence_hit_no_intro + ['node-alpine-vs-slim']  - ['golang-multistage-build', 'temurin-jdk-build-stage']
+qwen3-0.6b-noinst  global_hit5                + ['python-slim-vs-full', 'postgres-ci-ephemeral', 'redis-cache-sidecar']  - ['python-latest-stable', 'node-native-addon', 'debian-slim-runtime']
+qwen3-0.6b-noinst  repo_included              + []  - ['node-native-addon', 'debian-slim-runtime', 'ubuntu-lts-base']
+qwen3-0.6b-noinst  plan_evidence_hit          + ['python-slim-vs-full', 'postgres-ci-ephemeral', 'redis-cache-sidecar']  - ['python-latest-stable']
+qwen3-0.6b-noinst  plan_evidence_hit_no_intro + []  - ['python-numpy-arm64', 'python-fastapi-prod', 'python-latest-stable', 'python-alpine-explicit', 'golang-multistage-build']
+arctic-embed2      global_hit5                + ['python-slim-vs-full', 'node-alpine-vs-slim', 'postgres-version-pinned-16', 'postgres-ci-ephemeral', 'redis-cache-sidecar']  - ['python-fastapi-prod', 'python-latest-stable']
+arctic-embed2      repo_included              + []  - ['python-fastapi-prod', 'ubuntu-lts-base']
+arctic-embed2      plan_evidence_hit          + ['python-slim-vs-full', 'node-alpine-vs-slim', 'postgres-version-pinned-16', 'postgres-ci-ephemeral', 'redis-cache-sidecar']  - ['python-latest-stable']
+arctic-embed2      plan_evidence_hit_no_intro + ['node-alpine-vs-slim', 'postgres-version-pinned-16']  - ['python-scientific-stack', 'python-latest-stable']
+openai-3-small     global_hit5                + ['node-alpine-vs-slim', 'postgres-version-pinned-16', 'postgres-ci-ephemeral', 'redis-cache-sidecar']  - ['python-fastapi-prod', 'python-scientific-stack', 'python-alpine-explicit', 'debian-slim-runtime', 'ubuntu-noble-pinned']
+openai-3-small     repo_included              + []  - ['python-fastapi-prod', 'python-alpine-explicit', 'node-lts-prod', 'debian-slim-runtime', 'ubuntu-noble-pinned']
+openai-3-small     plan_evidence_hit          + ['node-lts-prod', 'node-alpine-vs-slim', 'postgres-version-pinned-16', 'postgres-ci-ephemeral', 'redis-cache-sidecar']  - ['python-scientific-stack']
+openai-3-small     plan_evidence_hit_no_intro + ['node-lts-prod', 'node-alpine-vs-slim', 'postgres-version-pinned-16']  - ['python-scientific-stack']
+openai-3-large     global_hit5                + ['python-slim-vs-full', 'node-alpine-vs-slim', 'postgres-prod-default', 'postgres-version-pinned-16', 'redis-cache-sidecar']  - ['python-alpine-explicit', 'python-arm64-only', 'golang-cgo-sqlite', 'debian-slim-runtime']
+openai-3-large     repo_included              + []  - ['python-arm64-only', 'debian-slim-runtime', 'ubuntu-lts-base']
+openai-3-large     plan_evidence_hit          + ['python-slim-vs-full', 'node-alpine-vs-slim', 'postgres-prod-default', 'postgres-version-pinned-16', 'redis-cache-sidecar']  - ['python-alpine-explicit', 'golang-cgo-sqlite']
+openai-3-large     plan_evidence_hit_no_intro + ['python-slim-vs-full', 'postgres-prod-default', 'postgres-version-pinned-16']  - ['python-alpine-explicit', 'golang-cgo-sqlite']

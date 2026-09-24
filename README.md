@@ -161,6 +161,10 @@ digest는 측정 시점 DB 기준이며, digest로 인정한 문항은 결과와
 전체 모드에서는 문항별 검색 조건, 필드별 추출 일치 여부, 응답 알림(조건 완화, 추출 실패)도 저장한다.
 이 결과 폴더는 Git 추적 대상에서 제외되어 있다.
 
+모델 선택처럼 결정을 내린 비교는 `eval/experiments/<날짜>-<주제>/`에 조건, 결과, 한계, 결론과 재현 스크립트를 함께 남긴다.
+
+- [임베딩 모델 비교 (2026-09-24)](eval/experiments/2026-09-24-embedding-comparison/README.md): bge-m3, qwen3-embedding 0.6B, snowflake-arctic-embed2, OpenAI text-embedding-3-small·large를 비교했다. 교체할 만큼 확실한 이득을 확인하지 못해 bge-m3를 유지한다. 제목만 보는 Hit 지표가 한 문장짜리 "Image Variants" 소개문도 성공으로 세어 근거 품질을 과대평가할 수 있다는 점도 확인했다.
+
 ### 기준 측정 결과 (2026-09-23, 섹션 다양성)
 
 벡터 검색이 섹션마다 가장 가까운 청크 하나만 돌려주고, 거리가 같으면 청크 id 순으로 정렬하도록 바꾼 뒤 측정했다.

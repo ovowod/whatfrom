@@ -1,0 +1,5368 @@
+{
+ "bge-m3": {
+  "totals": {
+   "global_hit5": 31,
+   "repo_included": 39,
+   "in_repo_hit2": 32,
+   "plan_evidence_hit": 31,
+   "global_hit5_no_intro": 31,
+   "plan_evidence_hit_no_intro": 31,
+   "global_hit5_no_short": 31,
+   "plan_evidence_hit_no_short": 31
+  },
+  "declared": 40,
+  "cases": 40,
+  "query_seconds": 0.20525285622497905,
+  "per_case": {
+   "python-numpy-arm64": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-size-first": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|What is nginx?",
+     "node|What is Node.js?",
+     "python|What is Python?",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|What is Python?",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-version-pinned-312": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "debian|Supported tags and respective `Dockerfile` links",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "python-fastapi-prod": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|How to use this image > Start a Go instance in your app",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-scientific-stack": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-build-stage": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "nginx|Image Variants > `nginx:<version>`",
+     "debian|About this image",
+     "golang|Image Variants > `golang:<version>`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>`"
+    ]
+   },
+   "python-latest-stable": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "debian|About this image",
+     "ubuntu|What's in this image?",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "ubuntu|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags"
+    ]
+   },
+   "python-alpine-explicit": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-debian-codename": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "postgres|Supported tags and respective `Dockerfile` links",
+     "node|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>`",
+     "golang|Image Variants > `golang:<version>`"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "python-arm64-only": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Quick reference (cont.)",
+     "postgres|Quick reference (cont.)",
+     "golang|Quick reference (cont.)",
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "golang|How to use this image > Cross-compile your app inside the Docker container"
+    ],
+    "evidence": [
+     "python|Quick reference (cont.)"
+    ]
+   },
+   "python-small-cli": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-ml-torch": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-slim-vs-full": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|What is Python?",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "nginx|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|What is Python?",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "python-musl-explained": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "node-lts-prod": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|How to extend this image > Locale Customization",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "node|Image Variants > `node:<version>-slim`",
+     "postgres|How to use this image > ... via [`docker compose`](https://github.com/docker/compose)",
+     "eclipse-temurin|What is Eclipse Temurin ?"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   },
+   "node-size-first": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|What is Node.js?",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "debian|About this image",
+     "node|Image Variants > `node:<version>-slim`"
+    ],
+    "evidence": [
+     "node|What is Node.js?",
+     "node|Image Variants > `node:<version>`",
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   },
+   "node-native-addon": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|How to use this image > Multiple Python versions in the image",
+     "node|Supported tags and respective `Dockerfile` links",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   },
+   "node-arm64-graviton": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Quick reference (cont.)",
+     "node|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>-slim`",
+     "node|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "node-alpine-vs-slim": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "python|Image Variants > `python:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "postgres-prod-default": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|Caveats > Where to Store Data",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Database Configuration",
+     "postgres|How to extend this image > Initialization scripts"
+    ],
+    "evidence": [
+     "postgres|What is PostgreSQL?",
+     "postgres|Caveats > Where to Store Data",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Database Configuration",
+     "postgres|How to extend this image > Initialization scripts"
+    ]
+   },
+   "postgres-postgis-extension": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "postgres|How to extend this image > Additional Extensions",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ],
+    "evidence": [
+     "postgres|How to extend this image > Additional Extensions"
+    ]
+   },
+   "postgres-version-pinned-16": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Database Configuration",
+     "postgres|What is PostgreSQL?",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags"
+    ],
+    "evidence": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Database Configuration",
+     "postgres|What is PostgreSQL?"
+    ]
+   },
+   "postgres-ci-ephemeral": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to use this image > start a postgres instance",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Caveats > Where to Store Data",
+     "postgres|Caveats"
+    ],
+    "evidence": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to use this image > start a postgres instance",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Caveats > Where to Store Data",
+     "postgres|Caveats"
+    ]
+   },
+   "redis-cache-sidecar": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "redis|What is Redis?",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "node|What is Node.js?",
+     "nginx|Image Variants > `nginx:<version>`"
+    ],
+    "evidence": [
+     "redis|What is Redis?",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ..."
+    ]
+   },
+   "redis-version-pinned-7": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|License",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "eclipse-temurin|Can I add my internal CA certificates to the truststore?"
+    ],
+    "evidence": [
+     "redis|License",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "redis-persistence-docs": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|How to use this image > Start with persistent storage",
+     "redis|Security",
+     "postgres|How to extend this image > Environment Variables",
+     "redis|What is Redis?",
+     "nginx|How to use this image > Entrypoint quiet logs"
+    ],
+    "evidence": [
+     "redis|How to use this image > Start with persistent storage",
+     "redis|Security",
+     "redis|What is Redis?"
+    ]
+   },
+   "nginx-static-spa": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|What is nginx?",
+     "nginx|Quick reference (cont.)",
+     "nginx|How to use this image > Hosting some simple static content",
+     "nginx|How to use this image > Entrypoint quiet logs"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|What is nginx?",
+     "nginx|Quick reference (cont.)",
+     "nginx|How to use this image > Hosting some simple static content",
+     "nginx|How to use this image > Entrypoint quiet logs"
+    ]
+   },
+   "nginx-stable-branch": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|How to use this image > Customize configuration",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx in read-only mode"
+    ],
+    "evidence": [
+     "nginx|How to use this image > Customize configuration",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx in read-only mode"
+    ]
+   },
+   "nginx-otel-tracing": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Quick reference (cont.)",
+     "node|Image Variants > `node:<version>-slim`",
+     "nginx|What is nginx?"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Quick reference (cont.)",
+     "nginx|What is nginx?"
+    ]
+   },
+   "golang-multistage-build": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "debian|About this image",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "node|Image Variants > `node:<version>-slim`"
+    ],
+    "evidence": [
+     "golang|Image Variants > `golang:<version>-alpine`"
+    ]
+   },
+   "golang-cgo-sqlite": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "node|Image Variants > `node:<version>-slim`",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Customize configuration",
+     "node|How to use this image"
+    ],
+    "evidence": [
+     "golang|Image Variants > `golang:<version>-alpine`"
+    ]
+   },
+   "golang-cross-compile-arm64": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Quick reference (cont.)",
+     "golang|Quick reference (cont.)"
+    ],
+    "evidence": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|Quick reference (cont.)"
+    ]
+   },
+   "temurin-jre-runtime": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "python|Image Variants > `python:<version>-slim`",
+     "eclipse-temurin|How to use this Image",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "node|Image Variants > `node:<version>-slim`"
+    ],
+    "evidence": [
+     "eclipse-temurin|How to use this Image",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?"
+    ]
+   },
+   "temurin-jdk-build-stage": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "golang|How to use this image > Start a Go instance in your app",
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "ubuntu|What's in this image?",
+     "debian|About this image"
+    ],
+    "evidence": [
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`"
+    ]
+   },
+   "temurin-17-jammy-pinned": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "ubuntu|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "debian-slim-runtime": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "debian|About this image",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Image Variants > `python:<version>-slim`",
+     "eclipse-temurin|What is Eclipse Temurin ?",
+     "debian|About this image > Locales"
+    ],
+    "evidence": [
+     "debian|About this image",
+     "debian|About this image > Locales"
+    ]
+   },
+   "debian-codename-vs-number": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>`",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ],
+    "evidence": [
+     "debian|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "ubuntu-lts-base": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "ubuntu|License",
+     "ubuntu|What is Ubuntu?",
+     "python|Image Variants > `python:<version>-slim`",
+     "debian|License",
+     "ubuntu|Quick reference (cont.)"
+    ],
+    "evidence": [
+     "ubuntu|License",
+     "ubuntu|What is Ubuntu?",
+     "python|Image Variants > `python:<version>-slim`",
+     "debian|License",
+     "ubuntu|Quick reference (cont.)"
+    ]
+   },
+   "ubuntu-noble-pinned": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags"
+    ],
+    "evidence": [
+     "ubuntu|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "alpine-static-binary": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "eclipse-temurin|Can I add my internal CA certificates to the truststore?",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "eclipse-temurin|Can I add my internal CA certificates to the truststore?",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Supported tags and respective `Dockerfile` links"
+    ]
+   }
+  }
+ },
+ "qwen3-0.6b": {
+  "totals": {
+   "global_hit5": 31,
+   "repo_included": 35,
+   "in_repo_hit2": 31,
+   "plan_evidence_hit": 34,
+   "global_hit5_no_intro": 27,
+   "plan_evidence_hit_no_intro": 30,
+   "global_hit5_no_short": 27,
+   "plan_evidence_hit_no_short": 30
+  },
+  "declared": 40,
+  "cases": 40,
+  "query_seconds": 0.16055087267504858,
+  "per_case": {
+   "python-numpy-arm64": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "nginx|Quick reference (cont.)",
+     "python|Image Variants > `python:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-size-first": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-version-pinned-312": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants",
+     "ubuntu|What's in this image?"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants"
+    ]
+   },
+   "python-fastapi-prod": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "nginx|Image Variants > `nginx:<version>`",
+     "golang|Image Variants > `golang:<version>`",
+     "redis|Image Variants > `redis:<version>`",
+     "postgres|Image Variants > `postgres:<version>`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>`",
+     "python|Image Variants"
+    ]
+   },
+   "python-scientific-stack": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`",
+     "node|License",
+     "python|How to use this image > Multiple Python versions in the image",
+     "postgres|Image Variants"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|How to use this image > Multiple Python versions in the image"
+    ]
+   },
+   "python-build-stage": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "python|How to use this image > Run a single Python script",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>`",
+     "python|How to use this image > Run a single Python script"
+    ]
+   },
+   "python-latest-stable": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "ubuntu|What's in this image?",
+     "python|Image Variants > `python:<version>-slim`",
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "python|Image Variants",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "python-alpine-explicit": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-debian-codename": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-slim`",
+     "debian|Supported tags and respective `Dockerfile` links",
+     "postgres|Image Variants > `postgres:<version>`",
+     "golang|Image Variants > `golang:<version>`",
+     "redis|Image Variants > `redis:<version>`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-slim`"
+    ]
+   },
+   "python-arm64-only": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Quick reference (cont.)",
+     "eclipse-temurin|Quick reference (cont.)",
+     "python|Image Variants",
+     "eclipse-temurin|Image Variants",
+     "ubuntu|Quick reference (cont.)"
+    ],
+    "evidence": [
+     "python|Quick reference (cont.)",
+     "python|Image Variants"
+    ]
+   },
+   "python-small-cli": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "nginx|Image Variants > `nginx:<version>`"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>`"
+    ]
+   },
+   "python-ml-torch": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`",
+     "postgres|Image Variants",
+     "golang|Image Variants",
+     "redis|Image Variants"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`"
+    ]
+   },
+   "python-slim-vs-full": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|What is Python?",
+     "node|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|What is Python?"
+    ]
+   },
+   "python-musl-explained": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "node-lts-prod": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "nginx|Image Variants > `nginx:<version>`",
+     "golang|Image Variants > `golang:<version>`",
+     "redis|Image Variants > `redis:<version>`",
+     "postgres|Image Variants > `postgres:<version>`"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>`",
+     "node|License"
+    ]
+   },
+   "node-size-first": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Image Variants > `node:<version>-slim`",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|Image Variants",
+     "node|How to use this image",
+     "node|What is Node.js?"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>-slim`",
+     "node|How to use this image",
+     "node|What is Node.js?"
+    ]
+   },
+   "node-native-addon": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`",
+     "redis|Image Variants > `redis:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>-alpine`",
+     "node|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "node-arm64-graviton": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-slim`",
+     "node|Quick reference (cont.)",
+     "python|Image Variants > `python:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-slim`",
+     "node|Quick reference (cont.)"
+    ]
+   },
+   "node-alpine-vs-slim": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants",
+     "node|Image Variants > `node:<version>-slim`",
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "python|Image Variants > `python:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants",
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   },
+   "postgres-prod-default": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Caveats > Where to Store Data",
+     "postgres|Image Variants",
+     "postgres|Quick reference (cont.)",
+     "postgres|How to extend this image"
+    ],
+    "evidence": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Caveats > Where to Store Data",
+     "postgres|Image Variants",
+     "postgres|Quick reference (cont.)",
+     "postgres|How to extend this image"
+    ]
+   },
+   "postgres-postgis-extension": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "postgres|How to extend this image > Additional Extensions",
+     "postgres|How to extend this image",
+     "postgres|Image Variants",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ],
+    "evidence": [
+     "postgres|How to extend this image > Additional Extensions",
+     "postgres|How to extend this image",
+     "postgres|Image Variants"
+    ]
+   },
+   "postgres-version-pinned-16": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Quick reference (cont.)",
+     "postgres|Image Variants",
+     "postgres|Quick reference",
+     "postgres|What is PostgreSQL?"
+    ],
+    "evidence": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Quick reference (cont.)",
+     "postgres|Image Variants",
+     "postgres|Quick reference",
+     "postgres|What is PostgreSQL?"
+    ]
+   },
+   "postgres-ci-ephemeral": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image",
+     "postgres|Image Variants",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Initialization scripts"
+    ],
+    "evidence": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image",
+     "postgres|Image Variants",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Initialization scripts"
+    ]
+   },
+   "redis-cache-sidecar": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "redis|What is Redis?",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|Image Variants",
+     "redis|Security",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ..."
+    ],
+    "evidence": [
+     "redis|What is Redis?",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|Image Variants",
+     "redis|Security",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ..."
+    ]
+   },
+   "redis-version-pinned-7": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|Quick reference (cont.)",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "redis|License",
+     "redis|Image Variants"
+    ],
+    "evidence": [
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|Quick reference (cont.)",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "redis|License",
+     "redis|Image Variants"
+    ]
+   },
+   "redis-persistence-docs": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|Quick reference",
+     "postgres|How to extend this image > Environment Variables",
+     "redis|What is Redis?",
+     "redis|How to use this image > Start a redis instance"
+    ],
+    "evidence": [
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|Quick reference",
+     "redis|What is Redis?",
+     "redis|How to use this image > Start a redis instance"
+    ]
+   },
+   "nginx-static-spa": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|What is nginx?",
+     "nginx|Image Variants",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Quick reference (cont.)"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|What is nginx?",
+     "nginx|Image Variants",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Quick reference (cont.)"
+    ]
+   },
+   "nginx-stable-branch": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|Quick reference (cont.)"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|Quick reference (cont.)"
+    ]
+   },
+   "nginx-otel-tracing": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Entrypoint quiet logs"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Entrypoint quiet logs"
+    ]
+   },
+   "golang-multistage-build": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "python|How to use this image > Multiple Python versions in the image",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "golang|Image Variants",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "eclipse-temurin|Image Variants"
+    ],
+    "evidence": [
+     "golang|Image Variants"
+    ]
+   },
+   "golang-cgo-sqlite": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "nginx|Image Variants > `nginx:<version>`",
+     "golang|Image Variants > `golang:<version>-alpine`"
+    ],
+    "evidence": [
+     "golang|Image Variants",
+     "golang|Image Variants > `golang:<version>-alpine`"
+    ]
+   },
+   "golang-cross-compile-arm64": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Quick reference (cont.)",
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|Image Variants",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "eclipse-temurin|Quick reference (cont.) > Overview"
+    ],
+    "evidence": [
+     "golang|Quick reference (cont.)",
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|Image Variants",
+     "golang|Image Variants > `golang:<version>-alpine`"
+    ]
+   },
+   "temurin-jre-runtime": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|How to use this Image",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "postgres|Caveats",
+     "golang|How to use this image > Compile your app inside the Docker container"
+    ],
+    "evidence": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|How to use this Image",
+     "eclipse-temurin|Quick reference (cont.) > Overview"
+    ]
+   },
+   "temurin-jdk-build-stage": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Image Variants",
+     "eclipse-temurin|What is Eclipse Temurin ?",
+     "ubuntu|What's in this image?"
+    ],
+    "evidence": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Image Variants",
+     "eclipse-temurin|What is Eclipse Temurin ?"
+    ]
+   },
+   "temurin-17-jammy-pinned": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "nginx|Image Variants > `nginx:<version>`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "eclipse-temurin|Quick reference (cont.) > Overview"
+    ],
+    "evidence": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "eclipse-temurin|Quick reference (cont.) > Overview"
+    ]
+   },
+   "debian-slim-runtime": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Image Variants > `node:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "debian|About this image",
+     "debian|What is Debian?"
+    ]
+   },
+   "debian-codename-vs-number": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "debian|About this image",
+     "nginx|Image Variants > `nginx:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "golang|Image Variants > `golang:<version>`"
+    ],
+    "evidence": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "debian|About this image"
+    ]
+   },
+   "ubuntu-lts-base": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "debian|About this image",
+     "ubuntu|What is Ubuntu?",
+     "nginx|Image Variants > `nginx:<version>`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "postgres|Image Variants > `postgres:<version>`"
+    ],
+    "evidence": [
+     "debian|About this image",
+     "ubuntu|What is Ubuntu?",
+     "nginx|Image Variants > `nginx:<version>`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "postgres|Image Variants > `postgres:<version>`"
+    ]
+   },
+   "ubuntu-noble-pinned": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "ubuntu|How is the rootfs built? > Ubuntu 26.04 LTS \"Resolute Raccoon\" and later",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "node|Supported tags and respective `Dockerfile` links",
+     "ubuntu|What's in this image? > Unminimize"
+    ],
+    "evidence": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "ubuntu|How is the rootfs built? > Ubuntu 26.04 LTS \"Resolute Raccoon\" and later",
+     "ubuntu|What's in this image? > Unminimize"
+    ]
+   },
+   "alpine-static-binary": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "debian|About this image",
+     "python|Supported tags and respective `Dockerfile` links",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links",
+     "golang|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "debian|About this image",
+     "python|Supported tags and respective `Dockerfile` links",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links",
+     "golang|Supported tags and respective `Dockerfile` links"
+    ]
+   }
+  }
+ },
+ "qwen3-0.6b-noinst": {
+  "totals": {
+   "global_hit5": 31,
+   "repo_included": 36,
+   "in_repo_hit2": 31,
+   "plan_evidence_hit": 33,
+   "global_hit5_no_intro": 24,
+   "plan_evidence_hit_no_intro": 26,
+   "global_hit5_no_short": 24,
+   "plan_evidence_hit_no_short": 26
+  },
+  "declared": 40,
+  "cases": 40,
+  "query_seconds": 0.1625813642751382,
+  "per_case": {
+   "python-numpy-arm64": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "python|Image Variants",
+     "redis|Image Variants",
+     "nginx|Image Variants",
+     "node|Image Variants > `node:<version>-slim`",
+     "golang|Image Variants"
+    ],
+    "evidence": [
+     "python|Image Variants"
+    ]
+   },
+   "python-size-first": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "node|What is Node.js?",
+     "node|License",
+     "redis|Image Variants",
+     "python|Image Variants > `python:<version>-slim`"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`"
+    ]
+   },
+   "python-version-pinned-312": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|How to use this image > Multiple Python versions in the image"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|How to use this image > Multiple Python versions in the image"
+    ]
+   },
+   "python-fastapi-prod": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "nginx|Image Variants > `nginx:<version>`",
+     "python|Image Variants",
+     "redis|Image Variants",
+     "nginx|Image Variants"
+    ],
+    "evidence": [
+     "python|Image Variants"
+    ]
+   },
+   "python-scientific-stack": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "postgres|Image Variants",
+     "node|License",
+     "python|Image Variants > `python:<version>-slim`",
+     "redis|Image Variants"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`"
+    ]
+   },
+   "python-build-stage": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|How to use this image > Run a single Python script",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "python|Image Variants"
+    ],
+    "evidence": [
+     "python|How to use this image > Run a single Python script",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>`",
+     "python|Image Variants"
+    ]
+   },
+   "python-latest-stable": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "python|Image Variants > `python:<version>-slim`",
+     "ubuntu|What's in this image?",
+     "python|Image Variants",
+     "python|What is Python?",
+     "ubuntu|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants",
+     "python|What is Python?"
+    ]
+   },
+   "python-alpine-explicit": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "python|Image Variants",
+     "nginx|Image Variants > `nginx:<version>`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "golang|Image Variants > `golang:<version>`"
+    ],
+    "evidence": [
+     "python|Image Variants"
+    ]
+   },
+   "python-debian-codename": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "postgres|Image Variants > `postgres:<version>`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|Image Variants > `python:<version>`"
+    ]
+   },
+   "python-arm64-only": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "python|Quick reference (cont.)",
+     "python|Image Variants > `python:<version>-slim`",
+     "eclipse-temurin|Image Variants",
+     "postgres|Image Variants"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Quick reference (cont.)",
+     "python|Image Variants > `python:<version>-slim`"
+    ]
+   },
+   "python-small-cli": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`",
+     "node|How to use this image",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "nginx|Image Variants > `nginx:<version>`"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`"
+    ]
+   },
+   "python-ml-torch": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "redis|Image Variants",
+     "python|Image Variants > `python:<version>-slim`",
+     "golang|Image Variants",
+     "postgres|Image Variants"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`"
+    ]
+   },
+   "python-slim-vs-full": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Image Variants",
+     "python|What is Python?",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|How to use this image > Multiple Python versions in the image"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Image Variants",
+     "python|What is Python?",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|How to use this image > Multiple Python versions in the image"
+    ]
+   },
+   "python-musl-explained": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "node-lts-prod": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "redis|Image Variants",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "nginx|Image Variants > `nginx:<version>`",
+     "python|Image Variants",
+     "node|License"
+    ],
+    "evidence": [
+     "node|License"
+    ]
+   },
+   "node-size-first": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Image Variants > `node:<version>-slim`",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "node|What is Node.js?",
+     "eclipse-temurin|Image Variants",
+     "node|Image Variants"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>-slim`",
+     "node|What is Node.js?",
+     "node|Image Variants"
+    ]
+   },
+   "node-native-addon": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`",
+     "redis|Image Variants > `redis:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>-alpine`",
+     "node|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "node-arm64-graviton": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-slim`",
+     "node|Quick reference (cont.)",
+     "node|How to use this image",
+     "python|Image Variants > `python:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-slim`",
+     "node|Quick reference (cont.)",
+     "node|How to use this image"
+    ]
+   },
+   "node-alpine-vs-slim": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "python|Image Variants > `python:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "postgres-prod-default": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Caveats > Where to Store Data",
+     "postgres|Image Variants",
+     "postgres|How to extend this image > Initialization scripts",
+     "postgres|How to extend this image"
+    ],
+    "evidence": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Caveats > Where to Store Data",
+     "postgres|Image Variants",
+     "postgres|How to extend this image > Initialization scripts",
+     "postgres|How to extend this image"
+    ]
+   },
+   "postgres-postgis-extension": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "postgres|Image Variants",
+     "postgres|How to extend this image",
+     "postgres|How to extend this image > Additional Extensions",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ],
+    "evidence": [
+     "postgres|Image Variants",
+     "postgres|How to extend this image",
+     "postgres|How to extend this image > Additional Extensions"
+    ]
+   },
+   "postgres-version-pinned-16": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Image Variants",
+     "postgres|Quick reference (cont.)",
+     "postgres|Quick reference",
+     "postgres|How to extend this image"
+    ],
+    "evidence": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Image Variants",
+     "postgres|Quick reference (cont.)",
+     "postgres|Quick reference",
+     "postgres|How to extend this image"
+    ]
+   },
+   "postgres-ci-ephemeral": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image",
+     "postgres|Image Variants",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Caveats > Where to Store Data"
+    ],
+    "evidence": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image",
+     "postgres|Image Variants",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Caveats > Where to Store Data"
+    ]
+   },
+   "redis-cache-sidecar": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "redis|What is Redis?",
+     "redis|Image Variants",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|Security",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ..."
+    ],
+    "evidence": [
+     "redis|What is Redis?",
+     "redis|Image Variants",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|Security",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ..."
+    ]
+   },
+   "redis-version-pinned-7": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|Quick reference (cont.)",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "redis|Image Variants",
+     "redis|Quick reference"
+    ],
+    "evidence": [
+     "redis|Quick reference (cont.)",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "redis|Image Variants",
+     "redis|Quick reference"
+    ]
+   },
+   "redis-persistence-docs": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "postgres|How to extend this image > Environment Variables",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|Quick reference",
+     "redis|What is Redis?",
+     "redis|How to use this image > Start with persistent storage"
+    ],
+    "evidence": [
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|Quick reference",
+     "redis|What is Redis?",
+     "redis|How to use this image > Start with persistent storage"
+    ]
+   },
+   "nginx-static-spa": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|What is nginx?",
+     "nginx|Image Variants",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|What is nginx?",
+     "nginx|Image Variants",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`"
+    ]
+   },
+   "nginx-stable-branch": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Image Variants",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|Quick reference (cont.)"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Image Variants",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|Quick reference (cont.)"
+    ]
+   },
+   "nginx-otel-tracing": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Image Variants",
+     "nginx|How to use this image > Entrypoint quiet logs",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx in debug mode"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Image Variants",
+     "nginx|How to use this image > Entrypoint quiet logs",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx in debug mode"
+    ]
+   },
+   "golang-multistage-build": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "golang|Image Variants",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Image Variants",
+     "python|Image Variants",
+     "postgres|Image Variants"
+    ],
+    "evidence": [
+     "golang|Image Variants"
+    ]
+   },
+   "golang-cgo-sqlite": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|How to use this image > Compile your app inside the Docker container",
+     "golang|Quick reference (cont.)",
+     "python|Image Variants > `python:<version>`"
+    ],
+    "evidence": [
+     "golang|Image Variants",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|How to use this image > Compile your app inside the Docker container",
+     "golang|Quick reference (cont.)"
+    ]
+   },
+   "golang-cross-compile-arm64": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Quick reference (cont.)",
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|Image Variants",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "eclipse-temurin|Quick reference (cont.) > Overview"
+    ],
+    "evidence": [
+     "golang|Quick reference (cont.)",
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|Image Variants",
+     "golang|Image Variants > `golang:<version>-alpine`"
+    ]
+   },
+   "temurin-jre-runtime": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "nginx|Image Variants > `nginx:<version>`",
+     "postgres|Caveats"
+    ],
+    "evidence": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`"
+    ]
+   },
+   "temurin-jdk-build-stage": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Image Variants",
+     "golang|Image Variants",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`"
+    ],
+    "evidence": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Image Variants",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`"
+    ]
+   },
+   "temurin-17-jammy-pinned": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|What is Eclipse Temurin ?",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`"
+    ],
+    "evidence": [
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|What is Eclipse Temurin ?",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`"
+    ]
+   },
+   "debian-slim-runtime": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`",
+     "redis|Image Variants > `redis:<version>-alpine`"
+    ],
+    "evidence": [
+     "debian|About this image",
+     "debian|What is Debian?"
+    ]
+   },
+   "debian-codename-vs-number": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "debian|About this image",
+     "nginx|Image Variants > `nginx:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "golang|Image Variants > `golang:<version>`"
+    ],
+    "evidence": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "debian|About this image"
+    ]
+   },
+   "ubuntu-lts-base": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "debian|About this image",
+     "nginx|Image Variants > `nginx:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "golang|Image Variants > `golang:<version>`",
+     "redis|Image Variants > `redis:<version>`"
+    ],
+    "evidence": [
+     "debian|About this image",
+     "nginx|Image Variants > `nginx:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "golang|Image Variants > `golang:<version>`",
+     "redis|Image Variants > `redis:<version>`"
+    ]
+   },
+   "ubuntu-noble-pinned": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "ubuntu|How is the rootfs built? > Ubuntu 26.04 LTS \"Resolute Raccoon\" and later",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "nginx|Image Variants > `nginx:<version>`"
+    ],
+    "evidence": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "ubuntu|How is the rootfs built? > Ubuntu 26.04 LTS \"Resolute Raccoon\" and later"
+    ]
+   },
+   "alpine-static-binary": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "debian|About this image",
+     "python|Image Variants > `python:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "debian|About this image",
+     "python|Image Variants > `python:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ]
+   }
+  }
+ },
+ "arctic-embed2": {
+  "totals": {
+   "global_hit5": 34,
+   "repo_included": 37,
+   "in_repo_hit2": 31,
+   "plan_evidence_hit": 35,
+   "global_hit5_no_intro": 30,
+   "plan_evidence_hit_no_intro": 31,
+   "global_hit5_no_short": 30,
+   "plan_evidence_hit_no_short": 31
+  },
+  "declared": 40,
+  "cases": 40,
+  "query_seconds": 0.2620452451250458,
+  "per_case": {
+   "python-numpy-arm64": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-size-first": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-version-pinned-312": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "postgres|Arbitrary `--user` Notes"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags"
+    ]
+   },
+   "python-fastapi-prod": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>`",
+     "golang|Image Variants > `golang:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "redis|Image Variants > `redis:<version>`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>`",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-scientific-stack": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "python|Quick reference (cont.)",
+     "python|Image Variants",
+     "node|Image Variants",
+     "redis|Quick reference (cont.)",
+     "python|How to use this image > Multiple Python versions in the image"
+    ],
+    "evidence": [
+     "python|Quick reference (cont.)",
+     "python|Image Variants",
+     "python|How to use this image > Multiple Python versions in the image"
+    ]
+   },
+   "python-build-stage": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>`",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-latest-stable": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>`",
+     "python|What is Python?",
+     "golang|Image Variants > `golang:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "redis|Image Variants > `redis:<version>`"
+    ],
+    "evidence": [
+     "python|What is Python?"
+    ]
+   },
+   "python-alpine-explicit": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-debian-codename": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "postgres|Supported tags and respective `Dockerfile` links",
+     "debian|Supported tags and respective `Dockerfile` links",
+     "golang|Image Variants > `golang:<version>`"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "python-arm64-only": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Quick reference (cont.)",
+     "python|Quick reference (cont.)",
+     "nginx|Quick reference (cont.)",
+     "postgres|Quick reference (cont.)",
+     "redis|Quick reference (cont.)"
+    ],
+    "evidence": [
+     "python|Quick reference (cont.)"
+    ]
+   },
+   "python-small-cli": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-ml-torch": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-slim-vs-full": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|Image Variants",
+     "node|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|Image Variants"
+    ]
+   },
+   "python-musl-explained": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "node-lts-prod": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>`",
+     "node|Image Variants > `node:<version>-slim`",
+     "golang|Image Variants > `golang:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "redis|Image Variants > `redis:<version>`"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   },
+   "node-size-first": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Image Variants",
+     "node|Image Variants > `node:<version>-slim`",
+     "debian|About this image",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "redis|Image Variants"
+    ],
+    "evidence": [
+     "node|Image Variants",
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   },
+   "node-native-addon": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "debian|Supported tags and respective `Dockerfile` links",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   },
+   "node-arm64-graviton": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Image Variants > `node:<version>-slim`",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>-slim`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   },
+   "node-alpine-vs-slim": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-slim`",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ],
+    "evidence": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   },
+   "postgres-prod-default": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image",
+     "postgres|How to extend this image > Database Configuration",
+     "postgres|Caveats > Where to Store Data"
+    ],
+    "evidence": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image",
+     "postgres|How to extend this image > Database Configuration",
+     "postgres|Caveats > Where to Store Data"
+    ]
+   },
+   "postgres-postgis-extension": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ]
+   },
+   "postgres-version-pinned-16": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Quick reference",
+     "postgres|What is PostgreSQL?",
+     "postgres|Quick reference (cont.)",
+     "postgres|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Quick reference",
+     "postgres|What is PostgreSQL?",
+     "postgres|Quick reference (cont.)",
+     "postgres|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "postgres-ci-ephemeral": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image",
+     "postgres|Image Variants",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Initialization scripts"
+    ],
+    "evidence": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image",
+     "postgres|Image Variants",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Initialization scripts"
+    ]
+   },
+   "redis-cache-sidecar": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "redis|What is Redis?",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|Quick reference",
+     "redis|Image Variants"
+    ],
+    "evidence": [
+     "redis|What is Redis?",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|Quick reference",
+     "redis|Image Variants"
+    ]
+   },
+   "redis-version-pinned-7": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|License",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "redis|Security > Process User and Privileges",
+     "redis|Quick reference",
+     "redis|Quick reference (cont.)"
+    ],
+    "evidence": [
+     "redis|License",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "redis|Security > Process User and Privileges",
+     "redis|Quick reference",
+     "redis|Quick reference (cont.)"
+    ]
+   },
+   "redis-persistence-docs": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|How to use this image > Start with persistent storage",
+     "redis|How to use this image > Start a redis instance",
+     "redis|Quick reference",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "postgres|How to extend this image > Environment Variables"
+    ],
+    "evidence": [
+     "redis|How to use this image > Start with persistent storage",
+     "redis|How to use this image > Start a redis instance",
+     "redis|Quick reference",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ..."
+    ]
+   },
+   "nginx-static-spa": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|Image Variants",
+     "nginx|How to use this image > Hosting some simple static content",
+     "nginx|How to use this image > Running nginx in debug mode",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|Image Variants",
+     "nginx|How to use this image > Hosting some simple static content",
+     "nginx|How to use this image > Running nginx in debug mode"
+    ]
+   },
+   "nginx-stable-branch": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|How to use this image > Customize configuration",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|What is nginx?"
+    ],
+    "evidence": [
+     "nginx|How to use this image > Customize configuration",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|What is nginx?"
+    ]
+   },
+   "nginx-otel-tracing": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Quick reference (cont.)",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|How to use this image > Running nginx in debug mode"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Quick reference (cont.)",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|How to use this image > Running nginx in debug mode"
+    ]
+   },
+   "golang-multistage-build": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants",
+     "golang|How to use this image > Start a Go instance in your app",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|Quick reference (cont.)",
+     "nginx|Image Variants > `nginx:<version>`"
+    ],
+    "evidence": [
+     "golang|Image Variants",
+     "golang|How to use this image > Start a Go instance in your app",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|Quick reference (cont.)"
+    ]
+   },
+   "golang-cgo-sqlite": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|How to use this image > Start a Go instance in your app",
+     "golang|Quick reference (cont.)",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|License",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ],
+    "evidence": [
+     "golang|How to use this image > Start a Go instance in your app",
+     "golang|Quick reference (cont.)",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|License",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "golang-cross-compile-arm64": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Quick reference (cont.)",
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|How to use this image > Start a Go instance in your app",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|License"
+    ],
+    "evidence": [
+     "golang|Quick reference (cont.)",
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|How to use this image > Start a Go instance in your app",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|License"
+    ]
+   },
+   "temurin-jre-runtime": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|How to use this Image",
+     "debian|About this image > How It's Made",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "golang|How to use this image > Start a Go instance in your app"
+    ],
+    "evidence": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|How to use this Image",
+     "eclipse-temurin|Quick reference (cont.) > Overview"
+    ]
+   },
+   "temurin-jdk-build-stage": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "nginx|Image Variants > `nginx:<version>`",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "golang|Image Variants > `golang:<version>`"
+    ],
+    "evidence": [
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`"
+    ]
+   },
+   "temurin-17-jammy-pinned": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "nginx|Image Variants > `nginx:<version>`",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "debian|About this image"
+    ],
+    "evidence": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags"
+    ]
+   },
+   "debian-slim-runtime": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>`",
+     "debian|About this image > How It's Made",
+     "golang|Image Variants > `golang:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "redis|Image Variants > `redis:<version>`"
+    ],
+    "evidence": [
+     "debian|About this image > How It's Made"
+    ]
+   },
+   "debian-codename-vs-number": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>`",
+     "debian|About this image",
+     "golang|Image Variants > `golang:<version>`"
+    ],
+    "evidence": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "debian|About this image"
+    ]
+   },
+   "ubuntu-lts-base": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "golang|Image Variants > `golang:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "redis|Image Variants > `redis:<version>`",
+     "nginx|Image Variants > `nginx:<version>`"
+    ],
+    "evidence": [
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "golang|Image Variants > `golang:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "redis|Image Variants > `redis:<version>`",
+     "nginx|Image Variants > `nginx:<version>`"
+    ]
+   },
+   "ubuntu-noble-pinned": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "ubuntu|Quick reference (cont.)",
+     "redis|Quick reference (cont.)"
+    ],
+    "evidence": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "ubuntu|Quick reference (cont.)"
+    ]
+   },
+   "alpine-static-binary": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "eclipse-temurin|Can I add my internal CA certificates to the truststore?",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ],
+    "evidence": [
+     "eclipse-temurin|Can I add my internal CA certificates to the truststore?",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ]
+   }
+  }
+ },
+ "openai-3-small": {
+  "totals": {
+   "global_hit5": 30,
+   "repo_included": 34,
+   "in_repo_hit2": 32,
+   "plan_evidence_hit": 35,
+   "global_hit5_no_intro": 28,
+   "plan_evidence_hit_no_intro": 33,
+   "global_hit5_no_short": 28,
+   "plan_evidence_hit_no_short": 33
+  },
+  "declared": 40,
+  "cases": 40,
+  "query_seconds": 0.2509019224999065,
+  "per_case": {
+   "python-numpy-arm64": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-size-first": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-version-pinned-312": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "debian|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "python-fastapi-prod": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|What is Redis?",
+     "postgres|How to extend this image",
+     "postgres|Image Variants",
+     "golang|Image Variants",
+     "nginx|How to use this image > Running nginx as a non-root user"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>`",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-scientific-stack": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "alpine|Quick reference (cont.)",
+     "eclipse-temurin|Quick reference (cont.)",
+     "python|Quick reference (cont.)",
+     "golang|How to use this image > Git LFS",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ],
+    "evidence": [
+     "python|Quick reference (cont.)",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "python-build-stage": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|How to use this image > Start a Go instance in your app",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "node|Supported tags and respective `Dockerfile` links",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Image Variants > `python:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-latest-stable": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "redis|Image Variants > `redis:<version>`"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Image Variants > `python:<version>`"
+    ]
+   },
+   "python-alpine-explicit": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "alpine|Quick reference (cont.)",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "alpine|License"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>`",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "python-debian-codename": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "debian|Supported tags and respective `Dockerfile` links",
+     "postgres|Supported tags and respective `Dockerfile` links",
+     "node|Supported tags and respective `Dockerfile` links",
+     "python|Image Variants > `python:<version>`"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Image Variants > `python:<version>`"
+    ]
+   },
+   "python-arm64-only": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Quick reference (cont.)",
+     "python|Quick reference (cont.)",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "debian|Quick reference (cont.)",
+     "golang|How to use this image > Cross-compile your app inside the Docker container"
+    ],
+    "evidence": [
+     "python|Quick reference (cont.)"
+    ]
+   },
+   "python-small-cli": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-ml-torch": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "python-slim-vs-full": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "python-musl-explained": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "node-lts-prod": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "postgres|How to extend this image",
+     "redis|What is Redis?",
+     "postgres|Image Variants",
+     "eclipse-temurin|Quick reference (cont.)",
+     "nginx|Image Variants > `nginx:<version>`"
+    ],
+    "evidence": [
+     "node|License",
+     "node|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "node-size-first": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Image Variants > `node:<version>-slim`",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   },
+   "node-native-addon": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   },
+   "node-arm64-graviton": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   },
+   "node-alpine-vs-slim": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-slim`",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ],
+    "evidence": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   },
+   "postgres-prod-default": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|Image Variants",
+     "postgres|How to extend this image",
+     "postgres|What is PostgreSQL?",
+     "postgres|Arbitrary `--user` Notes",
+     "postgres|How to extend this image > Environment Variables"
+    ],
+    "evidence": [
+     "postgres|Image Variants",
+     "postgres|How to extend this image",
+     "postgres|What is PostgreSQL?",
+     "postgres|Arbitrary `--user` Notes",
+     "postgres|How to extend this image > Environment Variables"
+    ]
+   },
+   "postgres-postgis-extension": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "postgres|How to extend this image > Additional Extensions",
+     "alpine|Quick reference (cont.)",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "postgres|How to extend this image",
+     "golang|Image Variants > `golang:<version>-alpine`"
+    ],
+    "evidence": [
+     "postgres|How to extend this image > Additional Extensions",
+     "postgres|How to extend this image"
+    ]
+   },
+   "postgres-version-pinned-16": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Quick reference",
+     "postgres|How to use this image > ... or via `psql`",
+     "postgres|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Quick reference",
+     "postgres|How to use this image > ... or via `psql`",
+     "postgres|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "postgres-ci-ephemeral": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to use this image > ... or via `psql`",
+     "postgres|How to extend this image",
+     "postgres|Quick reference",
+     "postgres|Image Variants"
+    ],
+    "evidence": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to use this image > ... or via `psql`",
+     "postgres|How to extend this image",
+     "postgres|Quick reference",
+     "postgres|Image Variants"
+    ]
+   },
+   "redis-cache-sidecar": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "redis|What is Redis?",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|Image Variants",
+     "redis|How to use this image > Start a redis instance",
+     "redis|How to use this image > Start with persistent storage"
+    ],
+    "evidence": [
+     "redis|What is Redis?",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|Image Variants",
+     "redis|How to use this image > Start a redis instance",
+     "redis|How to use this image > Start with persistent storage"
+    ]
+   },
+   "redis-version-pinned-7": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|Supported tags and respective `Dockerfile` links",
+     "redis|Quick reference",
+     "redis|Quick reference (cont.)",
+     "redis|How to use this image > Connecting via `redis-cli`",
+     "redis|License"
+    ],
+    "evidence": [
+     "redis|Supported tags and respective `Dockerfile` links",
+     "redis|Quick reference",
+     "redis|Quick reference (cont.)",
+     "redis|How to use this image > Connecting via `redis-cli`",
+     "redis|License"
+    ]
+   },
+   "redis-persistence-docs": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|What is Redis?",
+     "redis|Quick reference",
+     "redis|How to use this image > Start a redis instance",
+     "redis|How to use this image > Start with persistent storage"
+    ],
+    "evidence": [
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|What is Redis?",
+     "redis|Quick reference",
+     "redis|How to use this image > Start a redis instance",
+     "redis|How to use this image > Start with persistent storage"
+    ]
+   },
+   "nginx-static-spa": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx in debug mode",
+     "nginx|Quick reference (cont.)",
+     "nginx|How to use this image > Running nginx in read-only mode",
+     "nginx|Image Variants"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx in debug mode",
+     "nginx|Quick reference (cont.)",
+     "nginx|How to use this image > Running nginx in read-only mode",
+     "nginx|Image Variants"
+    ]
+   },
+   "nginx-stable-branch": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "debian|About this image",
+     "nginx|Quick reference (cont.)"
+    ],
+    "evidence": [
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|Quick reference (cont.)"
+    ]
+   },
+   "nginx-otel-tracing": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|License",
+     "nginx|How to use this image > Running nginx in debug mode",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|License",
+     "nginx|How to use this image > Running nginx in debug mode",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "golang-multistage-build": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|Image Variants > `redis:<version>`",
+     "golang|Image Variants > `golang:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`"
+    ],
+    "evidence": [
+     "golang|Image Variants > `golang:<version>`"
+    ]
+   },
+   "golang-cgo-sqlite": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "debian|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "golang-cross-compile-arm64": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|How to use this image > Start a Go instance in your app",
+     "golang|Quick reference (cont.)",
+     "golang|How to use this image > Git LFS"
+    ],
+    "evidence": [
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|How to use this image > Start a Go instance in your app",
+     "golang|Quick reference (cont.)",
+     "golang|How to use this image > Git LFS"
+    ]
+   },
+   "temurin-jre-runtime": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|How to use this Image",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "postgres|Caveats"
+    ],
+    "evidence": [
+     "eclipse-temurin|How to use this Image",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?"
+    ]
+   },
+   "temurin-jdk-build-stage": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|How to use this Image",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|What is Eclipse Temurin ?"
+    ],
+    "evidence": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|How to use this Image",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|What is Eclipse Temurin ?"
+    ]
+   },
+   "temurin-17-jammy-pinned": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "debian|About this image",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "debian|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?"
+    ]
+   },
+   "debian-slim-runtime": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "redis|Image Variants > `redis:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ],
+    "evidence": [
+     "debian|About this image",
+     "debian|About this image > How It's Made"
+    ]
+   },
+   "debian-codename-vs-number": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "debian|About this image",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "nginx|Image Variants > `nginx:<version>`"
+    ],
+    "evidence": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "debian|About this image"
+    ]
+   },
+   "ubuntu-lts-base": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "debian|About this image",
+     "debian|Quick reference",
+     "node|Image Variants > `node:<version>`",
+     "python|Image Variants > `python:<version>`",
+     "ubuntu|What is Ubuntu?"
+    ],
+    "evidence": [
+     "debian|About this image",
+     "debian|Quick reference",
+     "node|Image Variants > `node:<version>`",
+     "python|Image Variants > `python:<version>`",
+     "ubuntu|What is Ubuntu?"
+    ]
+   },
+   "ubuntu-noble-pinned": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "golang|How to use this image > Git LFS"
+    ],
+    "evidence": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "ubuntu|What's in this image? > Locales"
+    ]
+   },
+   "alpine-static-binary": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "eclipse-temurin|Can I add my internal CA certificates to the truststore?",
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "golang|Image Variants > `golang:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "redis|Image Variants > `redis:<version>`"
+    ],
+    "evidence": [
+     "eclipse-temurin|Can I add my internal CA certificates to the truststore?",
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "golang|Image Variants > `golang:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "redis|Image Variants > `redis:<version>`"
+    ]
+   }
+  }
+ },
+ "openai-3-large": {
+  "totals": {
+   "global_hit5": 32,
+   "repo_included": 36,
+   "in_repo_hit2": 34,
+   "plan_evidence_hit": 34,
+   "global_hit5_no_intro": 30,
+   "plan_evidence_hit_no_intro": 32,
+   "global_hit5_no_short": 30,
+   "plan_evidence_hit_no_short": 32
+  },
+  "declared": 40,
+  "cases": 40,
+  "query_seconds": 0.22995087527506258,
+  "per_case": {
+   "python-numpy-arm64": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Quick reference (cont.)",
+     "node|Image Variants > `node:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Quick reference (cont.)"
+    ]
+   },
+   "python-size-first": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Quick reference",
+     "python|Image Variants",
+     "alpine|What is Alpine Linux?"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Quick reference",
+     "python|Image Variants"
+    ]
+   },
+   "python-version-pinned-312": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Quick reference (cont.)",
+     "debian|Supported tags and respective `Dockerfile` links",
+     "alpine|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Quick reference (cont.)"
+    ]
+   },
+   "python-fastapi-prod": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "python|How to use this image > Create a `Dockerfile` in your Python app project",
+     "postgres|Image Variants > `postgres:<version>`",
+     "golang|Image Variants > `golang:<version>`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>`",
+     "python|How to use this image > Create a `Dockerfile` in your Python app project"
+    ]
+   },
+   "python-scientific-stack": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Quick reference (cont.)",
+     "python|Image Variants > `python:<version>-slim`",
+     "debian|About this image > How It's Made",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Image Variants"
+    ],
+    "evidence": [
+     "python|Quick reference (cont.)",
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Image Variants"
+    ]
+   },
+   "python-build-stage": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "node|Supported tags and respective `Dockerfile` links",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "alpine|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>`"
+    ]
+   },
+   "python-latest-stable": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "nginx|Image Variants > `nginx:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "golang|Image Variants > `golang:<version>`"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "python-alpine-explicit": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "nginx|Image Variants > `nginx:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "golang|Image Variants > `golang:<version>`",
+     "redis|Image Variants > `redis:<version>`"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "python-debian-codename": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "debian|Supported tags and respective `Dockerfile` links",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "node|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags"
+    ]
+   },
+   "python-arm64-only": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "alpine|Quick reference (cont.)",
+     "eclipse-temurin|Quick reference (cont.)",
+     "redis|Quick reference (cont.)",
+     "ubuntu|Quick reference (cont.)",
+     "golang|How to use this image > Cross-compile your app inside the Docker container"
+    ],
+    "evidence": [
+     "python|Quick reference (cont.)",
+     "python|Image Variants > `python:<version>-slim`"
+    ]
+   },
+   "python-small-cli": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Quick reference",
+     "postgres|Image Variants > `postgres:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Quick reference"
+    ]
+   },
+   "python-ml-torch": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants",
+     "redis|Image Variants",
+     "nginx|Image Variants > `nginx:<version>`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants"
+    ]
+   },
+   "python-slim-vs-full": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`"
+    ],
+    "evidence": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|Image Variants",
+     "python|Image Variants > `python:<version>-slim`"
+    ]
+   },
+   "python-musl-explained": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-slim`",
+     "alpine|What is Alpine Linux?",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`"
+    ],
+    "evidence": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "node-lts-prod": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "golang|Image Variants > `golang:<version>`",
+     "redis|Image Variants > `redis:<version>`"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>`"
+    ]
+   },
+   "node-size-first": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Image Variants > `node:<version>-slim`",
+     "node|What is Node.js?",
+     "node|Supported tags and respective `Dockerfile` links",
+     "alpine|What is Alpine Linux?",
+     "golang|Image Variants > `golang:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Image Variants > `node:<version>-slim`",
+     "node|What is Node.js?",
+     "node|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "node-native-addon": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   },
+   "node-arm64-graviton": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Quick reference (cont.)",
+     "alpine|Quick reference (cont.)",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`"
+    ],
+    "evidence": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Quick reference (cont.)",
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   },
+   "node-alpine-vs-slim": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "node|Image Variants",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "alpine|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants"
+    ]
+   },
+   "postgres-prod-default": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Quick reference",
+     "postgres|Supported tags and respective `Dockerfile` links",
+     "postgres|Caveats > Where to Store Data"
+    ],
+    "evidence": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Quick reference",
+     "postgres|Supported tags and respective `Dockerfile` links",
+     "postgres|Caveats > Where to Store Data"
+    ]
+   },
+   "postgres-postgis-extension": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "alpine|What is Alpine Linux?",
+     "postgres|Image Variants > `postgres:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ],
+    "evidence": [
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ]
+   },
+   "postgres-version-pinned-16": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Supported tags and respective `Dockerfile` links",
+     "postgres|Quick reference",
+     "postgres|Quick reference (cont.)",
+     "postgres|Arbitrary `--user` Notes"
+    ],
+    "evidence": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Supported tags and respective `Dockerfile` links",
+     "postgres|Quick reference",
+     "postgres|Quick reference (cont.)",
+     "postgres|Arbitrary `--user` Notes"
+    ]
+   },
+   "postgres-ci-ephemeral": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Locale Customization",
+     "postgres|Supported tags and respective `Dockerfile` links",
+     "postgres|How to extend this image"
+    ],
+    "evidence": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Locale Customization",
+     "postgres|Supported tags and respective `Dockerfile` links",
+     "postgres|How to extend this image"
+    ]
+   },
+   "redis-cache-sidecar": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "redis|What is Redis?",
+     "redis|Image Variants",
+     "redis|Quick reference (cont.)",
+     "redis|Security",
+     "postgres|Caveats > Where to Store Data"
+    ],
+    "evidence": [
+     "redis|What is Redis?",
+     "redis|Image Variants",
+     "redis|Quick reference (cont.)",
+     "redis|Security"
+    ]
+   },
+   "redis-version-pinned-7": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|Supported tags and respective `Dockerfile` links",
+     "redis|Quick reference (cont.)",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|License",
+     "redis|What is Redis?"
+    ],
+    "evidence": [
+     "redis|Supported tags and respective `Dockerfile` links",
+     "redis|Quick reference (cont.)",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|License",
+     "redis|What is Redis?"
+    ]
+   },
+   "redis-persistence-docs": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "redis|How to use this image > Start with persistent storage",
+     "redis|How to use this image > Start a redis instance",
+     "redis|Quick reference",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|What is Redis?"
+    ],
+    "evidence": [
+     "redis|How to use this image > Start with persistent storage",
+     "redis|How to use this image > Start a redis instance",
+     "redis|Quick reference",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|What is Redis?"
+    ]
+   },
+   "nginx-static-spa": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Quick reference (cont.)",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|What is nginx?"
+    ],
+    "evidence": [
+     "nginx|Quick reference (cont.)",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|What is nginx?"
+    ]
+   },
+   "nginx-stable-branch": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|What is nginx?",
+     "nginx|Image Variants > `nginx:<version>-slim`"
+    ],
+    "evidence": [
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|What is nginx?",
+     "nginx|Image Variants > `nginx:<version>-slim`"
+    ]
+   },
+   "nginx-otel-tracing": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|Quick reference",
+     "nginx|Quick reference (cont.)",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|What is nginx?"
+    ],
+    "evidence": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|Quick reference",
+     "nginx|Quick reference (cont.)",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|What is nginx?"
+    ]
+   },
+   "golang-multistage-build": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>`",
+     "redis|Image Variants > `redis:<version>`",
+     "postgres|Image Variants > `postgres:<version>`",
+     "golang|Image Variants",
+     "golang|How to use this image > Start a Go instance in your app"
+    ],
+    "evidence": [
+     "golang|Image Variants > `golang:<version>`",
+     "golang|Image Variants",
+     "golang|How to use this image > Start a Go instance in your app"
+    ]
+   },
+   "golang-cgo-sqlite": {
+    "global_hit5": false,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "golang|How to use this image > Start a Go instance in your app",
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|Quick reference (cont.)",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "golang|License"
+    ],
+    "evidence": [
+     "golang|How to use this image > Start a Go instance in your app",
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|Quick reference (cont.)",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "golang|License"
+    ]
+   },
+   "golang-cross-compile-arm64": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|Quick reference (cont.)",
+     "golang|Image Variants",
+     "golang|How to use this image > Start a Go instance in your app",
+     "golang|Image Variants > `golang:<version>-alpine`"
+    ],
+    "evidence": [
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "golang|Quick reference (cont.)",
+     "golang|Image Variants",
+     "golang|How to use this image > Start a Go instance in your app",
+     "golang|Image Variants > `golang:<version>-alpine`"
+    ]
+   },
+   "temurin-jre-runtime": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": false,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|How to use this Image",
+     "golang|How to use this image > Compile your app inside the Docker container",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ],
+    "evidence": [
+     "eclipse-temurin|How to use this Image",
+     "eclipse-temurin|Quick reference (cont.) > Overview",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "temurin-jdk-build-stage": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "golang|How to use this image > Compile your app inside the Docker container",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|Image Variants",
+     "eclipse-temurin|How to use this Image",
+     "golang|Image Variants"
+    ],
+    "evidence": [
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|Image Variants",
+     "eclipse-temurin|How to use this Image"
+    ]
+   },
+   "temurin-17-jammy-pinned": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "eclipse-temurin|How to use this Image"
+    ],
+    "evidence": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "eclipse-temurin|How to use this Image"
+    ]
+   },
+   "debian-slim-runtime": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ],
+    "evidence": [
+     "debian|About this image",
+     "debian|Image Variants > `debian:<suite>-slim`"
+    ]
+   },
+   "debian-codename-vs-number": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>`",
+     "debian|About this image",
+     "node|Supported tags and respective `Dockerfile` links",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags"
+    ],
+    "evidence": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "debian|About this image"
+    ]
+   },
+   "ubuntu-lts-base": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "debian|About this image",
+     "node|Image Variants > `node:<version>`",
+     "python|Image Variants > `python:<version>`",
+     "debian|What is Debian?",
+     "golang|Image Variants > `golang:<version>`"
+    ],
+    "evidence": [
+     "debian|About this image",
+     "node|Image Variants > `node:<version>`",
+     "python|Image Variants > `python:<version>`",
+     "debian|What is Debian?",
+     "golang|Image Variants > `golang:<version>`"
+    ]
+   },
+   "ubuntu-noble-pinned": {
+    "global_hit5": true,
+    "repo_included": true,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": true,
+    "global_hit5_no_intro": true,
+    "plan_evidence_hit_no_intro": true,
+    "global_hit5_no_short": true,
+    "plan_evidence_hit_no_short": true,
+    "top5": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "node|Supported tags and respective `Dockerfile` links",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags"
+    ],
+    "evidence": [
+     "ubuntu|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "alpine-static-binary": {
+    "global_hit5": false,
+    "repo_included": false,
+    "in_repo_hit2": true,
+    "plan_evidence_hit": false,
+    "global_hit5_no_intro": false,
+    "plan_evidence_hit_no_intro": false,
+    "global_hit5_no_short": false,
+    "plan_evidence_hit_no_short": false,
+    "top5": [
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "debian|About this image",
+     "node|Image Variants > `node:<version>-slim`",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "node|Supported tags and respective `Dockerfile` links"
+    ],
+    "evidence": [
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "debian|About this image",
+     "node|Image Variants > `node:<version>-slim`",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "node|Supported tags and respective `Dockerfile` links"
+    ]
+   }
+  }
+ }
+}

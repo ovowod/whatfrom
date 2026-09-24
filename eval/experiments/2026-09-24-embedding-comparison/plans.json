@@ -1,0 +1,352 @@
+{
+ "source": "eval/results/2026-09-23T14-14-55.json",
+ "started_at": "2026-09-23T14:14:55+00:00",
+ "llm_model": "kimi-k3",
+ "goldenset_sha256": "fe366444652466a3b945448f1de99e14b3fc86f13e9cf8b07d3ba2cfad12765e",
+ "plans": {
+  "python-numpy-arm64": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [
+    "arm64"
+   ],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "python-size-first": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [
+    "alpine"
+   ],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "python-version-pinned-312": {
+   "repository": "python",
+   "version_prefix": "3.12",
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "python-fastapi-prod": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "python-scientific-stack": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "python-build-stage": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "python-latest-stable": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "python-alpine-explicit": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [
+    "alpine"
+   ],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "python-debian-codename": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [
+    "bookworm"
+   ],
+   "exclude_distributions": [
+    "trixie"
+   ],
+   "max_size_mb": null
+  },
+  "python-arm64-only": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [
+    "arm64"
+   ],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "python-small-cli": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "python-ml-torch": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "python-slim-vs-full": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "python-musl-explained": {
+   "repository": "python",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [
+    "alpine"
+   ],
+   "max_size_mb": null
+  },
+  "node-lts-prod": {
+   "repository": "node",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "node-size-first": {
+   "repository": "node",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "node-native-addon": {
+   "repository": "node",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [
+    "alpine"
+   ],
+   "max_size_mb": null
+  },
+  "node-arm64-graviton": {
+   "repository": "node",
+   "version_prefix": null,
+   "architectures": [
+    "arm64"
+   ],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "node-alpine-vs-slim": {
+   "repository": "node",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "postgres-prod-default": {
+   "repository": "postgres",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "postgres-postgis-extension": {
+   "repository": "postgres",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "postgres-version-pinned-16": {
+   "repository": "postgres",
+   "version_prefix": "16",
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "postgres-ci-ephemeral": {
+   "repository": "postgres",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "redis-cache-sidecar": {
+   "repository": "redis",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "redis-version-pinned-7": {
+   "repository": "redis",
+   "version_prefix": "7",
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "redis-persistence-docs": {
+   "repository": "redis",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "nginx-static-spa": {
+   "repository": "nginx",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "nginx-stable-branch": {
+   "repository": "nginx",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "nginx-otel-tracing": {
+   "repository": "nginx",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "golang-multistage-build": {
+   "repository": "golang",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "golang-cgo-sqlite": {
+   "repository": "golang",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "golang-cross-compile-arm64": {
+   "repository": "golang",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "temurin-jre-runtime": {
+   "repository": "eclipse-temurin",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "temurin-jdk-build-stage": {
+   "repository": "eclipse-temurin",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "temurin-17-jammy-pinned": {
+   "repository": "eclipse-temurin",
+   "version_prefix": "17",
+   "architectures": [],
+   "distributions": [
+    "jammy"
+   ],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "debian-slim-runtime": {
+   "repository": "debian",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [
+    "debian"
+   ],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "debian-codename-vs-number": {
+   "repository": "debian",
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "ubuntu-lts-base": {
+   "repository": null,
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [
+    "ubuntu"
+   ],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "ubuntu-noble-pinned": {
+   "repository": "ubuntu",
+   "version_prefix": "24.04",
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  },
+  "alpine-static-binary": {
+   "repository": null,
+   "version_prefix": null,
+   "architectures": [],
+   "distributions": [],
+   "exclude_distributions": [],
+   "max_size_mb": null
+  }
+ }
+}
