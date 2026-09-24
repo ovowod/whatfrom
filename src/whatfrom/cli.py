@@ -173,7 +173,8 @@ def cmd_search(args: argparse.Namespace) -> None:
     embedder = get_embedder(args.embedder)
     with session_scope(engine) as session:
         for chunk, distance in search_chunks(session, embedder, args.question, limit=args.limit):
-            print(f"[{distance:.4f}] {chunk.document.section_title}")
+            # 여러 리포지토리의 같은 제목 섹션이 함께 나오므로 리포지토리를 같이 적는다.
+            print(f"[{distance:.4f}] {chunk.document.repository} — {chunk.document.section_title}")
             print(f"    {chunk.content[:160].replace(chr(10), ' ')}")
 
 

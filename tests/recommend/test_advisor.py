@@ -10,10 +10,10 @@ from whatfrom.recommend.llm import FakeLLMProvider
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
 
 
-def _candidate(tag: str, size: int) -> Candidate:
+def _candidate(tag: str, size: int, repository: str = "python") -> Candidate:
     return Candidate(
-        image=f"python:{tag}",
-        repository="python",
+        image=f"{repository}:{tag}",
+        repository=repository,
         tag=tag,
         digest="sha256:aaa",
         platforms=[
@@ -39,9 +39,10 @@ def _candidate(tag: str, size: int) -> Candidate:
         collected_at=NOW,
         evidence=[
             Evidence(
-                section_title="Image Variants > `python:<version>-alpine`",
-                content="musl libc instead of glibc",
-                source_url="https://hub.docker.com/_/python",
+                repository=repository,
+                section_title="Image Variants",
+                content=f"{repository}: musl libc instead of glibc",
+                source_url=f"https://github.com/docker-library/docs/blob/master/{repository}/README.md",
             )
         ],
     )
@@ -88,3 +89,20 @@ def test_advise_propagates_provider_failure_as_llm_error():
 
     with pytest.raises(RemoteCallError):
         advise(provider, "q", [_candidate("3.13-slim", 1)])
+
+
+def test_build_prompt_keeps_the_same_section_from_different_repositories():
+    """리포지토리가 다르면 제목이 같아도 다른 문서다. 제목만으로 지우면 한쪽이 사라진다."""
+    prompt = build_prompt("q", [_candidate("3.13-slim", 1), _candidate("24-slim", 2, "node")])
+
+    assert "python: musl libc instead of glibc" in prompt
+    assert "node: musl libc instead of glibc" in prompt
+    assert "## python — Image Variants" in prompt
+    assert "## node — Image Variants" in prompt
+
+
+def test_build_prompt_lists_a_shared_section_once():
+    """같은 리포지토리의 같은 섹션은 후보마다 붙어 있어도 한 번만 넘긴다."""
+    prompt = build_prompt("q", [_candidate("3.13-slim", 1), _candidate("3.13-alpine", 2)])
+
+    assert prompt.count("## python — Image Variants") == 1

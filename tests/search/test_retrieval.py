@@ -7,12 +7,18 @@ from sqlalchemy import update
 from whatfrom.collect.hub import TagRow, VariantRow, parse_repository
 from whatfrom.collect.store import upsert_repository, upsert_tags
 from whatfrom.core.embed import FakeEmbedder
-from whatfrom.core.models import ImageTag
+from whatfrom.core.models import Document, DocumentChunk, ImageTag, Repository
 from whatfrom.index.indexer import index_readme
-from whatfrom.search.retrieval import search_candidates, search_chunks
+from whatfrom.search.retrieval import search_candidates, search_chunks, search_chunks_by_vector
+
+from .plan_seed import add_repository
 
 FIXTURES = Path(__file__).parents[1] / "fixtures"
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
+
+
+def vector(text: str) -> list[float]:
+    return FakeEmbedder().embed([text])[0]
 
 
 def _seed(session):
@@ -264,3 +270,110 @@ def test_search_candidates_carry_the_derived_tag_values(session):
     )
     alpine = next(c for c in candidates if c.tag == "3.13-alpine")
     assert (alpine.version, alpine.distribution) == (None, None)
+
+
+def _seed_long_sections(session) -> None:
+    """한 섹션이 청크 여럿이 되도록 800자를 넘는 본문을 넣는다."""
+    tags = "alpine slim bookworm trixie jre jdk tag list. " * 150
+    add_repository(
+        session, "many", f"# Supported tags\n\n{tags}\n\n# Image Variants\n\nalpine musl busybox.\n"
+    )
+    add_repository(session, "other", "# Image Variants\n\nalpine musl busybox.\n")
+
+
+def test_search_chunks_returns_one_chunk_per_section(session):
+    """청크가 많은 섹션이 상위를 독차지하면 다른 문서가 밀려난다."""
+    _seed_long_sections(session)
+
+    hits = search_chunks_by_vector(
+        session, vector("alpine slim bookworm trixie jre jdk tag list"), limit=5
+    )
+
+    sections = [chunk.document_id for chunk, _ in hits]
+    assert len(sections) == len(set(sections))
+    assert len({chunk.document.repository for chunk, _ in hits}) > 1
+
+
+def test_search_chunks_order_does_not_depend_on_the_limit(session):
+    """이미지 이름만 다른 청크는 거리가 같다. 동점은 청크 id로 정한다."""
+    _seed_long_sections(session)
+    v = vector("alpine musl busybox")
+
+    few = search_chunks_by_vector(session, v, limit=2)
+    many = search_chunks_by_vector(session, v, limit=50)
+
+    assert [c.id for c, _ in few] == [c.id for c, _ in many[:2]]
+
+
+def test_search_chunks_in_one_repository_also_keeps_one_chunk_per_section(session):
+    _seed_long_sections(session)
+
+    hits = search_chunks_by_vector(
+        session, vector("alpine slim bookworm trixie jre jdk tag list"), limit=5, repository="many"
+    )
+
+    assert {chunk.document.repository for chunk, _ in hits} == {"many"}
+    sections = [chunk.document_id for chunk, _ in hits]
+    assert len(sections) == len(set(sections))
+
+
+def add_chunks(session, repository: str, title: str, texts: list[str]) -> list[int]:
+    """거리와 id를 직접 정하려고 청크를 손으로 넣는다. 넣은 순서대로 id가 커진다."""
+    session.add(
+        Repository(
+            name=repository,
+            is_official=True,
+            source_url=f"https://hub.docker.com/_/{repository}",
+            collected_at=NOW,
+        )
+    )
+    session.flush()
+    document = Document(
+        repository=repository,
+        doc_type="readme",
+        section_title=title,
+        content=" ".join(texts),
+        source_url=f"https://hub.docker.com/_/{repository}",
+        collected_at=NOW,
+    )
+    session.add(document)
+    session.flush()
+    ids = []
+    for index, text in enumerate(texts):
+        chunk = DocumentChunk(
+            document_id=document.id, chunk_index=index, content=text, embedding=vector(text)
+        )
+        session.add(chunk)
+        session.flush()
+        ids.append(chunk.id)
+    return ids
+
+
+def test_search_chunks_takes_the_closest_chunk_of_a_section(session):
+    """섹션의 대표는 가장 가까운 청크다. 먼 청크를 먼저 넣어 순서로는 못 맞히게 한다."""
+    far, near = add_chunks(session, "one", "Image Variants", ["windows server core", "alpine musl"])
+
+    hits = search_chunks_by_vector(session, vector("alpine musl"), limit=5)
+
+    assert [chunk.id for chunk, _ in hits] == [near]
+    assert far not in [chunk.id for chunk, _ in hits]
+
+
+def test_a_tie_inside_a_section_picks_the_smaller_chunk_id(session):
+    """같은 본문이면 거리가 같다. 대표는 id가 작은 쪽이다."""
+    first, second = add_chunks(session, "two", "Image Variants", ["alpine musl", "alpine musl"])
+
+    hits = search_chunks_by_vector(session, vector("alpine musl"), limit=5)
+
+    assert [chunk.id for chunk, _ in hits] == [first]
+    assert second not in [chunk.id for chunk, _ in hits]
+
+
+def test_a_tie_between_sections_orders_by_chunk_id(session):
+    """이미지 이름만 다른 청크는 거리가 같다. 순서는 id로 정한다."""
+    [early] = add_chunks(session, "three", "Image Variants", ["alpine musl"])
+    [late] = add_chunks(session, "four", "Image Variants", ["alpine musl"])
+
+    hits = search_chunks_by_vector(session, vector("alpine musl"), limit=2)
+
+    assert [chunk.id for chunk, _ in hits] == [early, late]
