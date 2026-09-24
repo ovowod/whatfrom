@@ -597,3 +597,56 @@ def test_result_document_records_the_plan_and_notes_of_each_case():
 
     assert case["plan"] == {"repository": "python"}
     assert case["notes"] == ["조건을 풀었습니다."]
+
+
+def test_render_summary_shows_the_median_and_slowest_case_time() -> None:
+    scores = [
+        make_score(case_id="fast", seconds_total=10.0),
+        make_score(case_id="mid", seconds_total=20.0),
+        make_score(case_id="slow", seconds_total=90.0),
+    ]
+
+    output = render_summary([], scores, [], [], 3, {})
+
+    assert "문항당 소요 시간: 중앙값 20.0초, 최대 90.0초 (slow)" in output
+
+
+def test_render_summary_omits_the_time_line_without_timings() -> None:
+    """검색 전용 모드와 시간을 재지 않은 실행에는 시간 줄이 없다."""
+    output = render_summary([], [make_score()], [], [], 1, {})
+
+    assert "소요 시간" not in output
+
+
+def test_result_document_records_the_stage_times_and_the_advise_input() -> None:
+    score = make_score(
+        seconds_total=3.0,
+        seconds_embedding=0.5,
+        seconds_plan=1.0,
+        advise_prompt="Requirement: q",
+        dockerfile="FROM python:3.13-slim@sha256:aaa",
+    )
+
+    document = result_document([], [score], [], {})
+
+    case = document["cases"][0]
+    assert (case["seconds_total"], case["seconds_embedding"]) == (3.0, 0.5)
+    assert (case["seconds_plan"], case["seconds_advise"]) == (1.0, None)
+    assert case["advise_prompt"] == "Requirement: q"
+    assert case["dockerfile"] == "FROM python:3.13-slim@sha256:aaa"
+
+
+def test_result_document_of_a_retrieval_run_has_no_time_fields() -> None:
+    score = RetrievalScore(
+        case_id="case",
+        candidate_hit=True,
+        candidate_count=1,
+        accepted_count=1,
+        candidate_images=["python:3.13-slim"],
+        hit_declared=True,
+        hit_at5=True,
+    )
+
+    document = result_document([], [score], [], {})
+
+    assert not any(key.startswith("seconds_") for key in document["cases"][0])

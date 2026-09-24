@@ -1,6 +1,7 @@
 # src/whatfrom/eval/report.py
 from collections import Counter
 from dataclasses import asdict, dataclass
+from statistics import median
 from unicodedata import east_asian_width
 
 from whatfrom.eval.goldenset import GoldenCase
@@ -225,6 +226,17 @@ def render_summary(
     # 놓일 자리가 없다. 호출자가 넘겨도 여기서 걸러 둘이 어긋나지 않게 한다.
     if baseline is not None and any(m.label == "추천 정확도" for m in metrics):
         lines += ["", _format_baseline(baseline)]
+
+    # 전체 모드에서 러너가 잰 시간. 검색 전용 모드와 시간을 재지 않은 실행에는 없다.
+    timed = [s for s in scores if s.seconds_total is not None]
+    if timed:
+        slowest = max(timed, key=lambda s: s.seconds_total)
+        middle = median(s.seconds_total for s in timed)
+        lines += [
+            "",
+            f"문항당 소요 시간: 중앙값 {middle:.1f}초, 최대 {slowest.seconds_total:.1f}초 "
+            f"({slowest.case_id})",
+        ]
 
     by_digest = [s.case_id for s in scores if s.accurate_by_digest]
     if by_digest:
