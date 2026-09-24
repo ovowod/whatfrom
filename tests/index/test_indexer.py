@@ -94,3 +94,64 @@ def test_index_readme_is_idempotent(session):
 
     assert first == second
     assert len(session.execute(select(DocumentChunk)).scalars().all()) == first
+
+
+INTRO = "The `python` images come in many flavors, each designed for a specific use case."
+FAQ = (
+    "(See [\"What's the difference between 'Shared' and 'Simple' tags?\" in the FAQ]"
+    "(https://github.com/docker-library/faq#whats-the-difference-between-shared-and-simple-tags).)"
+)
+TEMPLATE_README = (
+    f"# Image Variants\n\n{INTRO}\n\n"
+    "## `python:<version>`\n\nThis is the defacto image.\n\n"
+    f"# Supported tags and respective `Dockerfile` links\n\n{FAQ}\n\n"
+    "## Shared Tags\n\n- `3.14`, `latest`\n"
+)
+
+
+def _titles(session) -> set[str]:
+    return {t for (t,) in session.execute(select(Document.section_title))}
+
+
+def test_sections_that_are_only_a_readme_template_line_are_not_indexed(session):
+    """공식 README 틀의 한 문장뿐인 상위 절은 답이 없다. 근거 자리와 채점을 속인다."""
+    row = _seed_repository(session)
+
+    index_readme(session, "python", TEMPLATE_README, row.source_url, FakeEmbedder(), NOW)
+    session.flush()
+
+    assert _titles(session) == {
+        "Image Variants > `python:<version>`",
+        "Supported tags and respective `Dockerfile` links > Shared Tags",
+    }
+
+
+def test_a_template_line_with_more_content_is_indexed(session):
+    """틀 문장만 있는 섹션만 뺀다. 내용이 덧붙은 섹션은 그대로 둔다."""
+    row = _seed_repository(session)
+    readme = f"# Image Variants\n\n{INTRO}\n\nPick slim when size matters.\n"
+
+    index_readme(session, "python", readme, row.source_url, FakeEmbedder(), NOW)
+    session.flush()
+
+    assert _titles(session) == {"Image Variants"}
+
+
+def test_reindexing_removes_template_sections_indexed_before(session):
+    """이전 색인에 남은 틀 문장 섹션은 다시 색인할 때 지워진다."""
+    row = _seed_repository(session)
+    stale = Document(
+        repository="python",
+        doc_type="readme",
+        section_title="Image Variants",
+        content=INTRO,
+        source_url=row.source_url,
+        collected_at=NOW,
+    )
+    session.add(stale)
+    session.flush()
+
+    index_readme(session, "python", TEMPLATE_README, row.source_url, FakeEmbedder(), NOW)
+    session.flush()
+
+    assert "Image Variants" not in _titles(session)
