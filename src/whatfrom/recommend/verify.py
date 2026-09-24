@@ -8,24 +8,31 @@ from whatfrom.core.contracts import Candidate, Recommendation
 from whatfrom.core.models import ImageTag
 
 # FROM [--platform=...] <ref> [AS <stage>]
-_FROM = re.compile(r"^\s*FROM\s+(?:--\S+\s+)*(\S+)(?:\s+[Aa][Ss]\s+(\S+))?", re.MULTILINE)
+# Dockerfile 명령은 대소문자를 구분하지 않는다. 대문자만 보면 `from unknown:tag` 줄이
+# 검증을 빠져나가 없는 이미지가 Dockerfile로 사용자에게 보인다.
+_FROM = re.compile(r"^\s*FROM\s+(?:--\S+\s+)*(\S+)(?:\s+AS\s+(\S+))?", re.MULTILINE | re.IGNORECASE)
 
 
-def dockerfile_image_refs(dockerfile: str) -> list[str]:
-    """Dockerfile이 FROM으로 가져오는 이미지들.
+def image_ref_spans(dockerfile: str) -> list[tuple[str, tuple[int, int]]]:
+    """FROM이 가져오는 이미지 참조와 그 위치. 검증과 digest 고정이 함께 쓰는 파서다.
 
     멀티스테이지에서 앞 단계 이름을 참조하는 FROM과 `scratch`는 이미지가 아니므로
     제외한다. 나머지는 전부 실재해야 하는 이미지 참조다.
     """
     stages: set[str] = set()
-    refs: list[str] = []
+    spans: list[tuple[str, tuple[int, int]]] = []
     for match in _FROM.finditer(dockerfile):
         ref, alias = match.group(1), match.group(2)
         if ref.lower() != "scratch" and ref not in stages:
-            refs.append(ref)
+            spans.append((ref, match.span(1)))
         if alias:
             stages.add(alias)
-    return refs
+    return spans
+
+
+def dockerfile_image_refs(dockerfile: str) -> list[str]:
+    """Dockerfile이 FROM으로 가져오는 이미지들."""
+    return [ref for ref, _ in image_ref_spans(dockerfile)]
 
 
 @dataclass(frozen=True)

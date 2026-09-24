@@ -204,3 +204,32 @@ def test_verify_accepts_a_dockerfile_that_matches_the_recommendation(session):
 
     assert result.ok is True
     assert result.unverifiable_dockerfile_refs == ()
+
+
+def test_dockerfile_image_refs_reads_from_in_any_letter_case():
+    """Dockerfile 명령은 대소문자를 구분하지 않는다. 소문자 from도 이미지를 가져온다."""
+    dockerfile = (
+        "FROM python:3.13-slim AS build\nfrom unknown:tag\nFrom Other:Tag as runtime\nfRoM build\n"
+    )
+
+    assert dockerfile_image_refs(dockerfile) == ["python:3.13-slim", "unknown:tag", "Other:Tag"]
+
+
+def test_verify_catches_an_unverified_image_in_a_lowercase_from(session):
+    """소문자 from 줄이 검증을 빠져나가면 없는 이미지가 Dockerfile로 사용자에게 보인다."""
+    _seed(session)
+    rec = Recommendation(
+        image="python:3.13-slim",
+        reason="ok",
+        dockerfile="FROM python:3.13-slim AS build\nfrom unknown:tag\n",
+    )
+
+    result = verify_recommendation(session, rec, [_candidate()])
+
+    assert result.ok is True
+    assert result.unverifiable_dockerfile_refs == ("unknown:tag",)
+
+
+def test_a_line_continuation_after_from_fails_verification():
+    """FROM \\ 다음 줄에 이미지를 쓰면 참조를 \\로 읽는다. 검증에 실패해 Dockerfile이 지워진다."""
+    assert dockerfile_image_refs("FROM \\\n  python:3.13-slim\n") == ["\\"]
