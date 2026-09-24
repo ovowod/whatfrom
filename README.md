@@ -237,8 +237,10 @@ Dockerfile이 남은 37문항은 `FROM`의 추천·대안 이미지가 모두 di
 시간 대부분은 LLM #2에서 쓴다. LLM #2가 100초를 넘은 문항은 3개다.
 
 - `temurin-jdk-build-stage`: 120.1초에서 시간이 초과돼 추천이 없다. 제한은 120초다.
-- `postgres-ci-ephemeral`: 117.2초. 프롬프트가 14,974자로 40문항 중앙값(4,928자)의 약 3배다.
+- `postgres-ci-ephemeral`: 117.2초.
 - `ubuntu-lts-base`: 100.6초.
+
+프롬프트 길이와 시간은 비례하지 않았다. 가장 긴 프롬프트(`temurin-17-jammy-pinned`, 46,844자)는 54.5초에 끝났고, 117.2초가 걸린 `postgres-ci-ephemeral`은 14,974자였다.
 
 **추천 정확도는 35/40에서 37/40으로 올랐다.**
 

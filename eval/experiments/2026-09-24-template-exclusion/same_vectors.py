@@ -7,6 +7,8 @@
 사용(프로젝트 루트에서, 다시 색인하기 전의 DB에서만):
     uv run --with numpy --with httpx python \\
         eval/experiments/2026-09-24-template-exclusion/same_vectors.py
+
+틀 문장 정규식은 indexer 상수의 복사본이다. 돌린 그대로 남기려고 import로 바꾸지 않았다.
 """
 
 import importlib.util
