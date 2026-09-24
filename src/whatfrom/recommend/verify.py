@@ -10,7 +10,21 @@ from whatfrom.core.models import ImageTag
 # FROM [--platform=...] <ref> [AS <stage>]
 # Dockerfile 명령은 대소문자를 구분하지 않는다. 대문자만 보면 `from unknown:tag` 줄이
 # 검증을 빠져나가 없는 이미지가 Dockerfile로 사용자에게 보인다.
-_FROM = re.compile(r"^\s*FROM\s+(?:--\S+\s+)*(\S+)(?:\s+AS\s+(\S+))?", re.MULTILINE | re.IGNORECASE)
+# kw는 FROM 키워드 자체의 위치다. `\s*`가 줄바꿈을 건너뛸 수 있어 match 시작과 다를 수 있다.
+_FROM = re.compile(
+    r"^\s*(?P<kw>FROM)\s+(?:--\S+\s+)*(?P<ref>\S+)(?:\s+AS\s+(?P<alias>\S+))?",
+    re.MULTILINE | re.IGNORECASE,
+)
+# 대문자 FROM은 main과 같이 위치와 무관하게 무조건 받아들인다. 소문자/대소문자 섞인 줄은
+# 줄 전체가 `FROM [--flag...] 참조 [AS 이름]` 문법에 맞을 때만 받아들인다 — Docker는 실제
+# 명령인 줄에만 이 문법을 강제하고(안 맞으면 빌드 에러), 이음·heredoc 줄은 애초에 명령이
+# 아니라 검사 대상이 아니다. ref·alias도 이 줄 안에서만 다시 찾는다: `_FROM`의 `\s+`는
+# 줄바꿈을 건너뛸 수 있어 관대한 매치의 ref·alias가 다음 줄까지 삼킬 수 있기 때문이다.
+_FROM_LINE = re.compile(
+    r"[^\S\n]*FROM[^\S\n]+(?:--\S+[^\S\n]+)*(?P<ref>\S+)"
+    r"(?:[^\S\n]+AS[^\S\n]+(?P<alias>\S+))?[^\S\n]*(?:\\[^\S\n]*)?",
+    re.IGNORECASE,
+)
 
 
 def image_ref_spans(dockerfile: str) -> list[tuple[str, tuple[int, int]]]:
@@ -21,10 +35,29 @@ def image_ref_spans(dockerfile: str) -> list[tuple[str, tuple[int, int]]]:
     """
     stages: set[str] = set()
     spans: list[tuple[str, tuple[int, int]]] = []
-    for match in _FROM.finditer(dockerfile):
-        ref, alias = match.group(1), match.group(2)
+    pos = 0
+    while match := _FROM.search(dockerfile, pos):
+        if match.group("kw") == "FROM":
+            ref, alias = match.group("ref"), match.group("alias")
+            span = match.span("ref")
+            pos = match.end()
+        else:
+            # 소문자/혼합 줄은 해당 줄 하나로만 다시 판단한다 — 받아들이든 거부하든 다음
+            # 검색은 이 줄 끝부터 재개해, 뒤에 오는 진짜 FROM을 놓치거나 삼키지 않는다.
+            kw_start = match.start("kw")
+            line_start = dockerfile.rfind("\n", 0, kw_start) + 1
+            line_end = dockerfile.find("\n", kw_start)
+            if line_end == -1:
+                line_end = len(dockerfile)
+            line = dockerfile[line_start:line_end].removesuffix("\r")
+            pos = line_end
+            line_match = _FROM_LINE.fullmatch(line)
+            if not line_match:
+                continue
+            ref, alias = line_match.group("ref"), line_match.group("alias")
+            span = (line_start + line_match.start("ref"), line_start + line_match.end("ref"))
         if ref.lower() != "scratch" and ref not in stages:
-            spans.append((ref, match.span(1)))
+            spans.append((ref, span))
         if alias:
             stages.add(alias)
     return spans

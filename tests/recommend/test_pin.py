@@ -61,3 +61,23 @@ def test_an_already_pinned_reference_is_not_pinned_twice():
 
     assert pinned == dockerfile
     assert missing == []
+
+
+def test_a_from_line_inside_a_heredoc_body_is_not_pinned():
+    dockerfile = "FROM python:3.13-slim\nCOPY <<EOF app.py\nfrom flask import Flask\nEOF\n"
+
+    pinned, missing = pin_dockerfile(dockerfile, DIGESTS)
+
+    assert pinned == (
+        "FROM python:3.13-slim@sha256:aaa\nCOPY <<EOF app.py\nfrom flask import Flask\nEOF\n"
+    )
+    assert missing == []
+
+
+def test_a_lowercase_line_with_crlf_and_a_stage_name_is_pinned():
+    dockerfile = "from --platform=x python:3.13-slim as b\r\n"
+
+    pinned, missing = pin_dockerfile(dockerfile, DIGESTS)
+
+    assert pinned == "from --platform=x python:3.13-slim@sha256:aaa as b\r\n"
+    assert missing == []
