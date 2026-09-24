@@ -11,6 +11,8 @@ import hashlib
 import json
 import subprocess
 import sys
+from collections.abc import Generator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -20,7 +22,14 @@ from sqlalchemy.orm import Session
 
 from whatfrom import cli
 from whatfrom.cli import accepted_digests, cmd_eval, indexed_repositories
+from whatfrom.collect.hub import TagRow, VariantRow
+from whatfrom.collect.store import upsert_tags
+from whatfrom.core.contracts import Recommendation
+from whatfrom.core.embed import FakeEmbedder
+from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import Document, DocumentChunk, ImageTag, Repository
+from whatfrom.index.indexer import index_readme
+from whatfrom.recommend.llm import FakeLLMProvider
 
 NOW = datetime(2026, 9, 12, tzinfo=UTC)
 
@@ -197,3 +206,107 @@ def test_accepted_digests_reads_the_digests_of_the_accepted_tags(session: Sessio
     )
 
     assert digests == frozenset({"sha256:jdk"})
+
+
+class BrokenEmbedder:
+    dimension = 1024
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        raise RemoteCallError("embedding down")
+
+
+def _fixed_session(session: Session):
+    @contextmanager
+    def open_fixed() -> Generator[Session]:
+        yield session
+
+    return open_fixed
+
+
+def _seed_python(session: Session) -> None:
+    """추천 경로가 LLM #2까지 가도록 색인된 리포지토리와 태그 하나를 넣는다."""
+    session.add(_repository("python"))
+    session.flush()
+    upsert_tags(
+        session,
+        "python",
+        [
+            TagRow(
+                tag="3.13-slim",
+                manifest_digest="sha256:aaa",
+                last_pushed_at=NOW,
+                variants=(VariantRow("linux", "amd64", "", "", "sha256:bbb", 1),),
+            )
+        ],
+        NOW,
+    )
+    readme = "# Image Variants\n\n## `python:<version>-slim`\n\npython slim image.\n"
+    index_readme(session, "python", readme, "https://example.invalid/python", FakeEmbedder(), NOW)
+    session.flush()
+
+
+RECOMMENDATION = Recommendation(
+    image="python:3.13-slim", reason="ok", dockerfile="FROM python:3.13-slim\n"
+)
+
+
+def test_timed_recommendation_times_every_stage_and_keeps_the_advise_prompt(
+    session: Session,
+) -> None:
+    _seed_python(session)
+
+    response, trace = cli.timed_recommendation(
+        _fixed_session(session),
+        FakeEmbedder(),
+        FakeLLMProvider(recommendation=RECOMMENDATION),
+        "python slim image",
+    )
+
+    assert response.recommended is not None
+    assert response.recommendation.dockerfile == "FROM python:3.13-slim@sha256:aaa\n"
+    assert None not in (
+        trace.seconds_total,
+        trace.seconds_embedding,
+        trace.seconds_plan,
+        trace.seconds_advise,
+    )
+    assert trace.seconds_total >= trace.seconds_advise
+    assert "python:3.13-slim" in trace.advise_prompt
+
+
+def test_timed_recommendation_times_a_failed_advise_call(session: Session) -> None:
+    """LLM #2가 시간 초과로 실패해도 그 호출에 걸린 시간과 보낸 프롬프트가 남는다."""
+    _seed_python(session)
+
+    response, trace = cli.timed_recommendation(
+        _fixed_session(session),
+        FakeEmbedder(),
+        FakeLLMProvider(error=RemoteCallError("read timed out")),
+        "python slim image",
+    )
+
+    assert response.recommendation is None
+    assert trace.seconds_advise is not None
+    assert "python:3.13-slim" in trace.advise_prompt
+
+
+def test_timed_recommendation_leaves_unreached_stages_empty(session: Session) -> None:
+    """색인이 비어 있으면 후보가 없어 LLM #2까지 가지 않는다. 부르지 않은 단계는 None이다."""
+    response, trace = cli.timed_recommendation(
+        _fixed_session(session), FakeEmbedder(), FakeLLMProvider(), "질문"
+    )
+
+    assert response.recommendation is None
+    assert trace.seconds_total >= trace.seconds_embedding >= 0.0
+    assert trace.seconds_plan is not None
+    assert (trace.seconds_advise, trace.advise_prompt) == (None, None)
+
+
+def test_timed_recommendation_times_a_failed_embedding(session: Session) -> None:
+    response, trace = cli.timed_recommendation(
+        _fixed_session(session), BrokenEmbedder(), FakeLLMProvider(), "질문"
+    )
+
+    assert response.degraded is True
+    assert trace.seconds_embedding is not None
+    assert (trace.seconds_plan, trace.seconds_advise) == (None, None)

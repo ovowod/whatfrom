@@ -2,8 +2,10 @@
 import argparse
 import hashlib
 import json
+import time
 from collections.abc import Callable, Generator, Sequence
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -23,11 +25,13 @@ from whatfrom.collect.sync import (
     collect_all,
 )
 from whatfrom.core.config import settings
+from whatfrom.core.contracts import RecommendResponse
 from whatfrom.core.db import make_engine, session_scope
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.models import Base, Document, DocumentChunk, ImageTag, Repository
+from whatfrom.eval.timing import Timed
 from whatfrom.index.indexer import index_readme
-from whatfrom.recommend.llm import get_provider
+from whatfrom.recommend.llm import LLMProvider, get_provider
 from whatfrom.search.retrieval import (
     search_candidates_by_vector,
     search_chunks,
@@ -233,6 +237,43 @@ def accepted_digests(session: Session, accept: list[str]) -> frozenset[str]:
     )
 
 
+@dataclass(frozen=True)
+class RunTrace:
+    """추천 경로 한 번의 단계별 소요 시간(초)과 LLM #2에 보낸 프롬프트. 부르지 않았으면 None."""
+
+    seconds_total: float
+    seconds_embedding: float | None
+    seconds_plan: float | None
+    seconds_advise: float | None
+    advise_prompt: str | None
+
+
+def timed_recommendation(
+    open_session: Callable[[], AbstractContextManager[Session]],
+    embedder: Embedder,
+    provider: LLMProvider,
+    question: str,
+) -> tuple[RecommendResponse, RunTrace]:
+    """추천 경로를 한 번 돌리며 전체·단계별 시간과 LLM #2의 입력을 남긴다.
+
+    임베더와 LLM 공급자를 문항마다 새 프록시로 감싼다. API와 추천 코드는 모른다.
+    """
+    timed_embedder = Timed(embedder, ["embed"])
+    timed_provider = Timed(provider, ["plan", "recommend"])
+    start = time.perf_counter()
+    response = recommend_for_question(open_session, timed_embedder, timed_provider, question)
+    total = time.perf_counter() - start
+    advise = timed_provider.calls.get("recommend")
+    return response, RunTrace(
+        seconds_total=total,
+        seconds_embedding=timed_embedder.seconds.get("embed"),
+        seconds_plan=timed_provider.seconds.get("plan"),
+        seconds_advise=timed_provider.seconds.get("recommend"),
+        # recommend(system, prompt)의 두 번째 인자가 LLM #2에 보낸 프롬프트다.
+        advise_prompt=advise[0][1] if advise else None,
+    )
+
+
 def cmd_eval(args: argparse.Namespace) -> None:
     # eval은 dev 의존성인 PyYAML을 쓴다. 모듈 최상단에서 가져오면 PyYAML이 없는
     # 환경에서 collect·index 같은 다른 명령까지 import 단계에서 실패한다.
@@ -301,7 +342,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
         # Hit@5는 두 모드 모두 후보 선택 전의 상위 5개 청크로 계산한다.
         # 추천 응답의 evidence에는 후보 선택에서 제외된 문서가 없을 수 있다.
         # 추천 경로도 별도로 실행하므로 전체 모드는 질문을 두 번 임베딩한다.
-        response = recommend_for_question(open_session, embedder, provider, case.question)
+        response, trace = timed_recommendation(open_session, embedder, provider, case.question)
 
         exists: bool | None = None
         if response.recommendation is not None:
@@ -317,7 +358,17 @@ def cmd_eval(args: argparse.Namespace) -> None:
                 )
         with open_session() as session:
             digests = accepted_digests(session, case.accept)
-        scores.append(score_full(case, response, sections, exists, digests))
+        score = score_full(case, response, sections, exists, digests)
+        scores.append(
+            replace(
+                score,
+                seconds_total=trace.seconds_total,
+                seconds_embedding=trace.seconds_embedding,
+                seconds_plan=trace.seconds_plan,
+                seconds_advise=trace.seconds_advise,
+                advise_prompt=trace.advise_prompt,
+            )
+        )
 
     meta = {
         "started_at": started_at.isoformat(timespec="seconds"),

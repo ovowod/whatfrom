@@ -1,0 +1,899 @@
+{
+ "changed_sections": [
+  "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+  "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+  "nginx|Quick reference",
+  "nginx|Quick reference (cont.)",
+  "nginx|Supported tags and respective `Dockerfile` links",
+  "nginx|What is nginx?",
+  "node|Supported tags and respective `Dockerfile` links",
+  "redis|Supported tags and respective `Dockerfile` links"
+ ],
+ "chunks": 334,
+ "cases": {
+  "python-numpy-arm64": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ]
+   }
+  },
+  "python-size-first": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "nginx|What is nginx?",
+     "node|What is Node.js?",
+     "python|What is Python?",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "nginx|What is nginx?",
+     "node|What is Node.js?",
+     "python|What is Python?",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   }
+  },
+  "python-version-pinned-312": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "debian|Supported tags and respective `Dockerfile` links",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "debian|Supported tags and respective `Dockerfile` links",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   }
+  },
+  "python-fastapi-prod": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "golang|How to use this image > Start a Go instance in your app",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "golang|How to use this image > Start a Go instance in your app",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   }
+  },
+  "python-scientific-stack": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ]
+   }
+  },
+  "python-build-stage": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "nginx|Image Variants > `nginx:<version>`",
+     "debian|About this image",
+     "golang|Image Variants > `golang:<version>`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "nginx|Image Variants > `nginx:<version>`",
+     "debian|About this image",
+     "golang|Image Variants > `golang:<version>`"
+    ]
+   }
+  },
+  "python-latest-stable": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "debian|About this image",
+     "ubuntu|What's in this image?",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "ubuntu|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "debian|About this image",
+     "ubuntu|What's in this image?",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "ubuntu|Supported tags and respective `Dockerfile` links"
+    ]
+   }
+  },
+  "python-alpine-explicit": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ]
+   }
+  },
+  "python-debian-codename": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "postgres|Supported tags and respective `Dockerfile` links",
+     "node|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>`",
+     "golang|Image Variants > `golang:<version>`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "postgres|Supported tags and respective `Dockerfile` links",
+     "node|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>`",
+     "golang|Image Variants > `golang:<version>`"
+    ]
+   }
+  },
+  "python-arm64-only": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "python|Quick reference (cont.)",
+     "postgres|Quick reference (cont.)",
+     "golang|Quick reference (cont.)",
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "golang|How to use this image > Cross-compile your app inside the Docker container"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "python|Quick reference (cont.)",
+     "postgres|Quick reference (cont.)",
+     "golang|Quick reference (cont.)",
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "golang|How to use this image > Cross-compile your app inside the Docker container"
+    ]
+   }
+  },
+  "python-small-cli": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ]
+   }
+  },
+  "python-ml-torch": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`",
+     "postgres|Image Variants > `postgres:<version>-alpine`"
+    ]
+   }
+  },
+  "python-slim-vs-full": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|What is Python?",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": false,
+    "top5": [
+     "python|How to use this image > Multiple Python versions in the image",
+     "python|What is Python?",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "nginx|Supported tags and respective `Dockerfile` links"
+    ]
+   }
+  },
+  "python-musl-explained": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "python|Image Variants > `python:<version>-slim`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`",
+     "nginx|Image Variants > `nginx:<version>-alpine`"
+    ]
+   }
+  },
+  "node-lts-prod": {
+   "now": {
+    "hit_at5": false,
+    "top5": [
+     "postgres|How to extend this image > Locale Customization",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "node|Image Variants > `node:<version>-slim`",
+     "postgres|How to use this image > ... via [`docker compose`](https://github.com/docker/compose)",
+     "eclipse-temurin|What is Eclipse Temurin ?"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": false,
+    "top5": [
+     "postgres|How to extend this image > Locale Customization",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "node|Image Variants > `node:<version>-slim`",
+     "postgres|How to use this image > ... via [`docker compose`](https://github.com/docker/compose)",
+     "eclipse-temurin|What is Eclipse Temurin ?"
+    ]
+   }
+  },
+  "node-size-first": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "node|What is Node.js?",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "debian|About this image",
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "node|What is Node.js?",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "debian|About this image",
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   }
+  },
+  "node-native-addon": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "python|How to use this image > Multiple Python versions in the image",
+     "node|Supported tags and respective `Dockerfile` links",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "python|How to use this image > Multiple Python versions in the image",
+     "node|Supported tags and respective `Dockerfile` links",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   }
+  },
+  "node-arm64-graviton": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Quick reference (cont.)",
+     "node|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Quick reference (cont.)",
+     "node|Supported tags and respective `Dockerfile` links"
+    ]
+   }
+  },
+  "node-alpine-vs-slim": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": false,
+    "top5": [
+     "node|Supported tags and respective `Dockerfile` links",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "python|Image Variants > `python:<version>-alpine`"
+    ]
+   }
+  },
+  "postgres-prod-default": {
+   "now": {
+    "hit_at5": false,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|Caveats > Where to Store Data",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Database Configuration",
+     "postgres|How to extend this image > Initialization scripts"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": false,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|Caveats > Where to Store Data",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Database Configuration",
+     "postgres|How to extend this image > Initialization scripts"
+    ]
+   }
+  },
+  "postgres-postgis-extension": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "postgres|How to extend this image > Additional Extensions",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "postgres|How to extend this image > Additional Extensions",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>-alpine`",
+     "node|Image Variants > `node:<version>-alpine`",
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>-alpine`"
+    ]
+   }
+  },
+  "postgres-version-pinned-16": {
+   "now": {
+    "hit_at5": false,
+    "top5": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Database Configuration",
+     "postgres|What is PostgreSQL?",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": false,
+    "top5": [
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|How to extend this image > Database Configuration",
+     "postgres|What is PostgreSQL?",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags"
+    ]
+   }
+  },
+  "postgres-ci-ephemeral": {
+   "now": {
+    "hit_at5": false,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to use this image > start a postgres instance",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Caveats > Where to Store Data",
+     "postgres|Caveats"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": false,
+    "top5": [
+     "postgres|What is PostgreSQL?",
+     "postgres|How to use this image > start a postgres instance",
+     "postgres|How to extend this image > Environment Variables",
+     "postgres|Caveats > Where to Store Data",
+     "postgres|Caveats"
+    ]
+   }
+  },
+  "redis-cache-sidecar": {
+   "now": {
+    "hit_at5": false,
+    "top5": [
+     "redis|What is Redis?",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "node|What is Node.js?",
+     "nginx|Image Variants > `nginx:<version>`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": false,
+    "top5": [
+     "redis|What is Redis?",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "node|What is Node.js?",
+     "nginx|Image Variants > `nginx:<version>`"
+    ]
+   }
+  },
+  "redis-version-pinned-7": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "redis|License",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|How to use this image > Start with persistent storage",
+     "eclipse-temurin|Can I add my internal CA certificates to the truststore?"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "redis|License",
+     "redis|How to use this image > Additionally, if you want to use your own redis.conf ...",
+     "redis|How to use this image > Start with persistent storage",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "eclipse-temurin|Can I add my internal CA certificates to the truststore?"
+    ]
+   }
+  },
+  "redis-persistence-docs": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "redis|How to use this image > Start with persistent storage",
+     "redis|Security",
+     "postgres|How to extend this image > Environment Variables",
+     "redis|What is Redis?",
+     "nginx|How to use this image > Entrypoint quiet logs"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "redis|How to use this image > Start with persistent storage",
+     "redis|Security",
+     "postgres|How to extend this image > Environment Variables",
+     "redis|What is Redis?",
+     "nginx|How to use this image > Entrypoint quiet logs"
+    ]
+   }
+  },
+  "nginx-static-spa": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|What is nginx?",
+     "nginx|How to use this image > Hosting some simple static content",
+     "nginx|How to use this image > Entrypoint quiet logs",
+     "nginx|How to use this image > Running nginx in debug mode"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|What is nginx?",
+     "nginx|Quick reference (cont.)",
+     "nginx|How to use this image > Hosting some simple static content",
+     "nginx|How to use this image > Entrypoint quiet logs"
+    ]
+   }
+  },
+  "nginx-stable-branch": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "nginx|How to use this image > Customize configuration",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx in read-only mode"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "nginx|How to use this image > Customize configuration",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>-perl` / `nginx:<version>-alpine-perl`",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx in read-only mode"
+    ]
+   }
+  },
+  "nginx-otel-tracing": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "node|Image Variants > `node:<version>-slim`",
+     "nginx|What is nginx?",
+     "nginx|How to use this image > Customize configuration"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Running nginx as a non-root user",
+     "nginx|Quick reference (cont.)",
+     "node|Image Variants > `node:<version>-slim`",
+     "nginx|What is nginx?"
+    ]
+   }
+  },
+  "golang-multistage-build": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "debian|About this image",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "debian|About this image",
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "python|Image Variants > `python:<version>`",
+     "node|Image Variants > `node:<version>`",
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   }
+  },
+  "golang-cgo-sqlite": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "node|Image Variants > `node:<version>-slim`",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Customize configuration",
+     "node|How to use this image"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "node|Image Variants > `node:<version>-slim`",
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "nginx|How to use this image > Customize configuration",
+     "node|How to use this image"
+    ]
+   }
+  },
+  "golang-cross-compile-arm64": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Quick reference (cont.)",
+     "golang|Quick reference (cont.)"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "golang|Image Variants > `golang:<version>-alpine`",
+     "golang|How to use this image > Cross-compile your app inside the Docker container",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Quick reference (cont.)",
+     "golang|Quick reference (cont.)"
+    ]
+   }
+  },
+  "temurin-jre-runtime": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "python|Image Variants > `python:<version>-slim`",
+     "eclipse-temurin|How to use this Image",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "nginx|Image Variants > `nginx:<version>-slim`",
+     "python|Image Variants > `python:<version>-slim`",
+     "eclipse-temurin|How to use this Image",
+     "eclipse-temurin|Do you provide JRE (Java Runtime Environment) Images?",
+     "node|Image Variants > `node:<version>-slim`"
+    ]
+   }
+  },
+  "temurin-jdk-build-stage": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "golang|How to use this image > Start a Go instance in your app",
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "ubuntu|What's in this image?",
+     "debian|About this image"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "eclipse-temurin|Image Variants > `eclipse-temurin:<version>`",
+     "golang|How to use this image > Start a Go instance in your app",
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "ubuntu|What's in this image?",
+     "debian|About this image"
+    ]
+   }
+  },
+  "temurin-17-jammy-pinned": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "ubuntu|Supported tags and respective `Dockerfile` links"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "ubuntu|Supported tags and respective `Dockerfile` links"
+    ]
+   }
+  },
+  "debian-slim-runtime": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "debian|About this image",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Image Variants > `python:<version>-slim`",
+     "eclipse-temurin|What is Eclipse Temurin ?",
+     "debian|About this image > Locales"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "debian|About this image",
+     "node|Image Variants > `node:<version>-slim`",
+     "python|Image Variants > `python:<version>-slim`",
+     "eclipse-temurin|What is Eclipse Temurin ?",
+     "debian|About this image > Locales"
+    ]
+   }
+  },
+  "debian-codename-vs-number": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>`",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "debian|Supported tags and respective `Dockerfile` links",
+     "nginx|Image Variants > `nginx:<version>`",
+     "redis|Supported tags and respective `Dockerfile` links",
+     "nginx|Supported tags and respective `Dockerfile` links",
+     "python|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   }
+  },
+  "ubuntu-lts-base": {
+   "now": {
+    "hit_at5": false,
+    "top5": [
+     "ubuntu|License",
+     "ubuntu|What is Ubuntu?",
+     "python|Image Variants > `python:<version>-slim`",
+     "debian|License",
+     "ubuntu|Quick reference (cont.)"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": false,
+    "top5": [
+     "ubuntu|License",
+     "ubuntu|What is Ubuntu?",
+     "python|Image Variants > `python:<version>-slim`",
+     "debian|License",
+     "ubuntu|Quick reference (cont.)"
+    ]
+   }
+  },
+  "ubuntu-noble-pinned": {
+   "now": {
+    "hit_at5": true,
+    "top5": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": true,
+    "top5": [
+     "ubuntu|Supported tags and respective `Dockerfile` links",
+     "golang|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Shared Tags",
+     "python|Supported tags and respective `Dockerfile` links > Shared Tags"
+    ]
+   }
+  },
+  "alpine-static-binary": {
+   "now": {
+    "hit_at5": false,
+    "top5": [
+     "eclipse-temurin|Can I add my internal CA certificates to the truststore?",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "node|Image Variants > `node:<version>-slim`",
+     "ubuntu|What's in this image?"
+    ]
+   },
+   "before_bodies": {
+    "hit_at5": false,
+    "top5": [
+     "eclipse-temurin|Can I add my internal CA certificates to the truststore?",
+     "eclipse-temurin|Supported tags and respective `Dockerfile` links > Simple Tags",
+     "debian|Image Variants > `debian:<suite>-slim`",
+     "node|Image Variants > `node:<version>-slim`",
+     "golang|Supported tags and respective `Dockerfile` links > Simple Tags"
+    ]
+   }
+  }
+ },
+ "hit_at5": {
+  "now": 33,
+  "before_bodies": 31
+ }
+}

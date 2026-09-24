@@ -1,4 +1,9 @@
+import random
+import re
+from collections import Counter
 from datetime import UTC, datetime
+
+import pytest
 
 from whatfrom.collect.hub import RepositoryRow, TagRow, VariantRow
 from whatfrom.collect.store import upsert_repository, upsert_tags
@@ -204,3 +209,150 @@ def test_verify_accepts_a_dockerfile_that_matches_the_recommendation(session):
 
     assert result.ok is True
     assert result.unverifiable_dockerfile_refs == ()
+
+
+def test_dockerfile_image_refs_reads_from_in_any_letter_case():
+    """Dockerfile 명령은 대소문자를 구분하지 않는다. 소문자 from도 이미지를 가져온다."""
+    dockerfile = (
+        "FROM python:3.13-slim AS build\nfrom unknown:tag\nFrom Other:Tag as runtime\nfRoM build\n"
+    )
+
+    assert dockerfile_image_refs(dockerfile) == ["python:3.13-slim", "unknown:tag", "Other:Tag"]
+
+
+def test_verify_catches_an_unverified_image_in_a_lowercase_from(session):
+    """소문자 from 줄이 검증을 빠져나가면 없는 이미지가 Dockerfile로 사용자에게 보인다."""
+    _seed(session)
+    rec = Recommendation(
+        image="python:3.13-slim",
+        reason="ok",
+        dockerfile="FROM python:3.13-slim AS build\nfrom unknown:tag\n",
+    )
+
+    result = verify_recommendation(session, rec, [_candidate()])
+
+    assert result.ok is True
+    assert result.unverifiable_dockerfile_refs == ("unknown:tag",)
+
+
+def test_a_line_continuation_after_from_fails_verification():
+    """FROM \\ 다음 줄에 이미지를 쓰면 참조를 \\로 읽는다. 검증에 실패해 Dockerfile이 지워진다."""
+    assert dockerfile_image_refs("FROM \\\n  python:3.13-slim\n") == ["\\"]
+
+
+def test_lowercase_python_import_lines_are_not_images():
+    """소문자 from 줄도 `FROM 문법(참조 뒤에 AS만 올 수 있음)`에 안 맞으면 이미지가 아니다."""
+    heredoc_body = "FROM python:3.13-slim\nCOPY <<EOF app.py\nfrom flask import Flask\nEOF\n"
+    assert dockerfile_image_refs(heredoc_body) == ["python:3.13-slim"]
+
+    after_continuation = 'FROM python:3.13-slim\nRUN python -c "\\\nfrom os import path"\n'
+    assert dockerfile_image_refs(after_continuation) == ["python:3.13-slim"]
+
+
+def test_a_grammar_valid_lowercase_from_is_read_anywhere_including_inside_a_heredoc():
+    """소문자라도 FROM 문법에 맞으면 어디 있든(heredoc 안이라도) 읽는다 — 지우는 쪽이라 안전하다."""
+    after_heredoc = "FROM python:3.13-slim\nRUN <<-'EOT'\necho hi\nEOT\nfrom other:tag\n"
+    assert dockerfile_image_refs(after_heredoc) == ["python:3.13-slim", "other:tag"]
+
+    inside_heredoc = "FROM python:3.13-slim\nRUN <<EOF\nfrom other:tag\nEOF\n"
+    assert dockerfile_image_refs(inside_heredoc) == ["python:3.13-slim", "other:tag"]
+
+
+@pytest.mark.parametrize(
+    "dockerfile",
+    [
+        "FROM a:1\nRUN cat <<< hi\nfrom evil:1\n",
+        "FROM a:1\nRUN echo $((1<<2))\nFROM evil:1\n",
+        "FROM a:1\nRUN cat <<EOF\nhi\nFROM evil:1\n",
+        "FROM a:1\nRUN a \\\n   \nFROM evil:1\n",
+        "FROM a:1\nRUN echo '<<EOF'\nFROM evil:1\nRUN <<EOF\necho\nEOF\n",
+        "FROM a:1\n# note \\\nFROM evil:1\n",
+        "# escape=`\nFROM a:1\nRUN echo \\\nFROM evil:1\n",
+        "FROM a:1\nRUN a \\ \nFROM evil:1\n",
+        "FROM a:1\n# n\x0bRUN cat <<EOF\nFROM evil:1\nRUN <<EOF\nEOF\n",
+        "FROM a:1\nRUN <<EOF\n  EOF\nRUN cat <<X\nEOF\nFROM evil:1\nRUN <<X\nx\nX\n",
+        "FROM a:1\nfrom\x0cevil:1\n",
+        "FROM a:1\nfrom evil:1\xa0\n",
+        "FROM a:1\nRUN x \\\nfrom\nFROM evil:1\n",
+        "FROM a:1\nRUN x \\\n  from\n\nFROM evil:1\n",
+        "FROM a:1\nfrom b:2\nas\nFROM evil:1\n",
+    ],
+)
+def test_a_real_from_is_never_hidden_by_heredoc_or_continuation_shaped_text(dockerfile):
+    """heredoc·이음 줄을 흉내 내지 않는다. 대문자 FROM은 어디 있든 항상 읽는다."""
+    assert "evil:1" in dockerfile_image_refs(dockerfile)
+
+
+def test_uppercase_from_keeps_mains_lenient_read():
+    """대문자 FROM은 main과 같이 문법 검사 없이 위치만으로 읽는다."""
+    dockerfile = "FROM a:1\nFROM evil:1 extra\n"
+    assert dockerfile_image_refs(dockerfile) == ["a:1", "evil:1"]
+
+
+def test_a_trailing_continuation_backslash_on_a_lowercase_from_is_still_read():
+    """소문자 from 줄 끝의 이음 `\\`은 FROM 문법이 허용하므로 참조는 그대로 읽는다."""
+    assert dockerfile_image_refs("from a:1 \\") == ["a:1"]
+
+
+# main의 파서(대문자 FROM만, 문법 검사 없음)를 그대로 재현한다. 아래 프로퍼티 테스트 전용.
+_MAIN_FROM = re.compile(r"^\s*FROM\s+(?:--\S+\s+)*(\S+)(?:\s+[Aa][Ss]\s+(\S+))?", re.MULTILINE)
+
+
+def _main_dockerfile_image_refs(dockerfile: str) -> list[str]:
+    stages: set[str] = set()
+    refs: list[str] = []
+    for match in _MAIN_FROM.finditer(dockerfile):
+        ref, alias = match.group(1), match.group(2)
+        if ref.lower() != "scratch" and ref not in stages:
+            refs.append(ref)
+        if alias:
+            stages.add(alias)
+    return refs
+
+
+_FUZZ_TOKENS = [
+    "FROM",
+    "from",
+    "From",
+    "evil:1",
+    "a:1",
+    "b",
+    "AS",
+    "as",
+    "--platform=x",
+    "\\",
+    "<<EOF",
+    "EOF",
+    "<<<",
+    "RUN",
+    "#",
+    "scratch",
+    "import",
+    "flask",
+    " ",
+    "\t",
+    "\x0b",
+    "\x0c",
+    "\r",
+    " ",
+    "\xa0",
+    "\n",
+    "\n",
+    "\n",
+]
+_FUZZ_SEPARATORS = ["", " ", "\n"]
+
+
+def test_a_lowercase_aware_parser_never_drops_a_ref_that_the_uppercase_only_parser_finds():
+    """소문자까지 읽더라도, main(대문자만 보는 파서)이 찾는 참조를 놓치면 안 된다."""
+    rng = random.Random(0)
+    for _ in range(25_000):
+        tokens = [
+            rng.choice(_FUZZ_TOKENS) + rng.choice(_FUZZ_SEPARATORS)
+            for _ in range(rng.randint(1, 14))
+        ]
+        dockerfile = "".join(tokens)
+        missing = Counter(_main_dockerfile_image_refs(dockerfile)) - Counter(
+            dockerfile_image_refs(dockerfile)
+        )
+        assert not missing, dockerfile

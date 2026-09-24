@@ -1,4 +1,5 @@
 # src/whatfrom/index/indexer.py
+import re
 from datetime import datetime
 
 from sqlalchemy import delete, select
@@ -9,6 +10,24 @@ from whatfrom.core.models import Document, DocumentChunk
 from whatfrom.index.chunk import chunk_text, split_sections
 
 DOC_TYPE = "readme"
+
+# 공식 이미지 README 틀에서 나온, 본문 전체가 이 한 문장뿐인 상위 절이 있다. 답이 없는데
+# 제목이 "Image Variants", "Supported tags"라 LLM 근거 자리를 차지하고, 제목만 보는
+# 문서 Hit@5 채점을 속인다. 실제 내용은 하위 절에 있다. 본문 전체가 일치할 때만 뺀다.
+# 길이 기준은 쓰지 않는다. redis 실행 명령(54자)처럼 짧아도 쓸모 있는 절이 있다.
+# 새 틀 문장을 발견하면 여기에 추가한다.
+IMAGE_VARIANTS_INTRO = re.compile(
+    r"The `[^`]+` images come in many flavors, each designed for a specific use case\."
+)
+SHARED_SIMPLE_TAGS_FAQ = re.compile(
+    r"\(See \[\"What's the difference between 'Shared' and 'Simple' tags\?\" in the FAQ\]"
+    r"\([^)]*\)\.\)"
+)
+TEMPLATE_ONLY = (IMAGE_VARIANTS_INTRO, SHARED_SIMPLE_TAGS_FAQ)
+
+
+def is_template_only(body: str) -> bool:
+    return any(pattern.fullmatch(body.strip()) for pattern in TEMPLATE_ONLY)
 
 
 def index_readme(
@@ -31,6 +50,9 @@ def index_readme(
     created = 0
     seen_titles: list[str] = []
     for section in split_sections(readme):
+        if is_template_only(section.body):
+            # seen_titles에 넣지 않으므로 이전 색인에 남은 같은 섹션은 아래에서 지워진다.
+            continue
         seen_titles.append(section.title)
         document = session.execute(
             select(Document).where(

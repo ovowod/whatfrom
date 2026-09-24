@@ -94,6 +94,17 @@ class SearchPlan(BaseModel):
     max_size_mb: float | None = None
 
 
+class RecommendedImage(BaseModel):
+    """검증을 통과한 추천 이미지의 출처. LLM이 아니라 코드가 후보에서 채운다."""
+
+    image: str
+    # 태그의 멀티 아키텍처 digest. 수집 시점 값이라 이동 태그는 그 뒤 바뀌었을 수 있다.
+    # 수집하지 못한 오래된 태그는 None이다.
+    digest: str | None
+    source_url: str
+    collected_at: datetime
+
+
 class RecommendResponse(BaseModel):
     question: str
     recommendation: Recommendation | None
@@ -104,3 +115,5 @@ class RecommendResponse(BaseModel):
     notes: list[str] = Field(default_factory=list)
     # 질문을 어떻게 해석했는지. 추출에 실패했거나 부르지 않았으면 None이다.
     plan: SearchPlan | None = None
+    # 검증을 통과한 추천의 digest·출처·수집 시점. 추천이 없으면 None이다.
+    recommended: RecommendedImage | None = None

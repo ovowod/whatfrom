@@ -93,6 +93,45 @@ def test_recommend_returns_a_real_tag_with_evidence_and_provenance(session):
     assert body["candidates"][0]["evidence"]
 
 
+def test_recommend_attaches_the_digest_and_pins_the_dockerfile(session):
+    """digest는 코드가 붙인다. LLM은 digest를 보지도 쓰지도 않는다."""
+    _seed(session)
+    provider = FakeLLMProvider(
+        recommendation=Recommendation(
+            image="python:3.13-slim", reason="ok", dockerfile="FROM python:3.13-slim\n"
+        )
+    )
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    assert body["recommended"] == {
+        "image": "python:3.13-slim",
+        "digest": "sha256:aaa",
+        "source_url": "https://hub.docker.com/_/python",
+        "collected_at": NOW.isoformat().replace("+00:00", "Z"),
+    }
+    assert body["recommendation"]["dockerfile"] == "FROM python:3.13-slim@sha256:aaa\n"
+    assert body["notes"] == []
+
+
+def test_recommend_leaves_the_from_unpinned_when_the_tag_has_no_digest(session):
+    _seed(session)
+    session.execute(update(ImageTag).values(manifest_digest=None))
+    provider = FakeLLMProvider(
+        recommendation=Recommendation(
+            image="python:3.13-slim", reason="ok", dockerfile="FROM python:3.13-slim\n"
+        )
+    )
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    assert body["recommended"]["digest"] is None
+    assert body["recommendation"]["dockerfile"] == "FROM python:3.13-slim\n"
+    assert body["notes"] == [
+        "digest가 없어 Dockerfile의 FROM을 고정하지 못했습니다: python:3.13-slim"
+    ]
+
+
 def test_recommend_discards_a_hallucinated_answer_and_still_returns_candidates(session):
     """저하 사다리 3단계: verify가 거부하면 LLM 답변을 버리고 후보 표만 낸다."""
     _seed(session)
@@ -105,6 +144,7 @@ def test_recommend_discards_a_hallucinated_answer_and_still_returns_candidates(s
     body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
 
     assert body["recommendation"] is None
+    assert body["recommended"] is None
     assert body["degraded"] is True
     assert body["candidates"]
     assert any("not a verifiable candidate image" in note for note in body["notes"])
@@ -145,6 +185,8 @@ def test_recommend_strips_a_dockerfile_that_pulls_an_unverified_image(session):
 
     assert body["recommendation"]["image"] == "python:3.13-slim"
     assert body["recommendation"]["dockerfile"] == ""
+    # 추천 자체는 유효하므로 출처와 digest는 남는다. 지운 Dockerfile은 고정할 것이 없다.
+    assert body["recommended"]["image"] == "python:3.13-slim"
     # 추천 객체에는 남으면 안 된다. 사용자가 복사해 쓰는 건 이쪽이다.
     assert "INVENTED" not in json.dumps(body["recommendation"], ensure_ascii=False)
     # 알림에는 남아야 한다. 무엇을 왜 지웠는지 말하지 않으면 진단이 안 된다.
