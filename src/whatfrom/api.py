@@ -1,8 +1,10 @@
 # src/whatfrom/api.py
+import time
 from collections.abc import Callable, Generator
 from contextlib import AbstractContextManager, contextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, field_validator
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -13,6 +15,13 @@ from whatfrom.core.db import make_engine
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import Repository
+from whatfrom.metrics import (
+    STAGE_ERRORS,
+    THREADPOOL_WAIT_SECONDS,
+    MetricsMiddleware,
+    record_outcome,
+    stage_timer,
+)
 from whatfrom.recommend.advisor import advise
 from whatfrom.recommend.llm import LLMProvider, get_provider
 from whatfrom.recommend.pin import pin_dockerfile
@@ -54,8 +63,10 @@ def recommend_for_question(
 
     # 임베딩도 HTTP 호출이라 실패한다. 매 요청마다 부르므로 LLM보다 자주 실패한다.
     try:
-        vector = embedder.embed([question])[0]
+        with stage_timer("embedding"):
+            vector = embedder.embed([question])[0]
     except RemoteCallError as exc:
+        STAGE_ERRORS.labels("embedding").inc()
         notes.append(f"임베딩 생성에 실패해 후보를 만들지 못했습니다: {exc}")
         return RecommendResponse(
             question=question,
@@ -71,13 +82,15 @@ def recommend_for_question(
 
     plan: SearchPlan | None
     try:
-        plan = extract_plan(provider, question, repositories)
+        with stage_timer("plan"):
+            plan = extract_plan(provider, question, repositories)
     except RemoteCallError as exc:
+        STAGE_ERRORS.labels("plan").inc()
         plan = None
         degraded = True
         notes.append(f"검색 조건 추출에 실패해 벡터 검색만 사용했습니다: {exc}")
 
-    with open_session() as session:
+    with stage_timer("search"), open_session() as session:
         if plan is None:
             candidates = search_candidates_by_vector(session, vector)
         else:
@@ -98,8 +111,10 @@ def recommend_for_question(
         )
 
     try:
-        recommendation = advise(provider, question, candidates)
+        with stage_timer("advise"):
+            recommendation = advise(provider, question, candidates)
     except RemoteCallError as exc:
+        STAGE_ERRORS.labels("advise").inc()
         notes.append(f"LLM 근거 생성에 실패해 후보 목록만 반환합니다: {exc}")
         return RecommendResponse(
             question=question,
@@ -110,7 +125,7 @@ def recommend_for_question(
             plan=plan,
         )
 
-    with open_session() as session:
+    with stage_timer("verify"), open_session() as session:
         verdict = verify_recommendation(session, recommendation, candidates)
     if not verdict.ok:
         # 검증을 통과하지 못한 답변 대신 후보 목록을 표로 보여준다.
@@ -189,6 +204,7 @@ def create_app(
     provider: LLMProvider | None = None,
 ) -> FastAPI:
     app = FastAPI(title="whatfrom")
+    app.add_middleware(MetricsMiddleware)
 
     resolved_engine = engine or make_engine(settings.database_url)
     resolved_embedder = embedder or get_embedder(settings.embedder)
@@ -210,14 +226,27 @@ def create_app(
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    # 비동기 함수라 이벤트 루프에서 바로 답한다. 동기 함수면 /recommend와 같은 스레드 풀(40개)을
+    # 기다려, 스레드가 다 찬 과부하 순간에 수집이 끊긴다.
+    @app.get("/metrics", include_in_schema=False)
+    async def metrics() -> Response:
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
     @app.post("/recommend", response_model=RecommendResponse)
-    def recommend(request: RecommendRequest) -> RecommendResponse:
-        return recommend_for_question(
+    def recommend(body: RecommendRequest, request: Request) -> RecommendResponse:
+        # 미들웨어가 적은 도착 시각. 이 함수는 스레드 풀에서 돌므로
+        # 그 차이가 스레드를 기다린 시간이다.
+        arrived_at = getattr(request.state, "arrived_at", None)
+        if arrived_at is not None:
+            THREADPOOL_WAIT_SECONDS.observe(time.perf_counter() - arrived_at)
+        response = recommend_for_question(
             app.state.open_session,
             resolved_embedder,
             resolved_provider,
-            request.question,
+            body.question,
         )
+        record_outcome(response)
+        return response
 
     return app
 
