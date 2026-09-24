@@ -8,13 +8,14 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from whatfrom.core.config import settings
-from whatfrom.core.contracts import RecommendResponse, SearchPlan
+from whatfrom.core.contracts import RecommendedImage, RecommendResponse, SearchPlan
 from whatfrom.core.db import make_engine
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import Repository
 from whatfrom.recommend.advisor import advise
 from whatfrom.recommend.llm import LLMProvider, get_provider
+from whatfrom.recommend.pin import pin_dockerfile
 from whatfrom.recommend.planner import extract_plan
 from whatfrom.recommend.verify import verify_recommendation
 from whatfrom.search.retrieval import search_candidates_by_vector, search_candidates_with_plan
@@ -153,6 +154,24 @@ def recommend_for_question(
             "실재하지 않는 대안 이미지를 제거했습니다: " + ", ".join(verdict.dropped_alternatives)
         )
 
+    # digest는 코드가 후보에서 붙인다. 검증을 통과한 뒤라 추천은 반드시 후보 중 하나다.
+    chosen = next(c for c in candidates if c.image == recommendation.image)
+    recommended = RecommendedImage(
+        image=chosen.image,
+        digest=chosen.digest,
+        source_url=chosen.source_url,
+        collected_at=chosen.collected_at,
+    )
+    if recommendation.dockerfile:
+        pinned, missing = pin_dockerfile(
+            recommendation.dockerfile, {c.image: c.digest for c in candidates}
+        )
+        recommendation = recommendation.model_copy(update={"dockerfile": pinned})
+        if missing:
+            notes.append(
+                "digest가 없어 Dockerfile의 FROM을 고정하지 못했습니다: " + ", ".join(missing)
+            )
+
     return RecommendResponse(
         question=question,
         recommendation=recommendation,
@@ -160,6 +179,7 @@ def recommend_for_question(
         degraded=degraded,
         notes=notes,
         plan=plan,
+        recommended=recommended,
     )
 
 
