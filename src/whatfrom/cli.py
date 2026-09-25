@@ -2,16 +2,21 @@
 import argparse
 import hashlib
 import json
+import random
 import time
 from collections.abc import Callable, Generator, Sequence
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import httpx2
 from sqlalchemy import Engine, inspect, select, text, tuple_
 from sqlalchemy.orm import Session, sessionmaker
+
+if TYPE_CHECKING:
+    from whatfrom.eval.goldenset import GoldenSet
 
 from whatfrom.api import recommend_for_question
 from whatfrom.collect import docs
@@ -420,6 +425,46 @@ def cmd_eval(args: argparse.Namespace) -> None:
     print(f"\n{out} 저장")
 
 
+def question_order(count: int, blocks: int, seed: int) -> list[int]:
+    """질문 인덱스의 순열을 blocks개 이어 붙인다. 같은 시드면 같은 순서다.
+
+    부하 시험은 이 순서표에서 질문을 고른다. 무작위로 고르면 실행 속도에 따라 두 실행의
+    질문 구성이 달라지고, 질문마다 LLM 시간이 달라 그 차이가 결과에 섞인다.
+    """
+    rng = random.Random(seed)
+    order: list[int] = []
+    for _ in range(blocks):
+        block = list(range(count))
+        rng.shuffle(block)
+        order += block
+    return order
+
+
+def question_file(goldenset: "GoldenSet", seed: int = 0, blocks: int = 12) -> dict:
+    """k6와 모의 LLM 서버가 읽는 질문 파일. k6는 YAML을 읽지 못한다.
+
+    blocks=12면 480개다. k6는 구간마다 오프셋(평소 0, 스파이크 40, 회복 400)에서 시작해
+    예정 요청 수(36, 360, 60)만큼 쓴다.
+    """
+    questions = [{"id": case.id, "question": case.question} for case in goldenset.cases]
+    return {
+        "seed": seed,
+        "questions": questions,
+        "order": question_order(len(questions), blocks, seed),
+    }
+
+
+def cmd_load_questions(args: argparse.Namespace) -> None:
+    # eval과 같은 이유로 PyYAML을 쓰는 모듈은 여기서 가져온다.
+    from whatfrom.eval.goldenset import load_goldenset
+
+    document = question_file(load_goldenset(Path(args.goldenset)), seed=args.seed)
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(document, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print(f"{out} 저장 ({len(document['questions'])}문항, 순서 {len(document['order'])}개)")
+
+
 def _positive_int(value: str) -> int:
     parsed = int(value)
     if parsed < 1:
@@ -477,6 +522,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_eval.add_argument("--llm-provider", default=settings.llm_provider)
     p_eval.add_argument("--database-url", default=settings.database_url)
     p_eval.set_defaults(func=cmd_eval)
+
+    p_load = sub.add_parser("load-questions", help="부하 시험용 질문과 고정 순서를 내보낸다")
+    p_load.add_argument("--goldenset", default="eval/goldenset.yaml")
+    p_load.add_argument("--out", default="load/questions.json")
+    p_load.add_argument("--seed", type=int, default=0)
+    p_load.set_defaults(func=cmd_load_questions)
 
     return parser
 
