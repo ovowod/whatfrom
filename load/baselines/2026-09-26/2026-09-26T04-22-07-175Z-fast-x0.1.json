@@ -1,0 +1,68 @@
+{
+  "label": "fast-x0.1",
+  "smoke": false,
+  "test_run_seconds": 669.543406214,
+  "by_start": {
+    "baseline": {
+      "n": 37,
+      "p50": 6.903,
+      "p95": 12.238999999999995,
+      "p99": 13.768920000000001,
+      "max": 14.076,
+      "success_rate": 1,
+      "dropped": 0
+    },
+    "spike": {
+      "n": 361,
+      "p50": 6.559,
+      "p95": 11.977,
+      "p99": 14.05,
+      "max": 14.07,
+      "success_rate": 1,
+      "dropped": 0
+    },
+    "recovery": {
+      "n": 61,
+      "p50": 6.881,
+      "p95": 9.783,
+      "p99": 13.560999999999998,
+      "max": 14.056,
+      "success_rate": 1,
+      "dropped": 0
+    }
+  },
+  "by_completion": {
+    "baseline": {
+      "seconds": 180,
+      "finished": 35,
+      "responses": 35,
+      "succeeded": 35,
+      "responses_per_s": 0.19444444444444445,
+      "succeeded_per_s": 0.19444444444444445
+    },
+    "spike": {
+      "seconds": 180,
+      "finished": 346,
+      "responses": 346,
+      "succeeded": 346,
+      "responses_per_s": 1.9222222222222223,
+      "succeeded_per_s": 1.9222222222222223
+    },
+    "recovery": {
+      "seconds": 300,
+      "finished": 76,
+      "responses": 76,
+      "succeeded": 76,
+      "responses_per_s": 0.25333333333333335,
+      "succeeded_per_s": 0.25333333333333335
+    },
+    "drain": {
+      "seconds": 9.543406214000015,
+      "finished": 2,
+      "responses": 2,
+      "succeeded": 2,
+      "responses_per_s": 0.20956878028161832,
+      "succeeded_per_s": 0.20956878028161832
+    }
+  }
+}

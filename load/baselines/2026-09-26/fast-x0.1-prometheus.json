@@ -1,0 +1,43 @@
+{
+ "source": "측정 직후(2026-09-26, fast-x0.1 실행 종료 뒤) Prometheus를 조회한 값을 옮겨 적었다. 원본 시계열은 다음 측정 전 Prometheus를 초기화하며 지워졌다. 분위수는 조회 당시 [20m] 창의 increase로 계산했다.",
+ "queries": {
+  "in_progress_max": {
+   "promql": "max_over_time(whatfrom_requests_in_progress{path=\"/recommend\"}[20m])",
+   "value": 17
+  },
+  "threadpool_wait_p50": {
+   "promql": "histogram_quantile(0.5, sum by (le) (increase(whatfrom_threadpool_wait_seconds_bucket[20m])))",
+   "value": 0.03
+  },
+  "threadpool_wait_p95": {
+   "promql": "histogram_quantile(0.95, sum by (le) (increase(whatfrom_threadpool_wait_seconds_bucket[20m])))",
+   "value": 0.05
+  },
+  "stage_seconds_p50": {
+   "promql": "histogram_quantile(0.5, sum by (le, stage) (increase(whatfrom_stage_seconds_bucket[20m])))",
+   "value": {
+    "embedding": 0.2,
+    "plan": 1.38,
+    "search": 0.03,
+    "advise": 5.5,
+    "verify": 0.03
+   }
+  },
+  "outcomes_total": {
+   "promql": "sum by (outcome) (whatfrom_recommend_outcomes_total)",
+   "value": {
+    "ok": 459
+   }
+  },
+  "stage_errors_total": {
+   "promql": "sum by (stage) (whatfrom_stage_errors_total)",
+   "value": {}
+  },
+  "http_requests_total": {
+   "promql": "sum by (status) (whatfrom_http_request_seconds_count{path=\"/recommend\"})",
+   "value": {
+    "200": 459
+   }
+  }
+ }
+}
