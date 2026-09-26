@@ -13,10 +13,12 @@ const DATA = JSON.parse(open('./questions.json'));
 
 // offset은 순서표에서 구간이 시작하는 위치다. 예정 요청 수(36, 360, 60)보다 한 번 이상의
 // 여유를 두고 떨어뜨린다(constant-arrival-rate는 계획보다 한 번 더 돌 수 있다).
+// 요청 하나가 VU를 최대 300초 붙잡으므로 필요한 VU를 미리 만들어 둔다. 실행 중에 새로 만드는
+// 속도는 도착 속도를 따라가지 못해, 모자라면 요청을 보내지 못하고 dropped로 버린다.
 const PHASES = [
-  { name: 'baseline', rate: 1, timeUnit: '5s', seconds: SMOKE ? 10 : 180, offset: 0, vus: 20, maxVUs: 100 },
-  { name: 'spike', rate: 2, timeUnit: '1s', seconds: SMOKE ? 10 : 180, offset: 40, vus: 200, maxVUs: 700 },
-  { name: 'recovery', rate: 1, timeUnit: '5s', seconds: SMOKE ? 10 : 300, offset: 420, vus: 20, maxVUs: 100 },
+  { name: 'baseline', rate: 1, timeUnit: '5s', seconds: SMOKE ? 10 : 180, offset: 0, vus: 100, maxVUs: 100 },
+  { name: 'spike', rate: 2, timeUnit: '1s', seconds: SMOKE ? 10 : 180, offset: 40, vus: 700, maxVUs: 700 },
+  { name: 'recovery', rate: 1, timeUnit: '5s', seconds: SMOKE ? 10 : 300, offset: 420, vus: 100, maxVUs: 100 },
 ];
 const WINDOWS = ['baseline', 'spike', 'recovery', 'drain'];
 const OFFSET = Object.fromEntries(PHASES.map((p) => [p.name, p.offset]));
