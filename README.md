@@ -758,11 +758,21 @@ k6로 세 구간을 이어 보낸다. 질문은 골든셋 40문항을 고정 시
 
 ### 실행
 
+앱 지표는 프로세스 전역이고, Prometheus는 이미지가 `/prometheus`를 볼륨으로 선언한다.
+실행마다 앱을 새로 띄우고 익명 볼륨까지 새로 만들어야 앞 실행의 값이 섞이지 않는다.
+그래서 스모크와 본 측정은 앱·모의 서버를 매번 새로 띄우고, 본 측정은 배율을 바꿀 때마다 Prometheus도 새로 띄운다.
+
+DB를 띄운다. 임베딩은 로컬 Ollama의 `bge-m3`가 떠 있어야 한다.
+
 ```bash
 make up
-docker compose --profile observability up -d --force-recreate --renew-anon-volumes prometheus
-docker compose --profile observability up -d grafana
-uv run python -m whatfrom.loadtest.mock_llm --results eval/results/<평가 결과>.json --scale 1.0 --port 8081
+```
+
+먼저 스모크로 구간마다 끝까지 관통하는지 확인한다. 배율 0.1로 짧게 돌린다.
+
+```bash
+uv run python -m whatfrom.loadtest.mock_llm \
+  --results load/baselines/2026-09-26/replay-kimi-k3.json --scale 0.1 --port 8081
 ```
 
 다른 터미널에서 앱을 모의 LLM에 연결해 띄운다.
@@ -774,13 +784,40 @@ WHATFROM_EMBEDDER=openai_compatible WHATFROM_LLM_PROVIDER=openai_compatible \
 ```
 
 ```bash
-make load-smoke                     # 구간당 10초로 끝까지 관통하는지 확인
-make load LOAD_LABEL=kimi-x1.0      # 본 측정, 최대 약 16분
+docker compose --profile observability up -d
+make load-smoke
 ```
+
+스모크가 끝나면 앱과 모의 서버를 멈춘다.
+
+본 측정은 배율마다 반복한다. 앱과 모의 서버가 멈춘 상태에서 Prometheus를 새로 띄운다.
+
+```bash
+docker compose --profile observability up -d --force-recreate --renew-anon-volumes prometheus
+```
+
+모의 서버를 이번 배율로 띄운다.
+
+```bash
+uv run python -m whatfrom.loadtest.mock_llm \
+  --results load/baselines/2026-09-26/replay-kimi-k3.json --scale <배율> --port 8081
+```
+
+앱을 다시 위와 같이 띄운 뒤 본 측정을 돌린다.
+
+```bash
+make load LOAD_LABEL=<라벨>          # 최대 약 16분
+```
+
+| 분포 | 모의 서버 `--scale` | `LOAD_LABEL` |
+| --- | --- | --- |
+| Kimi 실측 | 1.0 | `kimi-x1.0` |
+| 빠른 LLM | 0.1 | `fast-x0.1` |
+
+두 실행 사이에는 앱과 모의 서버를 멈추고, Prometheus를 새로 띄우는 단계부터 반복한다.
 
 - 결과는 `load/results/<시각>-<라벨>.json`에 저장된다(Git 추적 제외).
 - 서버 지표는 앱의 `/metrics`로 나가고, Grafana `http://localhost:3000`의 "whatfrom 부하" 대시보드에서 본다.
-- Prometheus는 이미지가 `/prometheus`를 볼륨으로 선언해, 실행마다 익명 볼륨까지 새로 만들어야 앞 실행의 값이 섞이지 않는다.
 
 ### 기준 측정 결과 (2026-09-26)
 
@@ -819,9 +856,9 @@ make load LOAD_LABEL=kimi-x1.0      # 본 측정, 최대 약 16분
 
 **Kimi 실측 분포에서는 스파이크의 93%, 회복 구간의 95%가 실패했다.** 한 요청이 약 65초라 한계는 초당 약 0.6건이고, 스파이크는 그 3배다.
 
-- **서버는 한계까지 일했다.** 포화 구간에서 검증 단계를 마친 요청이 분당 약 33~40건(초당 약 0.6건)으로, 스레드 40개로 계산한 한계와 같다. 단계별 시간도 평소와 같았다(LLM #1 중앙값 13.4초, LLM #2 52.0초). 요청을 받아 둔 채 스레드를 기다린 시간은 중앙값 210초였고, p95는 히스토그램 상한(300초)에 닿았다.
+- **서버는 한계까지 일했다.** 포화 구간에서 검증 단계를 마친 요청이 분당 약 29~40건(평균 초당 약 0.58건)으로, 스레드 40개로 계산한 한계와 같다. 단계별 시간도 평소와 같았다(LLM #1 중앙값 13.4초, LLM #2 52.1초). 요청을 받아 둔 채 스레드를 기다린 시간은 중앙값 210초였고, p95는 히스토그램 상한(300초)에 닿았다.
 - **요청이 스레드 풀 줄을 두 번 섰다.** FastAPI는 동기 엔드포인트의 응답 모델 검증도 스레드 풀에서 돌린다(`fastapi/routing.py`의 `serialize_response`). 핸들러를 마친 요청은 응답을 보내기 전에 다시 줄 끝에 서고, 그 줄에는 새로 들어온 요청이 이미 수백 건 서 있다.
-  검증을 마친 요청은 분당 약 35건이었지만 응답을 보낸 요청은 분당 3~18건이었고, 새 요청이 끊긴 14~15분에 분당 83건, 243건이 한꺼번에 나갔다.
+  검증을 마친 요청은 분당 약 35건이었지만 응답을 보낸 요청은 분당 3~18건이었고, 스레드 줄이 빠진 13~15분에 분당 83건, 243건이 한꺼번에 나갔다.
 - **서버가 끝낸 일 대부분이 헛일이 됐다.** 서버는 459건을 모두 처리해 200을 돌려줬지만, k6가 300초 안에 받은 성공은 64건이다. 나머지는 k6가 타임아웃으로 포기한 뒤에 끝났고, 마지막 요청은 k6가 끝난 뒤에야 끝났다. 받아 둔 요청을 끝까지 처리하는 동안 새 요청은 더 뒤로 밀려, 스파이크가 끝난 뒤인 회복 구간은 스파이크보다도 성공률이 낮았다.
 - 처음 측정에서는 k6가 가상 사용자를 미리 적게 만들어 두어, 새로 만드는 속도가 도착을 따라가지 못하고 스파이크의 78건을 보내지 못했다. 가상 사용자를 한도만큼 미리 만들도록 고쳐 다시 쟀고, 위 표가 그 결과다. 빠른 LLM 측정은 보내지 못한 요청이 없어 다시 재지 않았다.
 

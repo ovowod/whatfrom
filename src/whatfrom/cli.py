@@ -443,8 +443,10 @@ def question_order(count: int, blocks: int, seed: int) -> list[int]:
 def question_file(goldenset: "GoldenSet", seed: int = 0, blocks: int = 12) -> dict:
     """k6와 모의 LLM 서버가 읽는 질문 파일. k6는 YAML을 읽지 못한다.
 
-    blocks=12면 480개다. k6는 구간마다 오프셋(평소 0, 스파이크 40, 회복 400)에서 시작해
-    예정 요청 수(36, 360, 60)만큼 쓴다.
+    blocks=12면 480개다. k6는 구간마다 오프셋(평소 0, 스파이크 40, 회복 420)에서 시작해
+    예정 요청 수(36, 360, 60)만큼 쓴다. 회복 구간은 계획보다 한 번 더 돌 수 있어, 61번째
+    반복(420+60=480)이 순서표 끝을 넘어 처음(order[0])으로 돌아갈 수 있다. 나머지 연산이라
+    결정적이므로 비교에 영향은 없다.
     """
     questions = [{"id": case.id, "question": case.question} for case in goldenset.cases]
     return {

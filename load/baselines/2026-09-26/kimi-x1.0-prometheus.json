@@ -110,6 +110,8 @@
   "verify_completed_per_min": {
    "promql": "sum(increase(whatfrom_stage_seconds_count{stage=\"verify\"}[1m]))",
    "step_seconds": 60,
+   "start": "2026-09-26T04:24:54Z",
+   "end": "2026-09-26T04:49:54Z",
    "values": [
     "0",
     "10.901756999836474",
@@ -133,6 +135,8 @@
   "http_completed_per_min": {
    "promql": "sum(increase(whatfrom_http_request_seconds_count{path=\"/recommend\"}[1m]))",
    "step_seconds": 60,
+   "start": "2026-09-26T04:24:54Z",
+   "end": "2026-09-26T04:49:54Z",
    "values": [
     "0",
     "10.901756999836474",
@@ -156,6 +160,8 @@
   "in_progress_max_per_min": {
    "promql": "max_over_time(whatfrom_requests_in_progress{path=\"/recommend\"}[1m])",
    "step_seconds": 60,
+   "start": "2026-09-26T04:24:54Z",
+   "end": "2026-09-26T04:49:54Z",
    "values": [
     "11",
     "15",
