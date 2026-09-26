@@ -1,0 +1,52 @@
+{
+  "uid": "whatfrom-load",
+  "title": "whatfrom 부하",
+  "schemaVersion": 39,
+  "time": { "from": "now-30m", "to": "now" },
+  "refresh": "5s",
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "처리 중인 /recommend 요청",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "whatfrom_requests_in_progress{path=\"/recommend\"}", "legendFormat": "처리 중" }]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "스레드를 얻기까지 기다린 시간 (초)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.5, sum by (le) (rate(whatfrom_threadpool_wait_seconds_bucket[1m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(whatfrom_threadpool_wait_seconds_bucket[1m])))", "legendFormat": "p95" }
+      ]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "/recommend 요청 시간 (초, 서버 기준)",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.5, sum by (le) (rate(whatfrom_http_request_seconds_bucket{path=\"/recommend\"}[1m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(whatfrom_http_request_seconds_bucket{path=\"/recommend\"}[1m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(whatfrom_http_request_seconds_bucket{path=\"/recommend\"}[1m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "단계별 시간 p95 (초)",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, stage) (rate(whatfrom_stage_seconds_bucket[1m])))", "legendFormat": "{{stage}}" }]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "응답 결과 종류 (초당)",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum by (outcome) (rate(whatfrom_recommend_outcomes_total[1m]))", "legendFormat": "{{outcome}}" }]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "외부 호출 실패 (초당)",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum by (stage) (rate(whatfrom_stage_errors_total[1m]))", "legendFormat": "{{stage}}" }]
+    }
+  ]
+}

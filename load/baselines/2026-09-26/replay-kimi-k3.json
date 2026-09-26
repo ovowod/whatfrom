@@ -1,0 +1,588 @@
+{
+ "source": "eval/results/2026-09-24T07-22-39.json",
+ "note": "부하 시험 모의 LLM 재생용으로 유료 평가 결과에서 다섯 필드만 뽑았다.",
+ "cases": [
+  {
+   "case_id": "python-numpy-arm64",
+   "plan": {
+    "repository": "python",
+    "version_prefix": null,
+    "architectures": [
+     "arm64"
+    ],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.13-slim",
+   "seconds_plan": 19.383538201000192,
+   "seconds_advise": 69.14920935099508
+  },
+  {
+   "case_id": "python-size-first",
+   "plan": {
+    "repository": "python",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.13-alpine",
+   "seconds_plan": 37.60387711400108,
+   "seconds_advise": 42.42599796400464
+  },
+  {
+   "case_id": "python-version-pinned-312",
+   "plan": {
+    "repository": "python",
+    "version_prefix": "3.12",
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.12-slim",
+   "seconds_plan": 8.804165533998457,
+   "seconds_advise": 59.46712846000446
+  },
+  {
+   "case_id": "python-fastapi-prod",
+   "plan": {
+    "repository": "python",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.13-slim",
+   "seconds_plan": 10.54397064600198,
+   "seconds_advise": 61.8180257089989
+  },
+  {
+   "case_id": "python-scientific-stack",
+   "plan": {
+    "repository": "python",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.12",
+   "seconds_plan": 8.511627785999735,
+   "seconds_advise": 57.8470495770016
+  },
+  {
+   "case_id": "python-build-stage",
+   "plan": {
+    "repository": "python",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.13",
+   "seconds_plan": 6.578850992998923,
+   "seconds_advise": 47.044892767997226
+  },
+  {
+   "case_id": "python-latest-stable",
+   "plan": {
+    "repository": "python",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.14",
+   "seconds_plan": 7.740982025999983,
+   "seconds_advise": 25.168968583995593
+  },
+  {
+   "case_id": "python-alpine-explicit",
+   "plan": {
+    "repository": "python",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [
+     "alpine"
+    ],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.14-alpine",
+   "seconds_plan": 3.9025443060018006,
+   "seconds_advise": 52.3324220229988
+  },
+  {
+   "case_id": "python-debian-codename",
+   "plan": {
+    "repository": "python",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [
+     "bookworm"
+    ],
+    "exclude_distributions": [
+     "trixie"
+    ],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.14-bookworm",
+   "seconds_plan": 9.445158422997338,
+   "seconds_advise": 51.413741850003134
+  },
+  {
+   "case_id": "python-arm64-only",
+   "plan": {
+    "repository": "python",
+    "version_prefix": null,
+    "architectures": [
+     "arm64"
+    ],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.14-slim",
+   "seconds_plan": 5.02602839100291,
+   "seconds_advise": 27.05877129900182
+  },
+  {
+   "case_id": "python-small-cli",
+   "plan": {
+    "repository": "python",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.14-alpine",
+   "seconds_plan": 13.025258611000027,
+   "seconds_advise": 42.81277570599923
+  },
+  {
+   "case_id": "python-ml-torch",
+   "plan": {
+    "repository": null,
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.12",
+   "seconds_plan": 21.647830655994767,
+   "seconds_advise": 72.62482952099526
+  },
+  {
+   "case_id": "python-slim-vs-full",
+   "plan": {
+    "repository": "python",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.14-slim",
+   "seconds_plan": 9.571206970002095,
+   "seconds_advise": 49.55957799699536
+  },
+  {
+   "case_id": "python-musl-explained",
+   "plan": {
+    "repository": null,
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [
+     "alpine"
+    ],
+    "max_size_mb": null
+   },
+   "recommended_image": "python:3.13",
+   "seconds_plan": 26.874949425000523,
+   "seconds_advise": 64.11319887400168
+  },
+  {
+   "case_id": "node-lts-prod",
+   "plan": {
+    "repository": "node",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "node:24",
+   "seconds_plan": 14.204218341998057,
+   "seconds_advise": 58.897579559001315
+  },
+  {
+   "case_id": "node-size-first",
+   "plan": {
+    "repository": "node",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "node:22-alpine",
+   "seconds_plan": 18.730928744000266,
+   "seconds_advise": 40.464816957995936
+  },
+  {
+   "case_id": "node-native-addon",
+   "plan": {
+    "repository": "node",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [
+     "alpine"
+    ],
+    "max_size_mb": null
+   },
+   "recommended_image": "node:24",
+   "seconds_plan": 21.918514192002476,
+   "seconds_advise": 62.353740835998906
+  },
+  {
+   "case_id": "node-arm64-graviton",
+   "plan": {
+    "repository": "node",
+    "version_prefix": null,
+    "architectures": [
+     "arm64"
+    ],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "node:24-alpine",
+   "seconds_plan": 7.3343174119945616,
+   "seconds_advise": 47.19010303100367
+  },
+  {
+   "case_id": "node-alpine-vs-slim",
+   "plan": {
+    "repository": "node",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "node:24-slim",
+   "seconds_plan": 13.200231077003991,
+   "seconds_advise": 46.83494174400403
+  },
+  {
+   "case_id": "postgres-prod-default",
+   "plan": {
+    "repository": "postgres",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "postgres:18",
+   "seconds_plan": 12.533552955996129,
+   "seconds_advise": 57.73425637000037
+  },
+  {
+   "case_id": "postgres-postgis-extension",
+   "plan": {
+    "repository": "postgres",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "postgres:18",
+   "seconds_plan": 10.612736397000845,
+   "seconds_advise": 48.248776389998966
+  },
+  {
+   "case_id": "postgres-version-pinned-16",
+   "plan": {
+    "repository": "postgres",
+    "version_prefix": "16",
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "postgres:16",
+   "seconds_plan": 8.484230920999835,
+   "seconds_advise": 51.20577049500571
+  },
+  {
+   "case_id": "postgres-ci-ephemeral",
+   "plan": {
+    "repository": "postgres",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "postgres:18-alpine3.23",
+   "seconds_plan": 11.81415723900136,
+   "seconds_advise": 117.15204494199861
+  },
+  {
+   "case_id": "redis-cache-sidecar",
+   "plan": {
+    "repository": "redis",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "redis:6-alpine",
+   "seconds_plan": 9.714241487003164,
+   "seconds_advise": 52.89751969899953
+  },
+  {
+   "case_id": "redis-version-pinned-7",
+   "plan": {
+    "repository": "redis",
+    "version_prefix": "7",
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "redis:7",
+   "seconds_plan": 9.817049968005449,
+   "seconds_advise": 36.640002539003035
+  },
+  {
+   "case_id": "redis-persistence-docs",
+   "plan": {
+    "repository": "redis",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "redis:8",
+   "seconds_plan": 10.04050915100379,
+   "seconds_advise": 67.94776483000169
+  },
+  {
+   "case_id": "nginx-static-spa",
+   "plan": {
+    "repository": "nginx",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "nginx:1.31-alpine-slim",
+   "seconds_plan": 12.744787773997814,
+   "seconds_advise": 38.97127069399721
+  },
+  {
+   "case_id": "nginx-stable-branch",
+   "plan": {
+    "repository": "nginx",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "nginx:1.30",
+   "seconds_plan": 7.6770878699971945,
+   "seconds_advise": 29.06727843700355
+  },
+  {
+   "case_id": "nginx-otel-tracing",
+   "plan": {
+    "repository": "nginx",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "nginx:1.31-otel",
+   "seconds_plan": 11.171782376994088,
+   "seconds_advise": 32.343997763004154
+  },
+  {
+   "case_id": "golang-multistage-build",
+   "plan": {
+    "repository": "golang",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "golang:1.27-trixie",
+   "seconds_plan": 14.602465502000996,
+   "seconds_advise": 74.5689182549977
+  },
+  {
+   "case_id": "golang-cgo-sqlite",
+   "plan": {
+    "repository": "golang",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "golang:1.27-trixie",
+   "seconds_plan": 11.217009479005355,
+   "seconds_advise": 74.88202323899895
+  },
+  {
+   "case_id": "golang-cross-compile-arm64",
+   "plan": {
+    "repository": "golang",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "golang:1.27",
+   "seconds_plan": 21.4567484040017,
+   "seconds_advise": 44.50143663900235
+  },
+  {
+   "case_id": "temurin-jre-runtime",
+   "plan": {
+    "repository": "eclipse-temurin",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "eclipse-temurin:25-jre",
+   "seconds_plan": 20.321585917998163,
+   "seconds_advise": 53.91289625400532
+  },
+  {
+   "case_id": "temurin-jdk-build-stage",
+   "plan": {
+    "repository": "eclipse-temurin",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": null,
+   "seconds_plan": 17.36102044099971,
+   "seconds_advise": 120.1185680109993
+  },
+  {
+   "case_id": "temurin-17-jammy-pinned",
+   "plan": {
+    "repository": "eclipse-temurin",
+    "version_prefix": "17",
+    "architectures": [],
+    "distributions": [
+     "jammy"
+    ],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "eclipse-temurin:17-jre-jammy",
+   "seconds_plan": 20.22732182999607,
+   "seconds_advise": 54.538701637000486
+  },
+  {
+   "case_id": "debian-slim-runtime",
+   "plan": {
+    "repository": "debian",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [
+     "debian"
+    ],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "debian:12-slim",
+   "seconds_plan": 24.758112351002637,
+   "seconds_advise": 59.97961823300284
+  },
+  {
+   "case_id": "debian-codename-vs-number",
+   "plan": {
+    "repository": "debian",
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "debian:13",
+   "seconds_plan": 14.128089101999649,
+   "seconds_advise": 45.11997458800033
+  },
+  {
+   "case_id": "ubuntu-lts-base",
+   "plan": {
+    "repository": null,
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [
+     "ubuntu"
+    ],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "ubuntu:26.04",
+   "seconds_plan": 16.150283965995186,
+   "seconds_advise": 100.61175913400075
+  },
+  {
+   "case_id": "ubuntu-noble-pinned",
+   "plan": {
+    "repository": "ubuntu",
+    "version_prefix": "24.04",
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "ubuntu:24.04",
+   "seconds_plan": 8.33898092599702,
+   "seconds_advise": 25.42058449999604
+  },
+  {
+   "case_id": "alpine-static-binary",
+   "plan": {
+    "repository": null,
+    "version_prefix": null,
+    "architectures": [],
+    "distributions": [],
+    "exclude_distributions": [],
+    "max_size_mb": null
+   },
+   "recommended_image": "debian:12-slim",
+   "seconds_plan": 10.839406770995993,
+   "seconds_advise": 42.87872552200133
+  }
+ ]
+}

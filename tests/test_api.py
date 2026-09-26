@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from prometheus_client import REGISTRY
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
@@ -367,3 +368,82 @@ def test_recommend_does_not_extract_a_plan_when_embedding_fails(session):
     )
 
     assert provider.plan_calls == []
+
+
+def _metric(name: str, labels: dict[str, str] | None = None) -> float:
+    return REGISTRY.get_sample_value(name, labels or {}) or 0.0
+
+
+STAGES = ("embedding", "plan", "search", "advise", "verify")
+
+
+def _stage_counts() -> dict[str, float]:
+    return {s: _metric("whatfrom_stage_seconds_count", {"stage": s}) for s in STAGES}
+
+
+def test_metrics_endpoint_exposes_every_whatfrom_metric(session):
+    _seed(session)
+    client = _client(session, FakeLLMProvider(error=RemoteCallError("down")))
+    client.post("/recommend", json={"question": QUESTION})
+
+    text = client.get("/metrics").text
+
+    for name in (
+        "whatfrom_http_request_seconds",
+        "whatfrom_requests_in_progress",
+        "whatfrom_threadpool_wait_seconds",
+        "whatfrom_stage_seconds",
+        "whatfrom_recommend_outcomes_total",
+        "whatfrom_stage_errors_total",
+    ):
+        assert name in text
+
+
+def test_a_recommendation_records_every_stage_the_thread_wait_and_the_outcome(session):
+    _seed(session)
+    provider = FakeLLMProvider(
+        recommendation=Recommendation(
+            image="python:3.13-slim", reason="ok", dockerfile="FROM python:3.13-slim\n"
+        )
+    )
+    stages = _stage_counts()
+    waits = _metric("whatfrom_threadpool_wait_seconds_count")
+    ok = _metric("whatfrom_recommend_outcomes_total", {"outcome": "ok"})
+
+    _client(session, provider).post("/recommend", json={"question": QUESTION})
+
+    assert _stage_counts() == {s: count + 1 for s, count in stages.items()}
+    assert _metric("whatfrom_threadpool_wait_seconds_count") == waits + 1
+    assert _metric("whatfrom_recommend_outcomes_total", {"outcome": "ok"}) == ok + 1
+
+
+def test_a_failed_advise_counts_an_advise_error_and_no_recommendation(session):
+    _seed(session)
+    errors = _metric("whatfrom_stage_errors_total", {"stage": "advise"})
+    none = _metric("whatfrom_recommend_outcomes_total", {"outcome": "no_recommendation"})
+
+    provider = FakeLLMProvider(error=RemoteCallError("read timed out"))
+    _client(session, provider).post("/recommend", json={"question": QUESTION})
+
+    assert _metric("whatfrom_stage_errors_total", {"stage": "advise"}) == errors + 1
+    assert (
+        _metric("whatfrom_recommend_outcomes_total", {"outcome": "no_recommendation"}) == none + 1
+    )
+
+
+class BrokenEmbedder(FakeEmbedder):
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        raise RemoteCallError("embedding down")
+
+
+def test_a_failed_embedding_skips_the_later_stages(session):
+    stages = _stage_counts()
+    errors = _metric("whatfrom_stage_errors_total", {"stage": "embedding"})
+
+    client = _client(session, FakeLLMProvider(), embedder=BrokenEmbedder())
+    client.post("/recommend", json={"question": QUESTION})
+
+    after = _stage_counts()
+    assert after["embedding"] == stages["embedding"] + 1
+    assert {s: after[s] for s in STAGES[1:]} == {s: stages[s] for s in STAGES[1:]}
+    assert _metric("whatfrom_stage_errors_total", {"stage": "embedding"}) == errors + 1

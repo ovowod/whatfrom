@@ -1,0 +1,68 @@
+{
+  "label": "kimi-x1.0",
+  "smoke": false,
+  "test_run_seconds": 960.5679152519999,
+  "by_start": {
+    "baseline": {
+      "n": 37,
+      "p50": 72.815,
+      "p95": 247.77219999999986,
+      "p99": 291.47812,
+      "max": 300.193,
+      "success_rate": 0.972972972972973,
+      "dropped": 0
+    },
+    "spike": {
+      "n": 361,
+      "p50": 300.166,
+      "p95": 300.188,
+      "p99": 300.188,
+      "max": 300.189,
+      "success_rate": 0.06925207756232687,
+      "dropped": 0
+    },
+    "recovery": {
+      "n": 61,
+      "p50": 300.159,
+      "p95": 300.18,
+      "p99": 300.18,
+      "max": 300.18,
+      "success_rate": 0.04918032786885246,
+      "dropped": 0
+    }
+  },
+  "by_completion": {
+    "baseline": {
+      "seconds": 180,
+      "finished": 21,
+      "responses": 21,
+      "succeeded": 21,
+      "responses_per_s": 0.11666666666666667,
+      "succeeded_per_s": 0.11666666666666667
+    },
+    "spike": {
+      "seconds": 180,
+      "finished": 15,
+      "responses": 15,
+      "succeeded": 15,
+      "responses_per_s": 0.08333333333333333,
+      "succeeded_per_s": 0.08333333333333333
+    },
+    "recovery": {
+      "seconds": 300,
+      "finished": 361,
+      "responses": 25,
+      "succeeded": 25,
+      "responses_per_s": 0.08333333333333333,
+      "succeeded_per_s": 0.08333333333333333
+    },
+    "drain": {
+      "seconds": 300.5679152519999,
+      "finished": 62,
+      "responses": 3,
+      "succeeded": 3,
+      "responses_per_s": 0.009981105260302858,
+      "succeeded_per_s": 0.009981105260302858
+    }
+  }
+}

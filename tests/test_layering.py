@@ -1,7 +1,7 @@
 # tests/test_layering.py
 """레이어링 규칙을 강제한다.
 
-stage 패키지(collect, index, search, recommend, eval)는 자기 자신과 whatfrom.core만
+stage 패키지(collect, index, search, recommend, eval, loadtest)는 자기 자신과 whatfrom.core만
 임포트할 수 있다. stage끼리는 서로 임포트하지 않는다. whatfrom.core는 어떤
 stage도 임포트하지 않는다. stage들을 조합하는 건 api.py와 cli.py뿐이다.
 
@@ -15,7 +15,7 @@ import pytest
 
 SRC_ROOT = Path(__file__).parents[1] / "src"
 WHATFROM_DIR = SRC_ROOT / "whatfrom"
-STAGES = ["collect", "index", "search", "recommend", "eval"]
+STAGES = ["collect", "index", "search", "recommend", "eval", "loadtest"]
 
 
 def _display_path(path: Path) -> str:
@@ -45,6 +45,9 @@ def _is_within(module: str, package: str) -> bool:
 @pytest.mark.parametrize("stage", STAGES)
 def test_stage_package_imports_only_itself_and_core(stage: str) -> None:
     stage_dir = WHATFROM_DIR / stage
+    assert stage_dir.is_dir(), (
+        f"{stage_dir}가 없다. 없는 디렉터리는 검사할 파일이 없어 그냥 통과한다."
+    )
     for path in sorted(stage_dir.rglob("*.py")):
         for module, node in _whatfrom_imports(path):
             allowed = _is_within(module, f"whatfrom.{stage}") or _is_within(module, "whatfrom.core")

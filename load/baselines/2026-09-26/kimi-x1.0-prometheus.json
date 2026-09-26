@@ -1,0 +1,186 @@
+{
+ "queried_at_eval_time": "2026-09-26T04:49:54Z",
+ "run_started": "2026-09-26T04:24:54Z",
+ "queries": {
+  "in_progress_max": {
+   "promql": "max_over_time(whatfrom_requests_in_progress{path=\"/recommend\"}[25m])",
+   "result": [
+    {
+     "labels": {
+      "instance": "host.docker.internal:8000",
+      "job": "whatfrom",
+      "path": "/recommend"
+     },
+     "value": "371"
+    }
+   ]
+  },
+  "threadpool_wait_p50": {
+   "promql": "histogram_quantile(0.5, sum by (le) (increase(whatfrom_threadpool_wait_seconds_bucket[25m])))",
+   "result": [
+    {
+     "labels": {},
+     "value": "210.79646017699116"
+    }
+   ]
+  },
+  "threadpool_wait_p95": {
+   "promql": "histogram_quantile(0.95, sum by (le) (increase(whatfrom_threadpool_wait_seconds_bucket[25m])))",
+   "result": [
+    {
+     "labels": {},
+     "value": "300"
+    }
+   ]
+  },
+  "stage_seconds_p50": {
+   "promql": "histogram_quantile(0.5, sum by (le, stage) (increase(whatfrom_stage_seconds_bucket[25m])))",
+   "result": [
+    {
+     "labels": {
+      "stage": "search"
+     },
+     "value": "0.027127672373344236"
+    },
+    {
+     "labels": {
+      "stage": "verify"
+     },
+     "value": "0.025"
+    },
+    {
+     "labels": {
+      "stage": "advise"
+     },
+     "value": "52.10953360401752"
+    },
+    {
+     "labels": {
+      "stage": "embedding"
+     },
+     "value": "0.25323275862068967"
+    },
+    {
+     "labels": {
+      "stage": "plan"
+     },
+     "value": "13.425905490571129"
+    }
+   ]
+  },
+  "outcomes_total": {
+   "promql": "sum by (outcome) (last_over_time(whatfrom_recommend_outcomes_total[25m]))",
+   "result": [
+    {
+     "labels": {
+      "outcome": "no_recommendation"
+     },
+     "value": "11"
+    },
+    {
+     "labels": {
+      "outcome": "ok"
+     },
+     "value": "448"
+    }
+   ]
+  },
+  "stage_errors_total": {
+   "promql": "sum by (stage) (last_over_time(whatfrom_stage_errors_total[25m]))",
+   "result": [
+    {
+     "labels": {
+      "stage": "advise"
+     },
+     "value": "11"
+    }
+   ]
+  },
+  "http_requests_total": {
+   "promql": "sum by (status) (last_over_time(whatfrom_http_request_seconds_count{path=\"/recommend\"}[25m]))",
+   "result": [
+    {
+     "labels": {
+      "status": "200"
+     },
+     "value": "459"
+    }
+   ]
+  },
+  "verify_completed_per_min": {
+   "promql": "sum(increase(whatfrom_stage_seconds_count{stage=\"verify\"}[1m]))",
+   "step_seconds": 60,
+   "start": "2026-09-26T04:24:54Z",
+   "end": "2026-09-26T04:49:54Z",
+   "values": [
+    "0",
+    "10.901756999836474",
+    "8.720771788303264",
+    "15.259964393416416",
+    "33.79667484328155",
+    "40.336500899394956",
+    "32.70824247710423",
+    "32.70527099950942",
+    "35.97906672481465",
+    "29.442233247914505",
+    "37.06664728541318",
+    "35.9803743412684",
+    "37.07405724670605",
+    "32.70467676877794",
+    "35.97122302158274",
+    "23.985172802267687",
+    "9.176059813755042"
+   ]
+  },
+  "http_completed_per_min": {
+   "promql": "sum(increase(whatfrom_http_request_seconds_count{path=\"/recommend\"}[1m]))",
+   "step_seconds": 60,
+   "start": "2026-09-26T04:24:54Z",
+   "end": "2026-09-26T04:49:54Z",
+   "values": [
+    "0",
+    "10.901756999836474",
+    "8.720771788303264",
+    "6.539984740035607",
+    "3.2706459525756344",
+    "6.541054199901884",
+    "18.53467073702573",
+    "5.450878499918237",
+    "9.81247274313127",
+    "6.542718499536557",
+    "11.99215059233956",
+    "14.174086861711793",
+    "9.813721035892776",
+    "82.85184781423743",
+    "243.07826466099849",
+    "23.985172802267687",
+    "10.323067290474423"
+   ]
+  },
+  "in_progress_max_per_min": {
+   "promql": "max_over_time(whatfrom_requests_in_progress{path=\"/recommend\"}[1m])",
+   "step_seconds": 60,
+   "start": "2026-09-26T04:24:54Z",
+   "end": "2026-09-26T04:49:54Z",
+   "values": [
+    "11",
+    "15",
+    "15",
+    "123",
+    "240",
+    "354",
+    "364",
+    "361",
+    "364",
+    "370",
+    "371",
+    "370",
+    "357",
+    "348",
+    "257",
+    "31",
+    "9"
+   ]
+  }
+ }
+}
