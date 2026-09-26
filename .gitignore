@@ -12,3 +12,5 @@ __pycache__/
 eval/results/
 # 실험의 벡터 캐시는 크고 로컬 색인에 묶여 있어 제외한다.
 eval/experiments/**/cache/
+# 부하 시험 결과(k6 요약 JSON)는 실행마다 생기므로 제외한다.
+load/results/
