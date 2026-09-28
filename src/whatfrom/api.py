@@ -4,11 +4,13 @@ from collections.abc import Callable, Generator
 from contextlib import AbstractContextManager, contextmanager
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, field_validator
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from whatfrom.admission import REJECTED_DETAIL, RecommendationLimiter, run_admitted
 from whatfrom.core.config import settings
 from whatfrom.core.contracts import RecommendedImage, RecommendResponse, SearchPlan
 from whatfrom.core.db import make_engine
@@ -16,6 +18,10 @@ from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import Repository
 from whatfrom.metrics import (
+    RECOMMEND_ACTIVE,
+    RECOMMEND_LIMIT,
+    RECOMMEND_REJECTED,
+    RECOMMEND_STARTED,
     STAGE_ERRORS,
     THREADPOOL_WAIT_SECONDS,
     MetricsMiddleware,
@@ -198,10 +204,26 @@ def recommend_for_question(
     )
 
 
+# /recommend의 503. 상한에 걸리면 추천 함수를 부르지 않고 바로 거절한다.
+REJECTED_RESPONSE = {
+    503: {
+        "description": "추천 작업 수 상한에 걸려 거절했다. Retry-After 뒤에 다시 시도한다.",
+        "headers": {
+            "Retry-After": {
+                "description": "다시 시도하기까지 기다릴 초",
+                "schema": {"type": "integer"},
+            }
+        },
+        "content": {"application/json": {"example": {"detail": REJECTED_DETAIL}}},
+    }
+}
+
+
 def create_app(
     engine: Engine | None = None,
     embedder: Embedder | None = None,
     provider: LLMProvider | None = None,
+    max_concurrent_recommendations: int | None = None,
 ) -> FastAPI:
     app = FastAPI(title="whatfrom")
     app.add_middleware(MetricsMiddleware)
@@ -210,6 +232,19 @@ def create_app(
     resolved_embedder = embedder or get_embedder(settings.embedder)
     resolved_provider = provider or get_provider(settings.llm_provider)
     factory = sessionmaker(bind=resolved_engine, expire_on_commit=False)
+
+    # 0도 명시한 값이다. `or`로 기본값을 고르면 0이 조용히 32가 되므로 None만 기본값으로 바꾼다.
+    limit = (
+        settings.max_concurrent_recommendations
+        if max_concurrent_recommendations is None
+        else max_concurrent_recommendations
+    )
+    limiter = RecommendationLimiter(limit)
+    app.state.limiter = limiter
+    RECOMMEND_LIMIT.set(limiter.limit)
+    # 수집할 때 읽는다. 자리는 스레드에서도 반환되므로 값을 따로 갱신하지 않는다.
+    RECOMMEND_ACTIVE.set_function(lambda: limiter.active)
+    retry_after = str(settings.recommend_retry_after_seconds)
 
     @contextmanager
     def open_session() -> Generator[Session]:
@@ -232,18 +267,34 @@ def create_app(
     async def metrics() -> Response:
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
-    @app.post("/recommend", response_model=RecommendResponse)
-    def recommend(body: RecommendRequest, request: Request) -> RecommendResponse:
-        # 미들웨어가 적은 도착 시각. 이 함수는 스레드 풀에서 돌므로
-        # 그 차이가 스레드를 기다린 시간이다.
+    # 비동기 함수라 FastAPI가 응답 모델 검증을 이벤트 루프에서 한다. 동기 함수면 검증도 스레드 풀을
+    # 다시 기다려, 처리를 마친 요청이 새로 들어온 요청 뒤에 다시 선다(F10 기준선).
+    @app.post("/recommend", response_model=RecommendResponse, responses=REJECTED_RESPONSE)
+    async def recommend(
+        body: RecommendRequest, request: Request
+    ) -> RecommendResponse | JSONResponse:
+        ticket = limiter.try_acquire()
+        if ticket is None:
+            # 추천용 스레드를 기다리지 않고 거절한다. 추천 함수를 부르지 않는다.
+            RECOMMEND_REJECTED.inc()
+            return JSONResponse(
+                {"detail": REJECTED_DETAIL}, status_code=503, headers={"Retry-After": retry_after}
+            )
+
         arrived_at = getattr(request.state, "arrived_at", None)
-        if arrived_at is not None:
-            THREADPOOL_WAIT_SECONDS.observe(time.perf_counter() - arrived_at)
-        response = recommend_for_question(
-            app.state.open_session,
-            resolved_embedder,
-            resolved_provider,
-            body.question,
+
+        def on_start() -> None:
+            # 스레드 안에서 추천 작업이 실제로 시작할 때 한 번 불린다.
+            RECOMMEND_STARTED.inc()
+            if arrived_at is not None:
+                THREADPOOL_WAIT_SECONDS.observe(time.perf_counter() - arrived_at)
+
+        response = await run_admitted(
+            ticket,
+            lambda: recommend_for_question(
+                app.state.open_session, resolved_embedder, resolved_provider, body.question
+            ),
+            on_start,
         )
         record_outcome(response)
         return response

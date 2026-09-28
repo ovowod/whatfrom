@@ -30,7 +30,7 @@ HTTP_REQUEST_SECONDS = Histogram(
 REQUESTS_IN_PROGRESS = Gauge("whatfrom_requests_in_progress", "지금 처리 중인 요청 수", ["path"])
 THREADPOOL_WAIT_SECONDS = Histogram(
     "whatfrom_threadpool_wait_seconds",
-    "요청이 도착한 뒤 /recommend 핸들러가 스레드에서 시작하기까지 기다린 시간",
+    "요청이 도착한 뒤 추천 작업이 스레드에서 시작하기까지 기다린 시간",
     buckets=BUCKETS,
 )
 STAGE_SECONDS = Histogram(
@@ -38,6 +38,14 @@ STAGE_SECONDS = Histogram(
 )
 RECOMMEND_OUTCOMES = Counter("whatfrom_recommend_outcomes", "추천 응답의 결과 종류", ["outcome"])
 STAGE_ERRORS = Counter("whatfrom_stage_errors", "외부 호출 실패(시간 초과 포함)", ["stage"])
+RECOMMEND_REJECTED = Counter(
+    "whatfrom_recommend_rejected", "추천 작업 수 상한에 걸려 503으로 거절한 요청 수"
+)
+# 결과 종류 카운터는 추천 함수가 정상으로 돌아와야 는다. 예상하지 못한 500도 세야
+# 서버가 한 일과 클라이언트가 받은 응답을 비교할 수 있다.
+RECOMMEND_STARTED = Counter("whatfrom_recommend_started", "추천 작업을 실제로 시작한 수")
+RECOMMEND_ACTIVE = Gauge("whatfrom_recommend_active", "수락해 자리를 점유한 추천 작업 수")
+RECOMMEND_LIMIT = Gauge("whatfrom_recommend_limit", "추천 작업 수 상한")
 
 
 @contextmanager
@@ -64,7 +72,7 @@ class MetricsMiddleware:
     """요청 시간과 처리 중인 요청 수를 잰다.
 
     순수 ASGI 미들웨어라 이벤트 루프에서 돈다. 스레드 풀이 다 찼을 때도 기록이 밀리지 않는다.
-    도착 시각을 scope의 state에 적어, /recommend 핸들러가 스레드를 얻기까지 기다린 시간을 잰다.
+    도착 시각을 scope의 state에 적어, 추천 작업이 스레드에서 시작하기까지 기다린 시간을 잰다.
     """
 
     def __init__(self, app: ASGIApp) -> None:

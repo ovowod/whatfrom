@@ -1,15 +1,18 @@
 # tests/test_api.py
 import json
+import threading
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 from prometheus_client import REGISTRY
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
+from whatfrom.admission import REJECTED_DETAIL
 from whatfrom.api import create_app
 from whatfrom.collect.hub import TagRow, VariantRow, parse_repository
 from whatfrom.collect.store import upsert_repository, upsert_tags
@@ -447,3 +450,123 @@ def test_a_failed_embedding_skips_the_later_stages(session):
     assert after["embedding"] == stages["embedding"] + 1
     assert {s: after[s] for s in STAGES[1:]} == {s: stages[s] for s in STAGES[1:]}
     assert _metric("whatfrom_stage_errors_total", {"stage": "embedding"}) == errors + 1
+
+
+class GateEmbedder(FakeEmbedder):
+    """첫 호출부터 풀려날 때까지 스레드를 붙잡고 호출 수를 센다.
+
+    풀리면 실패해 DB까지 가지 않는다.
+    """
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.entered = threading.Event()
+        self.release = threading.Event()
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        self.calls += 1
+        self.entered.set()
+        self.release.wait(10)
+        raise RemoteCallError("released")
+
+
+def test_recommend_rejects_at_once_when_every_seat_is_taken():
+    """자리가 없으면 추천 함수를 부르지 않고 503으로 거절한다. 다른 경로는 막히지 않는다."""
+    embedder = GateEmbedder()
+    provider = FakeLLMProvider()
+    app = create_app(embedder=embedder, provider=provider, max_concurrent_recommendations=1)
+    rejected = _metric("whatfrom_recommend_rejected_total")
+    started = _metric("whatfrom_recommend_started_total")
+    waits = _metric("whatfrom_threadpool_wait_seconds_count")
+
+    with TestClient(app) as client:
+        first = threading.Thread(
+            target=lambda: client.post("/recommend", json={"question": QUESTION})
+        )
+        first.start()
+        try:
+            assert embedder.entered.wait(5)
+
+            response = client.post("/recommend", json={"question": QUESTION})
+
+            assert response.status_code == 503
+            assert response.headers["Retry-After"] == "60"
+            assert response.json() == {"detail": REJECTED_DETAIL}
+            assert embedder.calls == 1
+            assert (provider.plan_calls, provider.calls) == ([], [])
+            assert _metric("whatfrom_recommend_rejected_total") == rejected + 1
+            assert app.state.limiter.active == 1
+            assert client.get("/health").status_code == 200
+            assert client.get("/metrics").status_code == 200
+        finally:
+            embedder.release.set()
+            first.join(10)
+
+    assert app.state.limiter.active == 0
+    assert _metric("whatfrom_recommend_started_total") == started + 1
+    assert _metric("whatfrom_threadpool_wait_seconds_count") == waits + 1
+
+
+class ExplodingEmbedder(FakeEmbedder):
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        raise ValueError("bug")
+
+
+def test_an_unexpected_error_returns_the_seat_and_counts_the_start():
+    """예상하지 못한 500도 시작한 작업으로 센다. 헛일 비교에서 빠지면 안 된다."""
+    app = create_app(
+        embedder=ExplodingEmbedder(), provider=FakeLLMProvider(), max_concurrent_recommendations=1
+    )
+    client = TestClient(app, raise_server_exceptions=False)
+    started = _metric("whatfrom_recommend_started_total")
+
+    assert client.post("/recommend", json={"question": QUESTION}).status_code == 500
+    assert client.post("/recommend", json={"question": QUESTION}).status_code == 500
+
+    assert app.state.limiter.active == 0
+    assert _metric("whatfrom_recommend_started_total") == started + 2
+
+
+def test_a_degraded_answer_returns_the_seat():
+    app = create_app(
+        embedder=BrokenEmbedder(), provider=FakeLLMProvider(), max_concurrent_recommendations=1
+    )
+    client = TestClient(app)
+
+    assert client.post("/recommend", json={"question": QUESTION}).status_code == 200
+    assert app.state.limiter.active == 0
+
+
+def test_create_app_rejects_a_zero_limit_instead_of_using_the_default():
+    with pytest.raises(ValueError):
+        create_app(
+            embedder=FakeEmbedder(), provider=FakeLLMProvider(), max_concurrent_recommendations=0
+        )
+
+
+def test_recommend_limit_and_active_gauges_reflect_the_current_app():
+    """게이지는 모듈 전역이라 마지막으로 만든 app이 이긴다. 그래서 이 app을 마지막에 만들고
+    바로 읽는다(운영에서는 프로세스마다 app이 하나뿐이라 문제가 없다)."""
+    app = create_app(
+        embedder=FakeEmbedder(), provider=FakeLLMProvider(), max_concurrent_recommendations=3
+    )
+
+    assert _metric("whatfrom_recommend_limit") == 3
+
+    ticket = app.state.limiter.try_acquire()
+    assert _metric("whatfrom_recommend_active") == 1
+
+    ticket.start()
+    ticket.finish()
+    assert _metric("whatfrom_recommend_active") == 0
+
+
+def test_openapi_documents_the_rejection():
+    app = create_app(embedder=FakeEmbedder(), provider=FakeLLMProvider())
+
+    responses = (
+        TestClient(app).get("/openapi.json").json()["paths"]["/recommend"]["post"]["responses"]
+    )
+
+    assert "Retry-After" in responses["503"]["headers"]
+    assert "200" in responses
