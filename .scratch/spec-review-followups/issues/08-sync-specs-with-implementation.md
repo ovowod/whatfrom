@@ -1,6 +1,6 @@
 # spec과 README 본문을 구현에 맞춘다
 
-Status: ready-for-agent
+Status: done
 Category: enhancement
 Source: Spec 리뷰 — 여러 spec
 
