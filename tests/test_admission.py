@@ -164,6 +164,7 @@ def test_cancel_before_the_thread_starts_returns_the_seat_and_skips_the_work():
     limiter = RecommendationLimiter(1)
     occupier = Blocker()
     work = Blocker()
+    starts: list[int] = []
 
     async def main() -> None:
         # 스레드 토큰을 하나로 줄이고 다른 작업이 쥐게 해, 추천 작업이 토큰을 기다리게 한다.
@@ -172,7 +173,9 @@ def test_cancel_before_the_thread_starts_returns_the_seat_and_skips_the_work():
             tg.start_soon(anyio.to_thread.run_sync, occupier)
             await wait_until(occupier.entered.is_set)
 
-            task = asyncio.create_task(run_admitted(limiter.try_acquire(), work))
+            task = asyncio.create_task(
+                run_admitted(limiter.try_acquire(), work, lambda: starts.append(1))
+            )
             await anyio.sleep(0.05)
             task.cancel()
             with pytest.raises(asyncio.CancelledError):
@@ -182,4 +185,6 @@ def test_cancel_before_the_thread_starts_returns_the_seat_and_skips_the_work():
             occupier.release.set()
 
     anyio.run(main)
+    # 스레드가 시작되기 전에 취소되었으므로 on_start 훅이 호출되지 않았다.
+    assert starts == []
     assert work.calls == 0
