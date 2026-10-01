@@ -1,6 +1,6 @@
 # 저하 응답 조립이 api.py에서 네 번 반복된다
 
-Status: ready-for-agent
+Status: done
 Category: enhancement
 Source: Standards 리뷰 — Duplicated Code (판단)
 

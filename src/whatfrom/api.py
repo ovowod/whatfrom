@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from whatfrom.admission import REJECTED_DETAIL, RecommendationLimiter, run_admitted
 from whatfrom.core.config import settings
-from whatfrom.core.contracts import RecommendedImage, RecommendResponse, SearchPlan
+from whatfrom.core.contracts import Candidate, RecommendedImage, RecommendResponse, SearchPlan
 from whatfrom.core.db import make_engine
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.httpclient import RemoteCallError
@@ -67,6 +67,19 @@ def recommend_for_question(
     notes: list[str] = []
     degraded = False
 
+    def without_recommendation(
+        candidates: list[Candidate], plan: SearchPlan | None = None
+    ) -> RecommendResponse:
+        """추천 없이 멈춘 단계의 응답. 확보한 후보와 지금까지의 notes를 싣는다."""
+        return RecommendResponse(
+            question=question,
+            recommendation=None,
+            candidates=candidates,
+            degraded=True,
+            notes=notes,
+            plan=plan,
+        )
+
     # 임베딩도 HTTP 호출이라 실패한다. 매 요청마다 부르므로 LLM보다 자주 실패한다.
     try:
         with stage_timer("embedding"):
@@ -74,13 +87,7 @@ def recommend_for_question(
     except RemoteCallError as exc:
         STAGE_ERRORS.labels("embedding").inc()
         notes.append(f"임베딩 생성에 실패해 후보를 만들지 못했습니다: {exc}")
-        return RecommendResponse(
-            question=question,
-            recommendation=None,
-            candidates=[],
-            degraded=True,
-            notes=notes,
-        )
+        return without_recommendation([])
 
     # 추출 프롬프트에 줄 목록이자 추출 결과를 대조할 목록이다.
     with open_session() as session:
@@ -107,14 +114,7 @@ def recommend_for_question(
 
     if not candidates:
         notes.append("검색된 후보가 없습니다. 수집·인덱싱이 되어 있는지 확인하세요.")
-        return RecommendResponse(
-            question=question,
-            recommendation=None,
-            candidates=[],
-            degraded=True,
-            notes=notes,
-            plan=plan,
-        )
+        return without_recommendation([], plan)
 
     try:
         with stage_timer("advise"):
@@ -122,14 +122,7 @@ def recommend_for_question(
     except RemoteCallError as exc:
         STAGE_ERRORS.labels("advise").inc()
         notes.append(f"LLM 근거 생성에 실패해 후보 목록만 반환합니다: {exc}")
-        return RecommendResponse(
-            question=question,
-            recommendation=None,
-            candidates=candidates,
-            degraded=True,
-            notes=notes,
-            plan=plan,
-        )
+        return without_recommendation(candidates, plan)
 
     with stage_timer("verify"), open_session() as session:
         verdict = verify_recommendation(session, recommendation, candidates)
@@ -143,14 +136,7 @@ def recommend_for_question(
         # 재시도를 도입하려면 먼저 답변이 검증에서 거부되는 비율을 확인해야 한다.
         # 재시도할 때는 이전 답변이 거부된 이유를 프롬프트에 포함해야 한다.
         notes.append(f"추천이 실재성 검증을 통과하지 못해 폐기했습니다: {verdict.reason}")
-        return RecommendResponse(
-            question=question,
-            recommendation=None,
-            candidates=candidates,
-            degraded=True,
-            notes=notes,
-            plan=plan,
-        )
+        return without_recommendation(candidates, plan)
 
     if verdict.unverifiable_dockerfile_refs:
         # Dockerfile은 사용자가 그대로 복사해 쓰는 산출물이다. 검증되지 않은
