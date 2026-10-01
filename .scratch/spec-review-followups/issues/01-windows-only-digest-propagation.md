@@ -1,6 +1,6 @@
 # Windows 전용 태그와 같은 digest를 가리키는 태그가 후보에 남는다
 
-Status: ready-for-agent
+Status: done
 Category: bug
 Source: Spec 리뷰 — `docs/superpowers/specs/2026-09-17-release-line-candidates-design.md` §3.1
 

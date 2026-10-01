@@ -72,7 +72,7 @@ def select_tags(
     아니라 그 버전으로 시작하는 고정 태그에서 고른다. 별칭 3.14는 3.14.7을 가리키므로
     3.14.6을 요구한 사람에게 줄 수 없고, 별칭만 고르면 존재하는 3.14.6을 버리게 된다.
     """
-    linux = [ref for ref in tags if not WINDOWS_ONLY.search(ref.tag)]
+    linux = _exclude_windows_only(tags)
     stable = _exclude_prerelease(linux)
     if not stable:
         return _by_recent_push(_fold_by_digest(_allowed(linux, allowed_ids)))[:limit]
@@ -103,7 +103,7 @@ def stale_pinned_lines(tags: list[TagRef], pinned_version: str, chosen: list[Tag
     지원 판정은 현재 시각이 아니라 리포지토리의 가장 최근 줄기와의 차이로 한다.
     후보에 없는 줄기는 알리지 않는다.
     """
-    stable = _exclude_prerelease([ref for ref in tags if not WINDOWS_ONLY.search(ref.tag)])
+    stable = _exclude_prerelease(_exclude_windows_only(tags))
     depth = _line_depth(stable)
     if depth is None:
         return []
@@ -133,16 +133,28 @@ def _allowed(refs: list[TagRef], allowed_ids: frozenset[int] | None) -> list[Tag
     return [ref for ref in refs if ref.id in allowed_ids]
 
 
-def _exclude_prerelease(tags: list[TagRef]) -> list[TagRef]:
-    """이름으로 걸러진 태그와, 그것과 같은 digest를 가리키는 태그를 뺀다.
+def _exclude_windows_only(tags: list[TagRef]) -> list[TagRef]:
+    """Windows 전용 tag와, 그것과 같은 digest를 가리키는 tag를 뺀다."""
+    return _exclude_with_digest(tags, {ref.id for ref in tags if WINDOWS_ONLY.search(ref.tag)})
 
-    ubuntu의 devel과 26.10처럼 개발 브랜치가 안정 버전 이름으로도 배포된다.
-    digest가 None이면 동일성을 알 수 없으므로 전파의 대상으로도, 근거로도 쓰지 않는다.
+
+def _exclude_prerelease(tags: list[TagRef]) -> list[TagRef]:
+    """prerelease·날짜 snapshot 이름의 tag와, 그것과 같은 digest를 가리키는 tag를 뺀다.
+
+    ubuntu의 devel과 26.10처럼 개발 branch가 안정 version 이름으로도 배포된다.
     """
     named_ids = {
         ref.id for ref in tags if PRERELEASE.search(ref.tag) or DATE_SNAPSHOT.match(ref.tag)
     }
-    prerelease_digests = {
+    return _exclude_with_digest(tags, named_ids)
+
+
+def _exclude_with_digest(tags: list[TagRef], named_ids: set[int]) -> list[TagRef]:
+    """named_ids의 tag와, 그것과 같은 digest를 가리키는 tag를 뺀다.
+
+    digest가 None이면 동일성을 알 수 없으므로 전파의 대상으로도, 근거로도 쓰지 않는다.
+    """
+    named_digests = {
         ref.manifest_digest
         for ref in tags
         if ref.id in named_ids and ref.manifest_digest is not None
@@ -151,7 +163,7 @@ def _exclude_prerelease(tags: list[TagRef]) -> list[TagRef]:
         ref
         for ref in tags
         if ref.id not in named_ids
-        and not (ref.manifest_digest is not None and ref.manifest_digest in prerelease_digests)
+        and not (ref.manifest_digest is not None and ref.manifest_digest in named_digests)
     ]
 
 

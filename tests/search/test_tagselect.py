@@ -336,6 +336,33 @@ def test_a_repo_with_only_windows_tags_has_no_candidates():
     assert select_tags(tags, limit=10) == []
 
 
+def test_a_tag_sharing_a_digest_with_a_windows_only_tag_is_excluded_too():
+    """이름에 Windows 표시가 없어도 Windows 전용 tag와 같은 image면 함께 뺀다."""
+    tags = [
+        ref(1, "3.14-windowsservercore", digest="sha256:win"),
+        ref(2, "3.14-win", digest="sha256:win"),
+        ref(3, "3.14-slim"),
+    ]
+    assert [t.tag for t in select_tags(tags, limit=10)] == ["3.14-slim"]
+
+
+def test_a_windows_only_tag_without_a_digest_excludes_nothing_else():
+    tags = [ref(1, "3.14-nanoserver", digest=None), ref(2, "3.14-slim", digest=None)]
+    assert [t.tag for t in select_tags(tags, limit=10)] == ["3.14-slim"]
+
+
+def test_a_line_made_only_of_windows_images_is_not_reported_as_stale():
+    """Windows 전용 tag와 digest가 같은 별칭은 줄기로 세지 않는다."""
+    now = datetime(2026, 9, 17, tzinfo=UTC)
+    old = now - timedelta(days=300)
+    tags = [
+        ref(1, "3.14", pushed=now),
+        ref(2, "3.9-windowsservercore", digest="sha256:win", pushed=old),
+        ref(3, "3.9", digest="sha256:win", pushed=old),
+    ]
+    assert stale_pinned_lines(tags, "3.9", [tags[2]]) == []
+
+
 def test_a_line_without_push_times_is_dropped_when_others_have_them():
     tags = [ref(1, "18", pushed=NOW), ref(2, "17", pushed=None)]
     assert [t.tag for t in select_tags(tags, limit=10)] == ["18"]
