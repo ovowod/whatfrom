@@ -1,6 +1,6 @@
 # eval/__init__.py docstring이 PyYAML import 방식을 반대로 설명한다
 
-Status: ready-for-agent
+Status: done
 Category: bug
 Source: Spec 리뷰 — `docs/superpowers/specs/2026-09-10-goldenset-eval-design.md`
 
