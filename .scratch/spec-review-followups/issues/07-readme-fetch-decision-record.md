@@ -1,6 +1,6 @@
 # README 원본 수집 방식 변경을 정한 spec이 없다
 
-Status: ready-for-agent
+Status: done
 Category: enhancement
 Source: Spec 리뷰 — `docs/superpowers/specs/2026-09-14-collection-expansion-design.md`
 
