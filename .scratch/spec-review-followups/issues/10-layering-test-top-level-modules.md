@@ -1,6 +1,6 @@
 # 계층 테스트가 최상위 모듈을 검사하지 않는다
 
-Status: ready-for-agent
+Status: done
 Category: enhancement
 Source: Spec 리뷰 — `docs/superpowers/specs/2026-09-06-ci-and-package-layout-design.md`
 
