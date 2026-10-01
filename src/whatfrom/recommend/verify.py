@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from whatfrom.core.contracts import Candidate, Recommendation
+from whatfrom.core.contracts import Candidate, Recommendation, split_image
 from whatfrom.core.models import ImageTag
 
 # FROM [--platform=...] <ref> [AS <stage>]
@@ -78,6 +78,20 @@ class VerifyResult:
     unverifiable_dockerfile_refs: tuple[str, ...] = ()
 
 
+def image_exists(session: Session, image: str) -> bool:
+    """image("repository:tag")가 수집된 tag인가. 요청 시점에 받을 수 있는지까지는 보지 않는다."""
+    parts = split_image(image)
+    if parts is None:
+        return False
+    repository, tag = parts
+    return (
+        session.execute(
+            select(ImageTag.id).where(ImageTag.repository == repository, ImageTag.tag == tag)
+        ).scalar_one_or_none()
+        is not None
+    )
+
+
 def verify_recommendation(
     session: Session, rec: Recommendation, candidates: list[Candidate]
 ) -> VerifyResult:
@@ -97,15 +111,7 @@ def verify_recommendation(
     def is_real(image: str) -> bool:
         if image.count(":") != 1 or image.startswith(":") or image.endswith(":"):
             return False
-        if image not in offered:
-            return False
-        repository, tag = image.split(":", 1)
-        return (
-            session.execute(
-                select(ImageTag.id).where(ImageTag.repository == repository, ImageTag.tag == tag)
-            ).scalar_one_or_none()
-            is not None
-        )
+        return image in offered and image_exists(session, image)
 
     if not is_real(rec.image):
         return VerifyResult(False, f"{rec.image} is not a verifiable candidate image")

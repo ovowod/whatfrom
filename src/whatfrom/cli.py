@@ -30,13 +30,14 @@ from whatfrom.collect.sync import (
     collect_all,
 )
 from whatfrom.core.config import settings
-from whatfrom.core.contracts import RecommendResponse
+from whatfrom.core.contracts import RecommendResponse, split_image
 from whatfrom.core.db import make_engine, session_factory, session_scope
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.models import Base, Document, DocumentChunk, ImageTag, Repository
 from whatfrom.eval.timing import Timed
 from whatfrom.index.indexer import index_readme
 from whatfrom.recommend.llm import LLMProvider, get_provider
+from whatfrom.recommend.verify import image_exists
 from whatfrom.search.retrieval import (
     search_candidates_by_vector,
     search_chunks,
@@ -210,7 +211,7 @@ def accepted_digests(session: Session, accept: list[str]) -> frozenset[str]:
 
     측정 시점 DB 기준이다. 수집되지 않았거나 digest가 없는 태그는 빠진다.
     """
-    pairs = [tuple(image.split(":", 1)) for image in accept if ":" in image]
+    pairs = [parts for image in accept if (parts := split_image(image)) is not None]
     if not pairs:
         return frozenset()
     return frozenset(
@@ -332,16 +333,8 @@ def cmd_eval(args: argparse.Namespace) -> None:
 
         exists: bool | None = None
         if response.recommendation is not None:
-            repository, _, tag = response.recommendation.image.partition(":")
             with open_session() as session:
-                exists = (
-                    session.execute(
-                        select(ImageTag.id).where(
-                            ImageTag.repository == repository, ImageTag.tag == tag
-                        )
-                    ).scalar_one_or_none()
-                    is not None
-                )
+                exists = image_exists(session, response.recommendation.image)
         with open_session() as session:
             digests = accepted_digests(session, case.accept)
         score = score_full(case, response, sections, exists, digests)

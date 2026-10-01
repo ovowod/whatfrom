@@ -1,6 +1,6 @@
 # "repo:tag" 문자열을 곳곳에서 다른 방식으로 쪼갠다
 
-Status: ready-for-agent
+Status: done
 Category: enhancement
 Source: Standards 리뷰 — Primitive Obsession, Duplicated Code (판단)
 
