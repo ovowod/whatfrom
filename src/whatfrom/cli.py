@@ -4,8 +4,8 @@ import hashlib
 import json
 import random
 import time
-from collections.abc import Callable, Generator, Sequence
-from contextlib import AbstractContextManager, contextmanager
+from collections.abc import Callable, Sequence
+from contextlib import AbstractContextManager
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 import httpx2
 from sqlalchemy import Engine, inspect, select, text, tuple_
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 if TYPE_CHECKING:
     from whatfrom.eval.goldenset import GoldenSet
@@ -31,7 +31,7 @@ from whatfrom.collect.sync import (
 )
 from whatfrom.core.config import settings
 from whatfrom.core.contracts import RecommendResponse
-from whatfrom.core.db import make_engine, session_scope
+from whatfrom.core.db import make_engine, session_factory, session_scope
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.models import Base, Document, DocumentChunk, ImageTag, Repository
 from whatfrom.eval.timing import Timed
@@ -187,25 +187,6 @@ def cmd_search(args: argparse.Namespace) -> None:
             print(f"    {chunk.content[:160].replace(chr(10), ' ')}")
 
 
-def _open_session_factory(engine: Engine):
-    """recommend_for_question이 요구하는 세션 팩토리를 만든다.
-
-    DB 조회 구간마다 세션을 열고 닫아, 임베딩·LLM 응답을 기다리는 동안
-    DB 연결과 트랜잭션을 유지하지 않도록 한다.
-    """
-    factory = sessionmaker(bind=engine, expire_on_commit=False)
-
-    @contextmanager
-    def open_session() -> Generator[Session]:
-        session = factory()
-        try:
-            yield session
-        finally:
-            session.close()
-
-    return open_session
-
-
 def indexed_repositories(session: Session) -> set[str]:
     """임베딩이 있는 문서 청크를 하나 이상 가진 리포지터리 이름을 반환한다.
 
@@ -300,7 +281,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
     cases = [c for c in goldenset.cases if not wanted or wanted & set(c.tags)]
 
     engine = make_engine(args.database_url)
-    open_session = _open_session_factory(engine)
+    open_session = session_factory(engine)
     embedder = get_embedder(args.embedder)
 
     with open_session() as session:

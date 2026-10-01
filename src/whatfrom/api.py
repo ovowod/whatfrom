@@ -1,19 +1,19 @@
 # src/whatfrom/api.py
 import time
-from collections.abc import Callable, Generator
-from contextlib import AbstractContextManager, contextmanager
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, field_validator
 from sqlalchemy import Engine, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from whatfrom.admission import REJECTED_DETAIL, RecommendationLimiter, run_admitted
 from whatfrom.core.config import settings
 from whatfrom.core.contracts import Candidate, RecommendedImage, RecommendResponse, SearchPlan
-from whatfrom.core.db import make_engine
+from whatfrom.core.db import make_engine, session_factory
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import Repository
@@ -217,7 +217,6 @@ def create_app(
     resolved_engine = engine or make_engine(settings.database_url)
     resolved_embedder = embedder or get_embedder(settings.embedder)
     resolved_provider = provider or get_provider(settings.llm_provider)
-    factory = sessionmaker(bind=resolved_engine, expire_on_commit=False)
 
     # 0도 명시한 값이다. `or`로 기본값을 고르면 0이 조용히 32가 되므로 None만 기본값으로 바꾼다.
     limit = (
@@ -232,16 +231,8 @@ def create_app(
     RECOMMEND_ACTIVE.set_function(lambda: limiter.active)
     retry_after = str(settings.recommend_retry_after_seconds)
 
-    @contextmanager
-    def open_session() -> Generator[Session]:
-        session = factory()
-        try:
-            yield session
-        finally:
-            session.close()
-
     # 테스트는 app.state.open_session을 롤백 세션을 내주는 팩토리로 갈아끼운다.
-    app.state.open_session = open_session
+    app.state.open_session = session_factory(resolved_engine)
 
     @app.get("/health")
     def health() -> dict[str, str]:

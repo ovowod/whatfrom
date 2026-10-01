@@ -1,6 +1,6 @@
 # session factory 코드가 api.py와 cli.py에 중복돼 있다
 
-Status: ready-for-agent
+Status: done
 Category: enhancement
 Source: Standards 리뷰 — Duplicated Code (판단)
 
