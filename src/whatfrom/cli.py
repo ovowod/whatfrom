@@ -91,8 +91,29 @@ def _format_collect_summary(outcomes: list[CollectOutcome]) -> str:
     return "\n".join(lines)
 
 
+def _target_repositories(args: argparse.Namespace) -> Sequence[str]:
+    return OFFICIAL_REPOSITORIES if args.all else (args.repository,)
+
+
+def _run_each(repositories: Sequence[str], run_one: Callable[[str], str]) -> int:
+    """repository마다 run_one을 부르고 그 결과 줄을 출력한다. 실패가 있으면 1을 돌려준다.
+
+    collect는 이 루프를 쓰지 않는다. 실패 격리와 실행 기록을 collect_all이 맡고,
+    결과를 표 하나로 모아 출력한다.
+    """
+    failed = 0
+    for repository in repositories:
+        try:
+            print(run_one(repository))
+        except Exception as exc:
+            # 한 repository의 실패가 나머지를 막지 않는다.
+            failed += 1
+            print(f"{repository:<16} failed: {type(exc).__name__}: {exc}")
+    return 1 if failed else 0
+
+
 def cmd_collect(args: argparse.Namespace) -> None:
-    repositories = OFFICIAL_REPOSITORIES if args.all else (args.repository,)
+    repositories = _target_repositories(args)
     engine = make_engine(args.database_url)
     with httpx2.Client(timeout=30.0) as http:
         code = run_collect(engine, HubClient(http), repositories, args.max_pages)
@@ -102,17 +123,12 @@ def cmd_collect(args: argparse.Namespace) -> None:
 
 def run_derive(engine: Engine, repositories: Sequence[str]) -> int:
     """이미 수집된 태그에 파생 값을 다시 채운다. Docker Hub를 부르지 않는다."""
-    failed = 0
-    for repository in repositories:
-        try:
-            with session_scope(engine) as session:
-                outcome = derive_repository(session, repository)
-            print(_format_derive_line(outcome))
-        except Exception as exc:
-            # 한 리포지토리의 실패가 나머지를 막지 않는다.
-            failed += 1
-            print(f"{repository:<16} failed: {type(exc).__name__}: {exc}")
-    return 1 if failed else 0
+
+    def derive_one(repository: str) -> str:
+        with session_scope(engine) as session:
+            return _format_derive_line(derive_repository(session, repository))
+
+    return _run_each(repositories, derive_one)
 
 
 def _format_derive_line(outcome: DeriveOutcome) -> str:
@@ -125,8 +141,7 @@ def _format_derive_line(outcome: DeriveOutcome) -> str:
 
 
 def cmd_derive(args: argparse.Namespace) -> None:
-    repositories = OFFICIAL_REPOSITORIES if args.all else (args.repository,)
-    code = run_derive(make_engine(args.database_url), repositories)
+    code = run_derive(make_engine(args.database_url), _target_repositories(args))
     if code:
         raise SystemExit(code)
 
@@ -143,27 +158,23 @@ def run_index(
     원본을 받지 못하면 잘린 Hub 본문으로 대신하지 않고 그 리포를 실패로 센다.
     이전 색인은 그대로 남는다.
     """
-    failed = 0
-    for repository in repositories:
-        try:
-            repo_row = parse_repository(client.fetch_repository(repository))
-            readme = fetch_readme(repository)
-            now = datetime.now(UTC)
-            with session_scope(engine) as session:
-                upsert_repository(session, repo_row, now)
-                created = index_readme(
-                    session, repository, readme, docs.docs_page_url(repository), embedder, now
-                )
-            print(f"{repository:<16} indexed {created} chunks")
-        except Exception as exc:
-            # 한 리포지토리의 실패가 나머지 색인을 막지 않는다.
-            failed += 1
-            print(f"{repository:<16} failed: {type(exc).__name__}: {exc}")
-    return 1 if failed else 0
+
+    def index_one(repository: str) -> str:
+        repo_row = parse_repository(client.fetch_repository(repository))
+        readme = fetch_readme(repository)
+        now = datetime.now(UTC)
+        with session_scope(engine) as session:
+            upsert_repository(session, repo_row, now)
+            created = index_readme(
+                session, repository, readme, docs.docs_page_url(repository), embedder, now
+            )
+        return f"{repository:<16} indexed {created} chunks"
+
+    return _run_each(repositories, index_one)
 
 
 def cmd_index(args: argparse.Namespace) -> None:
-    repositories = OFFICIAL_REPOSITORIES if args.all else (args.repository,)
+    repositories = _target_repositories(args)
     engine = make_engine(args.database_url)
     embedder = get_embedder(args.embedder)
     with httpx2.Client(timeout=30.0) as http:
@@ -448,6 +459,13 @@ def _positive_int(value: str) -> int:
     return parsed
 
 
+def _add_repository_target(parser: argparse.ArgumentParser, all_help: str) -> None:
+    """repository 하나 또는 --all 중 하나를 반드시 받는다."""
+    target = parser.add_mutually_exclusive_group(required=True)
+    target.add_argument("repository", nargs="?")
+    target.add_argument("--all", action="store_true", help=all_help)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="whatfrom")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -457,27 +475,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.set_defaults(func=cmd_init_db)
 
     p_collect = sub.add_parser("collect", help="collect tags from Docker Hub")
-    collect_target = p_collect.add_mutually_exclusive_group(required=True)
-    collect_target.add_argument("repository", nargs="?")
-    collect_target.add_argument(
-        "--all", action="store_true", help="스펙의 공식 이미지 10개를 모두 수집"
-    )
+    _add_repository_target(p_collect, all_help="스펙의 공식 이미지 10개를 모두 수집")
     # 익명 요청은 리포지토리당 10페이지(1,000개)까지만 닿는다.
     p_collect.add_argument("--max-pages", type=_positive_int, default=None)
     p_collect.add_argument("--database-url", default=settings.database_url)
     p_collect.set_defaults(func=cmd_collect)
 
     p_derive = sub.add_parser("derive", help="fill derived tag columns from collected tags")
-    derive_target = p_derive.add_mutually_exclusive_group(required=True)
-    derive_target.add_argument("repository", nargs="?")
-    derive_target.add_argument("--all", action="store_true", help="공식 이미지 10개를 모두 채움")
+    _add_repository_target(p_derive, all_help="공식 이미지 10개를 모두 채움")
     p_derive.add_argument("--database-url", default=settings.database_url)
     p_derive.set_defaults(func=cmd_derive)
 
     p_index = sub.add_parser("index", help="fetch README, chunk it, embed it")
-    index_target = p_index.add_mutually_exclusive_group(required=True)
-    index_target.add_argument("repository", nargs="?")
-    index_target.add_argument("--all", action="store_true", help="공식 이미지 10개를 모두 색인")
+    _add_repository_target(p_index, all_help="공식 이미지 10개를 모두 색인")
     p_index.add_argument("--embedder", default=settings.embedder)
     p_index.add_argument("--database-url", default=settings.database_url)
     p_index.set_defaults(func=cmd_index)

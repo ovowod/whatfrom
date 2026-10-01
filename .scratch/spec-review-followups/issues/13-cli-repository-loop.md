@@ -1,6 +1,6 @@
 # CLI의 repository별 실행 루프가 세 번 반복된다
 
-Status: ready-for-agent
+Status: done
 Category: enhancement
 Source: Standards 리뷰 — Duplicated Code (판단)
 
