@@ -178,7 +178,9 @@ def search_candidates_with_plan(
 
     if relaxed:
         degraded = True
-        notes.append(f"조건에 맞는 태그가 없어 {', '.join(relaxed)}을 풀었습니다.")
+        # 풀어도 후보가 없으면 소용없던 완화다. 후보가 없다는 안내는 호출한 쪽이 한다.
+        if chosen_by_repo:
+            notes.append(f"조건에 맞는 태그가 없어 {', '.join(relaxed)}을 풀었습니다.")
     # 실제로 쓰인 단계의 버전으로, 최종 후보에 들어간 줄기만 알린다. 버전 조건을 풀었으면
     # 되살린 줄기가 없으므로 알릴 것도 없다.
     if stage.version_prefix is not None:

@@ -1,6 +1,6 @@
 # 후보가 0개일 때 "조건을 풀었다" 알림이 함께 나간다
 
-Status: ready-for-agent
+Status: done
 Category: bug
 Source: Spec 리뷰 — `docs/superpowers/specs/2026-09-19-search-plan-design.md`
 

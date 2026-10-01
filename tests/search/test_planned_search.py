@@ -281,3 +281,16 @@ def test_a_forced_repository_found_by_the_search_keeps_that_evidence(session):
     )
 
     assert [e.section_title for e in result.candidates[0].evidence] == ["How to use this Image"]
+
+
+def test_no_relaxation_note_when_relaxing_finds_no_candidate(session):
+    """조건을 모두 풀어도 후보가 없으면, 소용없던 완화를 알리지 않는다. 저하 표시는 남는다."""
+    add_repository(session, "py", PY_README)
+
+    result = search_candidates_with_plan(
+        session, vector("python slim"), SearchPlan(distributions=["bookworm"])
+    )
+
+    assert images(result) == []
+    assert result.notes == []
+    assert result.degraded is True
