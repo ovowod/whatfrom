@@ -47,6 +47,21 @@
       "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [{ "refId": "A", "expr": "sum by (stage) (rate(whatfrom_stage_errors_total[1m]))", "legendFormat": "{{stage}}" }]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "추천 작업 자리 (점유 / 상한)",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "whatfrom_recommend_active", "legendFormat": "점유" },
+        { "refId": "B", "expr": "whatfrom_recommend_limit", "legendFormat": "상한" }
+      ]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "거절 (초당)",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "rate(whatfrom_recommend_rejected_total[1m])", "legendFormat": "거절" }]
     }
   ]
 }

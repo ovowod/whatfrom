@@ -40,6 +40,12 @@ const recommendOk = new Rate('recommend_ok');
 const requestsFinished = new Counter('requests_finished');
 const responsesReceived = new Counter('responses_received');
 const recommendationsSucceeded = new Counter('recommendations_succeeded');
+// 503(상한에 걸려 거절)과 200을 따로 센다. 빠른 거절과 타임아웃이 같은 실패로 섞이지 않게 하고,
+// 서버가 시작한 작업 수와 클라이언트가 받은 200 수를 맞춰 볼 수 있게 한다.
+const rejected = new Counter('rejected');
+const received200 = new Counter('received_200');
+// 200 응답을 받은 요청만의 지연. 타임아웃·연결 오류·500은 빠진다.
+const acceptedSeconds = new Trend('accepted_seconds');
 
 // k6 요약은 임계값으로 참조한 하위 지표만 따로 보여 준다. 기준선을 재는 것이지 판정하는 게
 // 아니므로 늘 참인 조건을 건다(지표 종류마다 쓸 수 있는 집계가 다르다).
@@ -48,11 +54,15 @@ for (const phase of PHASES) {
   thresholds[`recommend_seconds{scenario:${phase.name}}`] = ['max>=0'];
   thresholds[`recommend_ok{scenario:${phase.name}}`] = ['rate>=0'];
   thresholds[`dropped_iterations{scenario:${phase.name}}`] = ['count>=0'];
+  thresholds[`rejected{scenario:${phase.name}}`] = ['count>=0'];
+  thresholds[`accepted_seconds{scenario:${phase.name}}`] = ['max>=0'];
 }
 for (const window of WINDOWS) {
   thresholds[`requests_finished{window:${window}}`] = ['count>=0'];
   thresholds[`responses_received{window:${window}}`] = ['count>=0'];
   thresholds[`recommendations_succeeded{window:${window}}`] = ['count>=0'];
+  thresholds[`rejected{window:${window}}`] = ['count>=0'];
+  thresholds[`received_200{window:${window}}`] = ['count>=0'];
 }
 
 export const options = {
@@ -97,12 +107,18 @@ export function recommend() {
     timeout: '300s',
     tags: { name: 'recommend' },
   });
-  recommendSeconds.add((Date.now() - started) / 1000);
+  const seconds = (Date.now() - started) / 1000;
+  recommendSeconds.add(seconds);
 
   // 요청 종료 ⊃ 응답 수신 ⊃ 추천 성공. 타임아웃·연결 오류는 status 0이다.
   const window = windowAt(exec.instance.currentTestRunDuration / 1000);
   requestsFinished.add(1, { window });
   if (res.status !== 0) responsesReceived.add(1, { window });
+  if (res.status === 503) rejected.add(1, { window });
+  if (res.status === 200) {
+    received200.add(1, { window });
+    acceptedSeconds.add(seconds);
+  }
 
   let ok = false;
   if (res.status === 200) {
@@ -129,14 +145,27 @@ export function handleSummary(data) {
   const byStart = {};
   for (const phase of PHASES) {
     const trend = `recommend_seconds{scenario:${phase.name}}`;
+    const n = metricValue(data, trend, 'count') || 0;
+    const rejectedCount = metricValue(data, `rejected{scenario:${phase.name}}`, 'count') || 0;
+    const accepted = `accepted_seconds{scenario:${phase.name}}`;
+    // 표본이 없는 Trend는 k6가 0으로 보고할 수 있어, 상한 판정(예: p95<=150초)이 거짓으로
+    // 통과하지 않도록 count로 표본 유무를 확인한 뒤에만 값을 쓴다.
+    const acceptedCount = metricValue(data, accepted, 'count') || 0;
+    const acc = (stat) => (acceptedCount > 0 ? metricValue(data, accepted, stat) : null);
     byStart[phase.name] = {
-      n: metricValue(data, trend, 'count') || 0,
+      n,
       p50: metricValue(data, trend, 'p(50)'),
       p95: metricValue(data, trend, 'p(95)'),
       p99: metricValue(data, trend, 'p(99)'),
       max: metricValue(data, trend, 'max'),
       success_rate: metricValue(data, `recommend_ok{scenario:${phase.name}}`, 'rate'),
       dropped: metricValue(data, `dropped_iterations{scenario:${phase.name}}`, 'count') || 0,
+      rejected: rejectedCount,
+      rejected_rate: n > 0 ? rejectedCount / n : null,
+      accepted_n: acceptedCount,
+      accepted_p50: acc('p(50)'),
+      accepted_p95: acc('p(95)'),
+      accepted_p99: acc('p(99)'),
     };
   }
 
@@ -155,6 +184,8 @@ export function handleSummary(data) {
       succeeded,
       responses_per_s: seconds > 0 ? responses / seconds : null,
       succeeded_per_s: seconds > 0 ? succeeded / seconds : null,
+      rejected: count('rejected'),
+      received_200: count('received_200'),
     };
   }
 
@@ -164,6 +195,7 @@ export function handleSummary(data) {
     test_run_seconds: testRunSeconds,
     by_start: byStart,
     by_completion: byCompletion,
+    received_200_total: metricValue(data, 'received_200', 'count') || 0,
   };
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const text = JSON.stringify(result, null, 2);

@@ -1,0 +1,263 @@
+{
+ "start": "2026-09-30T12:32:35Z",
+ "end": "2026-09-30T12:45:21Z",
+ "window": "826s",
+ "queries": {
+  "started_total": {
+   "promql": "sum(last_over_time(whatfrom_recommend_started_total[826s]))",
+   "result": [
+    {
+     "labels": {},
+     "value": "184"
+    }
+   ]
+  },
+  "outcomes_total": {
+   "promql": "sum by (outcome) (last_over_time(whatfrom_recommend_outcomes_total[826s]))",
+   "result": [
+    {
+     "labels": {
+      "outcome": "ok"
+     },
+     "value": "179"
+    },
+    {
+     "labels": {
+      "outcome": "no_recommendation"
+     },
+     "value": "5"
+    }
+   ]
+  },
+  "rejected_total": {
+   "promql": "sum(last_over_time(whatfrom_recommend_rejected_total[826s]))",
+   "result": [
+    {
+     "labels": {},
+     "value": "275"
+    }
+   ]
+  },
+  "http_requests_total": {
+   "promql": "sum by (status) (last_over_time(whatfrom_http_request_seconds_count{path=\"/recommend\"}[826s]))",
+   "result": [
+    {
+     "labels": {
+      "status": "200"
+     },
+     "value": "184"
+    },
+    {
+     "labels": {
+      "status": "503"
+     },
+     "value": "275"
+    }
+   ]
+  },
+  "stage_errors_total": {
+   "promql": "sum by (stage) (last_over_time(whatfrom_stage_errors_total[826s]))",
+   "result": [
+    {
+     "labels": {
+      "stage": "advise"
+     },
+     "value": "5"
+    }
+   ]
+  },
+  "active_max": {
+   "promql": "max_over_time(whatfrom_recommend_active[826s])",
+   "result": [
+    {
+     "labels": {
+      "instance": "host.docker.internal:8000",
+      "job": "whatfrom"
+     },
+     "value": "32"
+    }
+   ]
+  },
+  "limit": {
+   "promql": "max_over_time(whatfrom_recommend_limit[826s])",
+   "result": [
+    {
+     "labels": {
+      "instance": "host.docker.internal:8000",
+      "job": "whatfrom"
+     },
+     "value": "32"
+    }
+   ]
+  },
+  "in_progress_max": {
+   "promql": "max_over_time(whatfrom_requests_in_progress{path=\"/recommend\"}[826s])",
+   "result": [
+    {
+     "labels": {
+      "instance": "host.docker.internal:8000",
+      "job": "whatfrom",
+      "path": "/recommend"
+     },
+     "value": "32"
+    }
+   ]
+  },
+  "threadpool_wait_p50": {
+   "promql": "histogram_quantile(0.5, sum by (le) (increase(whatfrom_threadpool_wait_seconds_bucket[826s])))",
+   "result": [
+    {
+     "labels": {},
+     "value": "0.025"
+    }
+   ]
+  },
+  "threadpool_wait_p95": {
+   "promql": "histogram_quantile(0.95, sum by (le) (increase(whatfrom_threadpool_wait_seconds_bucket[826s])))",
+   "result": [
+    {
+     "labels": {},
+     "value": "0.0475"
+    }
+   ]
+  },
+  "stage_seconds_p50": {
+   "promql": "histogram_quantile(0.5, sum by (le, stage) (increase(whatfrom_stage_seconds_bucket[826s])))",
+   "result": [
+    {
+     "labels": {
+      "stage": "embedding"
+     },
+     "value": "0.32633587786259544"
+    },
+    {
+     "labels": {
+      "stage": "plan"
+     },
+     "value": "13.674698795180724"
+    },
+    {
+     "labels": {
+      "stage": "search"
+     },
+     "value": "0.026687443724666533"
+    },
+    {
+     "labels": {
+      "stage": "advise"
+     },
+     "value": "51.95783132530121"
+    },
+    {
+     "labels": {
+      "stage": "verify"
+     },
+     "value": "0.025"
+    }
+   ]
+  },
+  "started_per_min": {
+   "promql": "sum(increase(whatfrom_recommend_started_total[1m]))",
+   "start": "2026-09-30T12:32:35Z",
+   "end": "2026-09-30T12:45:21Z",
+   "step_seconds": 60,
+   "values": [
+    "0",
+    "11.991932699820122",
+    "11.991932699820122",
+    "11.990407673860911",
+    "25.069941503469828",
+    "28.33993387348763",
+    "25.071307886561417",
+    "11.990647295109813",
+    "11.982135724919212",
+    "11.981483162385404",
+    "11.981918196176679",
+    "11.980830670926519",
+    "1.0892652905615163"
+   ]
+  },
+  "http_200_per_min": {
+   "promql": "sum(increase(whatfrom_http_request_seconds_count{path=\"/recommend\",status=\"200\"}[1m]))",
+   "start": "2026-09-30T12:32:35Z",
+   "end": "2026-09-30T12:45:21Z",
+   "step_seconds": 60,
+   "values": [
+    "0",
+    "11.991932699820122",
+    "8.720296490080663",
+    "14.169966936743815",
+    "27.24993641681503",
+    "23.981251021928312",
+    "21.583165131197664",
+    "11.982135724919212",
+    "15.249160388490512",
+    "13.071183486738196",
+    "13.069997095556202",
+    "9.803387615053648"
+   ]
+  },
+  "rejected_per_min": {
+   "promql": "sum(increase(whatfrom_recommend_rejected_total[1m]))",
+   "start": "2026-09-30T12:32:35Z",
+   "end": "2026-09-30T12:45:21Z",
+   "step_seconds": 60,
+   "values": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "87.37141663336119",
+    "91.55978636049849",
+    "94.83494722308014",
+    "0",
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  "active_max_per_min": {
+   "promql": "max_over_time(whatfrom_recommend_active[1m])",
+   "start": "2026-09-30T12:32:35Z",
+   "end": "2026-09-30T12:45:21Z",
+   "step_seconds": 60,
+   "values": [
+    "0",
+    "11",
+    "15",
+    "15",
+    "32",
+    "32",
+    "32",
+    "27",
+    "16",
+    "17",
+    "13",
+    "17",
+    "13"
+   ]
+  },
+  "in_progress_max_per_min": {
+   "promql": "max_over_time(whatfrom_requests_in_progress{path=\"/recommend\"}[1m])",
+   "start": "2026-09-30T12:32:35Z",
+   "end": "2026-09-30T12:45:21Z",
+   "step_seconds": 60,
+   "values": [
+    "11",
+    "15",
+    "15",
+    "32",
+    "32",
+    "32",
+    "27",
+    "16",
+    "17",
+    "13",
+    "17",
+    "13"
+   ]
+  }
+ }
+}

@@ -1,0 +1,95 @@
+{
+  "label": "fast-x0.1",
+  "smoke": false,
+  "test_run_seconds": 661.835728865,
+  "by_start": {
+    "baseline": {
+      "n": 37,
+      "p50": 6.992,
+      "p95": 12.315199999999995,
+      "p99": 13.798399999999999,
+      "max": 14.081,
+      "success_rate": 1,
+      "dropped": 0,
+      "rejected": 0,
+      "rejected_rate": 0,
+      "accepted_n": 37,
+      "accepted_p50": 6.992,
+      "accepted_p95": 12.315199999999995,
+      "accepted_p99": 13.798399999999999
+    },
+    "spike": {
+      "n": 361,
+      "p50": 6.555,
+      "p95": 12.06,
+      "p99": 14.051599999999999,
+      "max": 14.136,
+      "success_rate": 1,
+      "dropped": 0,
+      "rejected": 0,
+      "rejected_rate": 0,
+      "accepted_n": 361,
+      "accepted_p50": 6.555,
+      "accepted_p95": 12.06,
+      "accepted_p99": 14.051599999999999
+    },
+    "recovery": {
+      "n": 60,
+      "p50": 6.7635000000000005,
+      "p95": 9.924449999999995,
+      "p99": 13.607849999999997,
+      "max": 14.071,
+      "success_rate": 1,
+      "dropped": 0,
+      "rejected": 0,
+      "rejected_rate": 0,
+      "accepted_n": 60,
+      "accepted_p50": 6.7635000000000005,
+      "accepted_p95": 9.924449999999995,
+      "accepted_p99": 13.607849999999997
+    }
+  },
+  "by_completion": {
+    "baseline": {
+      "seconds": 180,
+      "finished": 35,
+      "responses": 35,
+      "succeeded": 35,
+      "responses_per_s": 0.19444444444444445,
+      "succeeded_per_s": 0.19444444444444445,
+      "rejected": 0,
+      "received_200": 35
+    },
+    "spike": {
+      "seconds": 180,
+      "finished": 346,
+      "responses": 346,
+      "succeeded": 346,
+      "responses_per_s": 1.9222222222222223,
+      "succeeded_per_s": 1.9222222222222223,
+      "rejected": 0,
+      "received_200": 346
+    },
+    "recovery": {
+      "seconds": 300,
+      "finished": 76,
+      "responses": 76,
+      "succeeded": 76,
+      "responses_per_s": 0.25333333333333335,
+      "succeeded_per_s": 0.25333333333333335,
+      "rejected": 0,
+      "received_200": 76
+    },
+    "drain": {
+      "seconds": 1.8357288649999646,
+      "finished": 1,
+      "responses": 1,
+      "succeeded": 1,
+      "responses_per_s": 0.544742755352392,
+      "succeeded_per_s": 0.544742755352392,
+      "rejected": 0,
+      "received_200": 1
+    }
+  },
+  "received_200_total": 458
+}

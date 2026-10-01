@@ -27,5 +27,11 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("WHATFROM_LLM_API_KEY", "MOONSHOT_API_KEY"),
     )
 
+    # 동시에 수락하는 추천 작업 수(스펙 F11-a). 스레드 풀(기본 40)보다 작게 둬 /health 같은
+    # 동기 요청이 쓸 스레드를 남긴다. 최적값으로 검증한 값이 아니라 시작값이다.
+    max_concurrent_recommendations: int = 32
+    # 거절 응답의 Retry-After(초). 한 요청 시간의 중앙값에 가깝게 둔다.
+    recommend_retry_after_seconds: int = 60
+
 
 settings = Settings()
