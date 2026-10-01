@@ -5,9 +5,23 @@ from contextlib import AbstractContextManager, contextmanager
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from whatfrom.core.config import settings
 
-def make_engine(url: str) -> Engine:
-    return create_engine(url, pool_pre_ping=True, future=True)
+
+def make_engine(url: str, statement_timeout_ms: int | None = None) -> Engine:
+    """pool 크기는 settings에서 읽는다. statement timeout은 준 경우에만 건다."""
+    connect_args = {}
+    if statement_timeout_ms is not None:
+        connect_args["options"] = f"-c statement_timeout={statement_timeout_ms}"
+    return create_engine(
+        url,
+        pool_pre_ping=True,
+        future=True,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        pool_timeout=settings.db_pool_timeout_seconds,
+        connect_args=connect_args,
+    )
 
 
 def session_factory(engine: Engine) -> Callable[[], AbstractContextManager[Session]]:

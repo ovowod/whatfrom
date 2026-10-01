@@ -214,7 +214,9 @@ def create_app(
     app = FastAPI(title="whatfrom")
     app.add_middleware(MetricsMiddleware)
 
-    resolved_engine = engine or make_engine(settings.database_url)
+    resolved_engine = engine or make_engine(
+        settings.database_url, statement_timeout_ms=settings.db_statement_timeout_ms
+    )
     resolved_embedder = embedder or get_embedder(settings.embedder)
     resolved_provider = provider or get_provider(settings.llm_provider)
 

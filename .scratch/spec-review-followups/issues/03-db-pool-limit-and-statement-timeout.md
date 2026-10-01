@@ -1,6 +1,6 @@
 # DB connection pool 상한과 쿼리 timeout이 없다
 
-Status: ready-for-agent
+Status: done
 Category: enhancement
 Source: Spec 리뷰 — `docs/superpowers/specs/2026-09-03-whatfrom-design.md` §8
 

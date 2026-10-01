@@ -10,6 +10,15 @@ class Settings(BaseSettings):
     test_database_url: str = "postgresql+psycopg://whatfrom:whatfrom@localhost:5432/whatfrom_test"
     embedder: str = "fake"
 
+    # pool 기본값은 SQLAlchemy 기본값과 같다. 추천 경로는 DB 구간에서만 session을 잡아
+    # 동시 추천 수(32)보다 작아도 바로 막히지 않는다. 부하 측정 뒤 다시 본다.
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_pool_timeout_seconds: float = 30.0
+    # API 요청의 SQL 하나가 넘으면 안 되는 시간. 검색과 tag 조회는 ms 단위다.
+    # CLI batch(collect, index)에는 걸지 않는다.
+    db_statement_timeout_ms: int = 5000
+
     # 임베딩도 OpenAI 호환 /v1/embeddings 사용 (ollama pull bge-m3 등 로컬 포함)
     embedding_base_url: str = "http://localhost:11434/v1"
     embedding_model: str = "bge-m3"
