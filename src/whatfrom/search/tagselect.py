@@ -58,7 +58,8 @@ def select_tags(
        SUPPORT_GAP 넘게 뒤처진 변형 별칭은 뺀다.
     4. 줄기를 최신순으로 번갈아 돌며 limit까지 채운다. 한 줄기로 몰아 채우면
        최신 줄기의 변형만 들어가 LTS 줄기가 빠진다.
-    5. 줄기가 없으면 최근 푸시 순으로 고른다.
+    5. 줄기가 없으면 최근 푸시 순으로 고른다. 줄기는 있는데 지원 줄기의 별칭이 모두
+       빠졌으면, 지원 줄기의 tag(고정 tag 포함) 안에서만 최근 푸시 순으로 고른다.
 
     allowed_ids를 주면 그 태그만 고른다. 검색 조건을 통과한 태그다. 1~3단계의
     판정은 allowed_ids와 무관하게 tags 전체로 한다. 조건으로 먼저 거른 태그만 넘기면
@@ -88,12 +89,16 @@ def select_tags(
         ]
         return sorted(_fold_by_digest(fixed), key=lambda ref: (len(ref.tag), ref.tag))[:limit]
 
-    kept = [] if depth is None else _supported_aliases(stable, depth, pinned_version)
-    if not kept:
+    if depth is None:
         return _by_recent_push(_fold_by_digest(_allowed(stable, allowed_ids)))[:limit]
+    kept = _supported_aliases(stable, depth, pinned_version)
+    if not kept:
+        # 별칭이 모두 낡은 변형으로 빠진 경우다. 지원이 끝난 줄기를 되살리지 않는다.
+        lines = _supported_lines(stable, depth, pinned_version)
+        in_lines = [ref for ref in stable if _line_of(ref.tag, depth) in lines]
+        return _by_recent_push(_fold_by_digest(_allowed(in_lines, allowed_ids)))[:limit]
     # 같은 digest를 접기 전에 거른다. 접은 뒤에 거르면, 허용된 긴 이름이 허용되지 않은
     # 짧은 이름에 흡수되어 함께 사라진다.
-    assert depth is not None
     return _interleave(_group_lines(_fold_by_digest(_allowed(kept, allowed_ids)), depth), limit)
 
 
@@ -240,16 +245,22 @@ def _aliases_by_line(
 def _supported_aliases(tags: list[TagRef], depth: int, pinned_version: str | None) -> list[TagRef]:
     """지원 중인 줄기의 별칭 태그. 명시한 버전의 줄기는 지원이 끝났어도 넣는다."""
     aliases, latest_push = _aliases_by_line(tags, depth)
+    return [
+        ref
+        for line in sorted(_supported_lines(tags, depth, pinned_version))
+        for ref in _drop_stale_variants(aliases[line], latest_push.get(line))
+    ]
+
+
+def _supported_lines(tags: list[TagRef], depth: int, pinned_version: str | None) -> set[str]:
+    """별칭이 있는 줄기 중 지원 중인 것. 명시한 version의 줄기는 지원이 끝났어도 넣는다."""
+    aliases, latest_push = _aliases_by_line(tags, depth)
     supported = _supported({line: latest_push.get(line) for line in aliases})
     if pinned_version is not None:
         # 줄기가 요구 버전의 앞부분일 때만 되살린다. "3.12"는 3.12 줄기를 되살리지만
         # "3"은 3.x 줄기 전체를 되살리지 않는다.
         supported |= {line for line in aliases if extends_version(line, pinned_version)}
-    return [
-        ref
-        for line in sorted(supported)
-        for ref in _drop_stale_variants(aliases[line], latest_push.get(line))
-    ]
+    return supported
 
 
 def _group_lines(refs: list[TagRef], depth: int) -> list[list[TagRef]]:

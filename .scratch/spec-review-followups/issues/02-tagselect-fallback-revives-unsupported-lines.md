@@ -1,6 +1,6 @@
 # 지원 줄기의 별칭이 모두 빠지면 폴백이 지원 끝난 줄기를 되살린다
 
-Status: ready-for-agent
+Status: done
 Category: bug
 Source: Spec 리뷰 — `docs/superpowers/specs/2026-09-17-release-line-candidates-design.md` §3.3, §3.4, §3.6
 

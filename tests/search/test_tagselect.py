@@ -617,3 +617,29 @@ def test_a_stale_line_not_in_the_chosen_tags_is_not_reported():
     tags = [ref(1, "3.14", pushed=NOW), ref(2, "3.9", pushed=NOW - 300 * DAY)]
 
     assert stale_pinned_lines(tags, "3.9", [tags[0]]) == []
+
+
+def test_the_fallback_after_stale_aliases_stays_within_supported_lines():
+    """지원 줄기의 별칭이 모두 낡아 빠져도, 지원이 끝난 줄기는 되살리지 않는다.
+
+    3.14는 고정 tag 3.14.7이 최근에 푸시돼 지원 줄기지만, 별칭 3.14는 100일 전에 멈췄다.
+    폴백은 지원 줄기의 tag 안에서만 최근 푸시 순으로 고른다.
+    """
+    tags = [
+        ref(1, "3.14", pushed=NOW - 100 * DAY),
+        ref(2, "3.14.7", pushed=NOW),
+        ref(3, "3.9", pushed=NOW - 200 * DAY),
+        ref(4, "3.9.20", pushed=NOW - 200 * DAY),
+    ]
+    assert [t.tag for t in select_tags(tags, limit=10)] == ["3.14.7", "3.14"]
+
+
+def test_the_supported_line_fallback_filters_allowed_ids_before_folding():
+    """같은 digest 중 긴 이름만 허용됐으면 그 tag가 남는다. 접은 뒤 거르면 둘 다 사라진다."""
+    tags = [
+        ref(1, "3.14", pushed=NOW - 100 * DAY),
+        ref(2, "3.14.7", digest="sha256:same", pushed=NOW),
+        ref(3, "3.14.7-slim", digest="sha256:same", pushed=NOW),
+    ]
+    allowed = ids(tags, "3.14.7-slim")
+    assert [t.tag for t in select_tags(tags, limit=10, allowed_ids=allowed)] == ["3.14.7-slim"]
