@@ -155,7 +155,7 @@ def run_index(
 ) -> int:
     """README 본문은 fetch_readme(원본)에서 받는다. Hub 본문은 25,000자에서 잘린다.
 
-    원본을 받지 못하면 잘린 Hub 본문으로 대신하지 않고 그 리포를 실패로 센다.
+    원본을 받지 못하면 잘린 Hub 본문으로 대신하지 않고 그 repository를 실패로 센다.
     이전 색인은 그대로 남는다.
     """
 
@@ -194,15 +194,15 @@ def cmd_search(args: argparse.Namespace) -> None:
     embedder = get_embedder(args.embedder)
     with session_scope(engine) as session:
         for chunk, distance in search_chunks(session, embedder, args.question, limit=args.limit):
-            # 여러 리포지토리의 같은 제목 섹션이 함께 나오므로 리포지토리를 같이 적는다.
+            # 여러 repository의 같은 제목 섹션이 함께 나오므로 repository를 같이 적는다.
             print(f"[{distance:.4f}] {chunk.document.repository} — {chunk.document.section_title}")
             print(f"    {chunk.content[:160].replace(chr(10), ' ')}")
 
 
 def indexed_repositories(session: Session) -> set[str]:
-    """임베딩이 있는 문서 청크를 하나 이상 가진 리포지터리 이름을 반환한다.
+    """임베딩이 있는 문서 청크를 하나 이상 가진 repository 이름을 반환한다.
 
-    수집과 색인은 별도 단계다. 필요한 리포지터리가 색인되지 않은 문항은
+    수집과 색인은 별도 단계다. 필요한 repository가 색인되지 않은 문항은
     검색 품질을 평가할 수 없으므로, 0점으로 채점하지 않고 미측정으로 분류한다.
     청크의 존재만 확인하며 색인이 완전하거나 최신인지는 검사하지 않는다.
     """
@@ -326,8 +326,8 @@ def _score_case(
     vector = embedder.embed([case.question])[0]
     with open_session() as session:
         hits = search_chunks_by_vector(session, vector, limit=5)
-        # 제목만 넘기면 다른 리포의 같은 이름 섹션도 히트가 된다. 리포를
-        # 함께 넘겨 채점이 문항이 묻는 리포의 문서만 보게 한다.
+        # 제목만 넘기면 다른 repository의 같은 이름 섹션도 히트가 된다. repository를
+        # 함께 넘겨 채점이 문항이 묻는 repository의 문서만 보게 한다.
         sections = [(chunk.document.repository, chunk.document.section_title) for chunk, _ in hits]
 
     if provider is None:
@@ -488,7 +488,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_collect = sub.add_parser("collect", help="collect tags from Docker Hub")
     _add_repository_target(p_collect, all_help="스펙의 공식 이미지 10개를 모두 수집")
-    # 익명 요청은 리포지토리당 10페이지(1,000개)까지만 닿는다.
+    # 익명 요청은 repository당 10페이지(1,000개)까지만 닿는다.
     p_collect.add_argument("--max-pages", type=_positive_int, default=None)
     p_collect.add_argument("--database-url", default=settings.database_url)
     p_collect.set_defaults(func=cmd_collect)
@@ -521,7 +521,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_eval.add_argument("--database-url", default=settings.database_url)
     p_eval.set_defaults(func=cmd_eval)
 
-    p_load = sub.add_parser("load-questions", help="부하 시험용 질문과 고정 순서를 내보낸다")
+    p_load = sub.add_parser("load-questions", help="export load test questions and a fixed order")
     p_load.add_argument("--goldenset", default="eval/goldenset.yaml")
     p_load.add_argument("--out", default="load/questions.json")
     p_load.add_argument("--seed", type=int, default=0)

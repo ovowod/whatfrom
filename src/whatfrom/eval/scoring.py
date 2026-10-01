@@ -51,9 +51,9 @@ def _candidate_hit(
 
 
 def _hit_at5(case: GoldenCase, sections: list[tuple[str, str]]) -> bool:
-    """필요한 리포지터리의 검색 결과에 기대 섹션 제목이 하나라도 포함되는지 확인한다.
+    """필요한 repository의 검색 결과에 기대 섹션 제목이 하나라도 포함되는지 확인한다.
 
-    호출자가 상위 5개 청크의 (리포지터리, 섹션 제목)을 전달해야 한다.
+    호출자가 상위 5개 청크의 (repository, 섹션 제목)을 전달해야 한다.
     다른 제품의 동명 섹션은 제외하고, 버전 등이 붙은 제목도 찾도록 부분 일치한다.
     기대 섹션 하나만 발견해도 성공이므로 관련 문서의 회수 비율인 Recall과 다르다.
     제목만 비교하므로 청크 본문이 질문의 근거인지는 검증하지 않는다.
@@ -73,7 +73,7 @@ def score_retrieval(
     sections: list[tuple[str, str]],
     accepted_digests: frozenset[str] = frozenset(),
 ) -> RetrievalScore:
-    """sections는 상위 청크의 (리포, 섹션 제목) 쌍이다. 러너가 문서에서 뽑아 넘긴다.
+    """sections는 상위 청크의 (repository, 섹션 제목) 쌍이다. 러너가 문서에서 뽑아 넘긴다.
 
     accepted_digests는 accept 태그들의 digest다. 러너가 DB에서 조회해 넘긴다.
     """
@@ -155,7 +155,7 @@ class CaseScore:
     accurate: bool
     # 이름은 accept에 없지만 digest가 같아 정답으로 인정했는가.
     accurate_by_digest: bool
-    # 지표가 아니라 경보다. 리포트의 실패 목록에 표시된다.
+    # 지표가 아니라 경보다. report의 실패 목록에 표시된다.
     rejected_pick: bool
     candidate_hit: bool
     candidate_count: int

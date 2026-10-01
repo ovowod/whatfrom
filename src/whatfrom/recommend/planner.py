@@ -49,7 +49,7 @@ def build_plan_prompt(question: str, repositories: Sequence[str]) -> str:
 
 
 def normalize_plan(plan: SearchPlan, repositories: Sequence[str]) -> SearchPlan:
-    """LLM에 맡기지 않을 정리. 목록 밖 리포지토리는 버리고 표기를 맞춘다.
+    """LLM에 맡기지 않을 정리. 목록 밖 repository는 버리고 표기를 맞춘다.
 
     지정과 제외가 겹쳐도 지우지 않는다. 거르기에서 중복은 해가 없고, 코드네임이
     어느 배포판에 속하는지 알아야 중복을 판정할 수 있는데 그 표는 collect에 있다.

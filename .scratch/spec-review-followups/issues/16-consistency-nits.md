@@ -1,6 +1,6 @@
 # 주석 용어와 CLI help 언어를 통일한다
 
-Status: ready-for-agent
+Status: done
 Category: enhancement
 Source: Standards 리뷰 — 일관성 (판단)
 

@@ -2,7 +2,7 @@
 """러너가 실행 메타에 남기는 골든셋 출처와, 측정/미측정을 가르는 조회를 확인한다.
 
 cli.py는 stage들을 조합하는 지점이라 단위 테스트가 아니라 여기서 본다. 측정
-문항이 0이 되도록(색인되지 않은 리포를 요구하는 문항만) 골든셋을 짜서 LLM도
+문항이 0이 되도록(색인되지 않은 repository를 요구하는 문항만) 골든셋을 짜서 LLM도
 임베딩도 타지 않게 한다 — 보려는 것은 점수가 아니라 메타다.
 """
 
@@ -38,7 +38,7 @@ version: 1
 verified_on: 2026-09-12
 cases:
   - id: not-indexed
-    question: 색인되지 않은 리포를 요구해 미측정으로 빠진다
+    question: 색인되지 않은 repository를 요구해 미측정으로 빠진다
     requires_repositories: [there-is-no-such-repository]
     accept: [there-is-no-such-repository:1]
     expected_plan: {}
@@ -141,9 +141,9 @@ def _repository(name: str) -> Repository:
 
 
 def test_a_collected_but_unindexed_repository_is_not_available(session: Session) -> None:
-    """수집만 되고 색인되지 않은 리포는 미측정으로 빠져야 한다.
+    """수집만 되고 색인되지 않은 repository는 미측정으로 빠져야 한다.
 
-    collect와 index는 별도 단계다. 색인되지 않은 리포는 청크가 없어 검색이 늘
+    collect와 index는 별도 단계다. 색인되지 않은 repository는 청크가 없어 검색이 늘
     빈 결과를 주므로, 측정에 넣으면 그 문항들이 전부 0점이 되어 색인 커버리지가
     검색 품질로 둔갑한다.
     """
@@ -224,7 +224,7 @@ def _fixed_session(session: Session):
 
 
 def _seed_python(session: Session) -> None:
-    """추천 경로가 LLM #2까지 가도록 색인된 리포지토리와 태그 하나를 넣는다."""
+    """추천 경로가 LLM #2까지 가도록 색인된 repository와 태그 하나를 넣는다."""
     session.add(_repository("python"))
     session.flush()
     upsert_tags(

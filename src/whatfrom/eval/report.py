@@ -75,7 +75,7 @@ def random_baseline(scores: list[CaseScore] | list[RetrievalScore]) -> RandomBas
 
     후보를 모두 합쳐 나누지 않는다. 무작위 선택은 문항마다 따로 일어나므로, 합치면
     후보가 많은 문항이 결과를 좌우한다. 후보가 없는 문항은 맞힐 수 없으니 0으로 센다.
-    분모는 전체 후보다. 정답 리포지토리의 후보로 좁히지 않는다.
+    분모는 전체 후보다. 정답 repository의 후보로 좁히지 않는다.
     """
     if not scores:
         return RandomBaseline(expected=None, total=0)
@@ -115,7 +115,7 @@ def aggregate_full(scores: list[CaseScore]) -> list[Metric]:
             sum(s.hit_declared for s in scores),
         ),
         # 검색 조건 추출(LLM #1)의 품질. 추출에 실패한 문항은 실패로 센다.
-        Metric("리포 추출 일치율", sum(s.repository_extracted for s in scores), len(scores)),
+        Metric("repository 추출 일치율", sum(s.repository_extracted for s in scores), len(scores)),
         # 분모가 전체다. 조건이 없는 문항에서 없는 조건을 만들어내는 것도 실패다.
         Metric("조건 추출 일치율", sum(s.plan_matched for s in scores), len(scores)),
     ]

@@ -134,7 +134,7 @@ def test_shorter_names_come_first_within_the_same_version():
 
 
 def test_falls_back_to_recent_push_when_no_tag_has_a_version():
-    """debian:bookworm처럼 숫자 버전이 없는 리포. 후보를 0개로 만들지 않는다."""
+    """debian:bookworm처럼 숫자 버전이 없는 repository. 후보를 0개로 만들지 않는다."""
     tags = [
         ref(1, "bookworm", pushed=datetime(2026, 9, 1, tzinfo=UTC)),
         ref(2, "trixie", pushed=datetime(2026, 9, 3, tzinfo=UTC)),
@@ -296,7 +296,7 @@ def test_a_date_snapshot_is_not_a_release_line():
 
 
 def test_new_prerelease_words_are_excluded():
-    """숫자 버전이 없는 리포지토리는 폴백으로 가므로, 이름만으로 걸러져야 한다."""
+    """숫자 버전이 없는 repository는 폴백으로 가므로, 이름만으로 걸러져야 한다."""
     tags = [
         ref(1, "19beta3", pushed=NOW),
         ref(2, "tip-bookworm", pushed=NOW),
@@ -463,10 +463,10 @@ def test_undated_aliases_are_kept_when_the_whole_line_has_no_push_time():
 
 
 def test_the_variant_check_uses_its_own_lines_latest_push_not_the_repos():
-    """변형 판정은 그 줄기 자신의 최신 푸시를 기준으로 한다. 리포 전체의 최신 줄기가 아니다.
+    """변형 판정은 그 줄기 자신의 최신 푸시를 기준으로 한다. repository 전체의 최신 줄기가 아니다.
 
-    19가 리포에서 가장 최근에 푸시됐어도, 18-alpine은 자기 줄기 18의 최신 푸시(55일 전)
-    기준으로 55일 뒤처졌을 뿐이라 후보로 남는다. 리포 전체 기준(19의 지금)으로 재면
+    19가 repository에서 가장 최근에 푸시됐어도, 18-alpine은 자기 줄기 18의 최신 푸시(55일 전)
+    기준으로 55일 뒤처졌을 뿐이라 후보로 남는다. repository 전체 기준(19의 지금)으로 재면
     110일 뒤처져 잘못 빠진다.
     """
     tags = [
@@ -495,7 +495,7 @@ def test_allowed_ids_do_not_revive_an_unsupported_line():
 
 
 def test_allowed_ids_that_leave_only_prereleases_do_not_trigger_the_fallback():
-    """프리릴리스 폴백은 리포지토리에 안정 태그가 하나도 없을 때만이다."""
+    """프리릴리스 폴백은 repository에 안정 태그가 하나도 없을 때만이다."""
     tags = [
         ref(1, "3.14-trixie", pushed=NOW),
         ref(2, "3.15.0rc2-bookworm", pushed=NOW),

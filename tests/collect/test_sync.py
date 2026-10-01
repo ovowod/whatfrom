@@ -1,5 +1,5 @@
 # tests/collect/test_sync.py
-"""리포지토리 수집 흐름과 collection_runs 기록.
+"""repository 수집 흐름과 collection_runs 기록.
 
 실제 DB에 커밋한다. 페이지마다 트랜잭션을 여는 동작 자체가 검증 대상이라
 롤백 세션으로는 확인할 수 없다. 테스트가 쓴 행은 cleanup 픽스처가 지운다.
@@ -44,7 +44,7 @@ def tag(name: str, image_os: str = "linux", duplicate_variant: bool = False) -> 
 class FakeHub:
     """URL 경로로 응답을 정한다.
 
-    부분문자열로 매칭하면 리포지토리 경로가 태그 목록 경로에도 걸린다.
+    부분문자열로 매칭하면 repository 경로가 태그 목록 경로에도 걸린다.
     """
 
     def __init__(self) -> None:

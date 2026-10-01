@@ -92,7 +92,7 @@ def test_advise_propagates_provider_failure_as_llm_error():
 
 
 def test_build_prompt_keeps_the_same_section_from_different_repositories():
-    """리포지토리가 다르면 제목이 같아도 다른 문서다. 제목만으로 지우면 한쪽이 사라진다."""
+    """repository가 다르면 제목이 같아도 다른 문서다. 제목만으로 지우면 한쪽이 사라진다."""
     prompt = build_prompt("q", [_candidate("3.13-slim", 1), _candidate("24-slim", 2, "node")])
 
     assert "python: musl libc instead of glibc" in prompt
@@ -102,7 +102,7 @@ def test_build_prompt_keeps_the_same_section_from_different_repositories():
 
 
 def test_build_prompt_lists_a_shared_section_once():
-    """같은 리포지토리의 같은 섹션은 후보마다 붙어 있어도 한 번만 넘긴다."""
+    """같은 repository의 같은 섹션은 후보마다 붙어 있어도 한 번만 넘긴다."""
     prompt = build_prompt("q", [_candidate("3.13-slim", 1), _candidate("3.13-alpine", 2)])
 
     assert prompt.count("## python — Image Variants") == 1

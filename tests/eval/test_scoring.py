@@ -91,8 +91,8 @@ def test_miss_when_no_expected_section_matches() -> None:
 def test_miss_when_the_section_comes_from_another_repository() -> None:
     """다른 제품의 문서를 찾은 것은 성공이 아니다.
 
-    "Image Variants"는 열 개 리포에 전부 있고 40문항 중 25문항이 이 제목을
-    기대한다. 리포를 보지 않으면 python 문항이 node README를 끌어와도 히트가 된다.
+    "Image Variants"는 열 개 repository에 전부 있고 40문항 중 25문항이 이 제목을
+    기대한다. repository를 보지 않으면 python 문항이 node README를 끌어와도 히트가 된다.
     """
     case = make_case(requires_repositories=["python"], expected_sections=["Image Variants"])
 
@@ -103,7 +103,7 @@ def test_miss_when_the_section_comes_from_another_repository() -> None:
 
 
 def test_hit_when_the_section_comes_from_a_repository_the_case_asks_about() -> None:
-    """리포까지 보더라도 묻는 리포의 섹션은 그대로 히트여야 한다."""
+    """repository까지 보더라도 묻는 repository의 섹션은 그대로 히트여야 한다."""
     case = make_case(requires_repositories=["python"], expected_sections=["Image Variants"])
 
     score = score_retrieval(case, [], [("node", "Image Variants"), ("python", "Image Variants")])
@@ -329,7 +329,7 @@ def test_score_full_propagates_retrieval_fields() -> None:
 
 
 def test_score_full_ignores_sections_from_another_repository() -> None:
-    """리포를 보는 규칙은 전체 모드에도 똑같이 걸려야 한다."""
+    """repository를 보는 규칙은 전체 모드에도 똑같이 걸려야 한다."""
     case = make_case(expected_sections=["Image Variants"])
     candidates = [make_candidate("3.13-slim")]
 

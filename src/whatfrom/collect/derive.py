@@ -123,7 +123,7 @@ def resolve_aliases(
 
 
 def derive_repository(session: Session, repository: str) -> DeriveOutcome:
-    """리포지토리의 태그 전부에 파생 값을 채운다. 다시 실행하면 바뀌는 행이 없다.
+    """repository의 태그 전부에 파생 값을 채운다. 다시 실행하면 바뀌는 행이 없다.
 
     태그 수와 무관하게 SELECT 두 번과 많아야 UPDATE 한 번이다. 바뀐 행만 쓴다.
     """

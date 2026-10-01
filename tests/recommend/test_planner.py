@@ -40,7 +40,7 @@ def test_the_system_prompt_separates_ubuntu_itself_from_ubuntu_as_a_base():
 
 
 def test_a_repository_outside_the_list_is_dropped():
-    """수집되지 않은 리포지토리는 후보를 낼 수 없다. 목록과 대조하는 것은 코드다."""
+    """수집되지 않은 repository는 후보를 낼 수 없다. 목록과 대조하는 것은 코드다."""
     plan = extract_plan(FakeLLMProvider(plan=SearchPlan(repository="openjdk")), "q", REPOSITORIES)
 
     assert plan.repository is None
