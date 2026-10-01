@@ -1,6 +1,6 @@
 # spec이 요구한 테스트 두 개가 없다
 
-Status: ready-for-agent
+Status: done
 Category: enhancement
 Source: Spec 리뷰 — F9 spec §7, tag-parser spec
 
