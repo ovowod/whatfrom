@@ -303,9 +303,9 @@ def test_timed_recommendation_leaves_unreached_stages_empty(session: Session) ->
 
 
 def test_timed_recommendation_does_not_carry_over_the_previous_question(session: Session) -> None:
-    """같은 공급자로 두 문항을 이어 돌려도, 두 번째 기록에 첫 문항의 시간과 프롬프트가 없다.
+    """같은 공급자로 두 문항을 이어 돌려도, 두 번째 기록에 첫 문항의 시간과 prompt가 없다.
 
-    두 번째 문항은 임베딩에서 멈춰 LLM을 부르지 않는다. 프록시를 문항 사이에 재사용하면
+    두 번째 문항은 embedding에서 멈춰 LLM을 부르지 않는다. proxy를 문항 사이에 재사용하면
     첫 문항이 남긴 값이 그대로 보인다.
     """
     _seed_python(session)
@@ -315,7 +315,7 @@ def test_timed_recommendation_does_not_carry_over_the_previous_question(session:
         _fixed_session(session), FakeEmbedder(), provider, "python slim image"
     )
     _, second = cli.timed_recommendation(
-        _fixed_session(session), BrokenEmbedder(), provider, "python slim image"
+        _fixed_session(session), BrokenEmbedder(), provider, "node alpine image"
     )
 
     assert first.advise_prompt is not None

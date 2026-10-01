@@ -21,11 +21,11 @@ Hub 본문은 docker-library/docs repository의 README를 올린 것이다. 그�
 
 ## Consequences
 
-- `HubClient`의 재시도(429, 5xx)와 rate limit 대기를 받지 않는다. 재시도를 넣지 않은 이유는 다음과 같다.
+- `HubClient`의 재시도(429, 500, 502, 503, 504)와 rate limit 대기를 받지 않는다. 재시도를 넣지 않은 이유는 다음과 같다.
   - `index`는 사람이 수동으로 다시 돌리는 batch다. 기다리는 사용자가 없고, 실패하면 다시 실행하면 된다.
   - `index --all`은 repository별로 실패를 격리하고 종료 코드 1로 알린다. 한 repository가 실패해도 나머지는 색인된다.
   - 대상은 공식 image README 10개라 GitHub raw의 rate limit에 걸릴 만큼 요청하지 않는다.
-- 색인은 Docker Hub와 GitHub 두 곳에 의존하게 된다. repository의 tag와 메타데이터는 계속 Hub에서 받는다.
+- 색인은 Docker Hub와 GitHub 두 곳에 의존하게 된다. repository의 tag와 metadata는 계속 Hub에서 받는다.
 - docker-library/docs의 경로 구조(`<repository>/README.md`)가 바뀌면 색인이 실패한다. 이 실패는 위 규칙대로 드러난다.
 
 다음 경우에는 이 결정을 다시 본다: 색인 대상이 크게 늘어 rate limit이 실제로 문제가 될 때, 또는 `index`가 사람 없이 정기적으로 돌게 될 때.

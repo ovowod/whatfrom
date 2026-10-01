@@ -268,7 +268,7 @@ def test_search_candidates_carry_the_derived_tag_values(session):
         "trixie",
         "slim",
     )
-    # 파생 값이 NULL인 태그(수집 실패로 지운 경우 포함)는 네 필드가 모두 None이다.
+    # 파생 값이 NULL인 tag는 네 field가 모두 None이다.
     alpine = next(c for c in candidates if c.tag == "3.13-alpine")
     assert (alpine.version, alpine.distribution, alpine.distro_codename, alpine.variant) == (
         None,

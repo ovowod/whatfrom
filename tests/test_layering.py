@@ -18,6 +18,8 @@ import pytest
 SRC_ROOT = Path(__file__).parents[1] / "src"
 WHATFROM_DIR = SRC_ROOT / "whatfrom"
 STAGES = ["collect", "index", "search", "recommend", "eval", "loadtest"]
+# stage를 조합하는 최상위 module. 나머지 최상위 module은 whatfrom.core만 import한다.
+COMPOSERS = {"api", "cli"}
 
 
 def _display_path(path: Path) -> str:
@@ -25,7 +27,7 @@ def _display_path(path: Path) -> str:
 
 
 def _whatfrom_imports(path: Path) -> list[tuple[str, ast.AST]]:
-    """파일에서 whatfrom.으로 시작하는 절대 임포트들을 (모듈 이름, 노드) 쌍으로 모은다."""
+    """파일에서 whatfrom.으로 시작하는 절대 import를 (module 이름, node) 쌍으로 모은다."""
     return _parse_whatfrom_imports(path.read_text(encoding="utf-8"), str(path))
 
 
@@ -100,10 +102,6 @@ def test_from_whatfrom_import_resolves_to_the_submodule() -> None:
         "whatfrom.core",
         "whatfrom.api",
     ]
-
-
-# stage를 조합하는 최상위 module. 나머지 최상위 module은 whatfrom.core만 import한다.
-COMPOSERS = {"api", "cli"}
 
 
 def _allowed_in_support_module(module: str) -> bool:
