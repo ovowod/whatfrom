@@ -1,6 +1,6 @@
 # cli.py가 평가·부하 로직까지 맡고 있다
 
-Status: ready-for-agent
+Status: done
 Category: enhancement
 Source: Standards 리뷰 — Divergent Change, Data Clumps (판단)
 

@@ -6,7 +6,7 @@ import random
 import time
 from collections.abc import Callable, Sequence
 from contextlib import AbstractContextManager
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -16,7 +16,7 @@ from sqlalchemy import Engine, inspect, select, text, tuple_
 from sqlalchemy.orm import Session
 
 if TYPE_CHECKING:
-    from whatfrom.eval.goldenset import GoldenSet
+    from whatfrom.eval.goldenset import GoldenCase, GoldenSet
 
 from whatfrom.api import recommend_for_question
 from whatfrom.collect import docs
@@ -34,7 +34,7 @@ from whatfrom.core.contracts import RecommendResponse, split_image
 from whatfrom.core.db import make_engine, session_factory, session_scope
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.models import Base, Document, DocumentChunk, ImageTag, Repository
-from whatfrom.eval.timing import Timed
+from whatfrom.eval.timing import RunTrace, Timed
 from whatfrom.index.indexer import index_readme
 from whatfrom.recommend.llm import LLMProvider, get_provider
 from whatfrom.recommend.verify import image_exists
@@ -235,17 +235,6 @@ def accepted_digests(session: Session, accept: list[str]) -> frozenset[str]:
     )
 
 
-@dataclass(frozen=True)
-class RunTrace:
-    """추천 경로 한 번의 단계별 소요 시간(초)과 LLM #2에 보낸 프롬프트. 부르지 않았으면 None."""
-
-    seconds_total: float
-    seconds_embedding: float | None
-    seconds_plan: float | None
-    seconds_advise: float | None
-    advise_prompt: str | None
-
-
 def timed_recommendation(
     open_session: Callable[[], AbstractContextManager[Session]],
     embedder: Embedder,
@@ -276,26 +265,40 @@ def cmd_eval(args: argparse.Namespace) -> None:
     # eval은 dev 의존성인 PyYAML을 쓴다. 모듈 최상단에서 가져오면 PyYAML이 없는
     # 환경에서 collect·index 같은 다른 명령까지 import 단계에서 실패한다.
     from whatfrom.eval.goldenset import load_goldenset
-    from whatfrom.eval.report import (
-        Skipped,
-        aggregate_full,
-        aggregate_retrieval,
-        constant_baseline,
-        random_baseline,
-        render_summary,
-        result_document,
-    )
-    from whatfrom.eval.scoring import score_full, score_retrieval
 
     goldenset = load_goldenset(Path(args.goldenset))
-    wanted = {tag for tag in (args.tags or "").split(",") if tag}
+    open_session = session_factory(make_engine(args.database_url))
+    embedder = get_embedder(args.embedder)
+    measured, skipped = _eval_cases(goldenset, args.tags, open_session)
+    provider = None if args.retrieval_only else get_provider(args.llm_provider)
+    started_at = datetime.now(UTC)
+
+    results_dir = Path(args.results_dir)
+    # 결과 디렉터리를 생성할 수 없는 오류는 외부 모델 호출 전에 발견한다.
+    # 디렉터리가 이미 존재할 때의 파일 쓰기 권한까지 확인하는 것은 아니다.
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    scores = []
+    for index, case in enumerate(measured, start=1):
+        print(f"[{index}/{len(measured)}] {case.id}", flush=True)
+        scores.append(_score_case(case, open_session, embedder, provider))
+
+    meta = _eval_meta(args, goldenset, started_at)
+    out = results_dir / f"{started_at.strftime('%Y-%m-%dT%H-%M-%S')}.json"
+    _report_eval(args.retrieval_only, goldenset, measured, skipped, scores, meta, out)
+
+
+def _eval_cases(
+    goldenset: "GoldenSet",
+    tags: str | None,
+    open_session: Callable[[], AbstractContextManager[Session]],
+) -> tuple[list, list]:
+    """--tags로 거른 문항을, 필요한 repository가 색인된 것과 아닌 것으로 나눈다."""
+    from whatfrom.eval.report import Skipped
+
+    wanted = {tag for tag in (tags or "").split(",") if tag}
     # --tags는 OR다. 지정한 태그 중 하나라도 가진 문항을 남긴다.
     cases = [c for c in goldenset.cases if not wanted or wanted & set(c.tags)]
-
-    engine = make_engine(args.database_url)
-    open_session = session_factory(engine)
-    embedder = get_embedder(args.embedder)
-
     with open_session() as session:
         available = indexed_repositories(session)
 
@@ -307,60 +310,49 @@ def cmd_eval(args: argparse.Namespace) -> None:
             skipped.append(Skipped(case_id=case.id, missing=missing))
         else:
             measured.append(case)
+    return measured, skipped
 
-    provider = None if args.retrieval_only else get_provider(args.llm_provider)
-    started_at = datetime.now(UTC)
-    scores: list = []
 
-    results_dir = Path(args.results_dir)
-    # 결과 디렉터리를 생성할 수 없는 오류는 외부 모델 호출 전에 발견한다.
-    # 디렉터리가 이미 존재할 때의 파일 쓰기 권한까지 확인하는 것은 아니다.
-    results_dir.mkdir(parents=True, exist_ok=True)
+def _score_case(
+    case: "GoldenCase",
+    open_session: Callable[[], AbstractContextManager[Session]],
+    embedder: Embedder,
+    provider: LLMProvider | None,
+):
+    """문항 하나를 채점한다. provider가 None이면 검색 지표만 잰다."""
+    from whatfrom.eval.scoring import score_full, score_retrieval
 
-    for index, case in enumerate(measured, start=1):
-        print(f"[{index}/{len(measured)}] {case.id}", flush=True)
+    # 임베딩 오류는 검색 품질의 0점으로 집계하지 않고 실행을 중단시킨다.
+    vector = embedder.embed([case.question])[0]
+    with open_session() as session:
+        hits = search_chunks_by_vector(session, vector, limit=5)
+        # 제목만 넘기면 다른 리포의 같은 이름 섹션도 히트가 된다. 리포를
+        # 함께 넘겨 채점이 문항이 묻는 리포의 문서만 보게 한다.
+        sections = [(chunk.document.repository, chunk.document.section_title) for chunk, _ in hits]
 
-        # 임베딩 오류는 검색 품질의 0점으로 집계하지 않고 실행을 중단시킨다.
-        vector = embedder.embed([case.question])[0]
+    if provider is None:
         with open_session() as session:
-            hits = search_chunks_by_vector(session, vector, limit=5)
-            # 제목만 넘기면 다른 리포의 같은 이름 섹션도 히트가 된다. 리포를
-            # 함께 넘겨 채점이 문항이 묻는 리포의 문서만 보게 한다.
-            sections = [
-                (chunk.document.repository, chunk.document.section_title) for chunk, _ in hits
-            ]
-
-        if args.retrieval_only:
-            with open_session() as session:
-                candidates = search_candidates_by_vector(session, vector)
-                digests = accepted_digests(session, case.accept)
-            scores.append(score_retrieval(case, candidates, sections, digests))
-            continue
-
-        # Hit@5는 두 모드 모두 후보 선택 전의 상위 5개 청크로 계산한다.
-        # 추천 응답의 evidence에는 후보 선택에서 제외된 문서가 없을 수 있다.
-        # 추천 경로도 별도로 실행하므로 전체 모드는 질문을 두 번 임베딩한다.
-        response, trace = timed_recommendation(open_session, embedder, provider, case.question)
-
-        exists: bool | None = None
-        if response.recommendation is not None:
-            with open_session() as session:
-                exists = image_exists(session, response.recommendation.image)
-        with open_session() as session:
+            candidates = search_candidates_by_vector(session, vector)
             digests = accepted_digests(session, case.accept)
-        score = score_full(case, response, sections, exists, digests)
-        scores.append(
-            replace(
-                score,
-                seconds_total=trace.seconds_total,
-                seconds_embedding=trace.seconds_embedding,
-                seconds_plan=trace.seconds_plan,
-                seconds_advise=trace.seconds_advise,
-                advise_prompt=trace.advise_prompt,
-            )
-        )
+        return score_retrieval(case, candidates, sections, digests)
 
-    meta = {
+    # Hit@5는 두 모드 모두 후보 선택 전의 상위 5개 청크로 계산한다.
+    # 추천 응답의 evidence에는 후보 선택에서 제외된 문서가 없을 수 있다.
+    # 추천 경로도 별도로 실행하므로 전체 모드는 질문을 두 번 임베딩한다.
+    response, trace = timed_recommendation(open_session, embedder, provider, case.question)
+
+    exists: bool | None = None
+    if response.recommendation is not None:
+        with open_session() as session:
+            exists = image_exists(session, response.recommendation.image)
+    with open_session() as session:
+        digests = accepted_digests(session, case.accept)
+    return replace(score_full(case, response, sections, exists, digests), trace=trace)
+
+
+def _eval_meta(args: argparse.Namespace, goldenset: "GoldenSet", started_at: datetime) -> dict:
+    """결과 JSON의 실행 meta. 서로 다른 실행의 점수를 비교할 수 있는지 판단하는 근거다."""
+    return {
         "started_at": started_at.isoformat(timespec="seconds"),
         "mode": "retrieval-only" if args.retrieval_only else "full",
         "embedder": args.embedder,
@@ -383,22 +375,42 @@ def cmd_eval(args: argparse.Namespace) -> None:
             goldenset.verified_on.isoformat() if goldenset.verified_on is not None else None
         ),
     }
-    metrics = aggregate_retrieval(scores) if args.retrieval_only else aggregate_full(scores)
+
+
+def _report_eval(
+    retrieval_only: bool,
+    goldenset: "GoldenSet",
+    measured: list,
+    skipped: list,
+    scores: list,
+    meta: dict,
+    out: Path,
+) -> None:
+    """지표를 집계해 요약을 출력하고 결과 JSON을 저장한다."""
+    from whatfrom.eval.report import (
+        aggregate_full,
+        aggregate_retrieval,
+        constant_baseline,
+        random_baseline,
+        render_summary,
+        result_document,
+    )
+
+    metrics = aggregate_retrieval(scores) if retrieval_only else aggregate_full(scores)
     # 전체 모드의 추천 정확도와 비교할 고정답 기준선을 계산한다.
     # 측정 문항의 accept 목록만 사용하며 추가 DB 조회나 모델 호출은 없다.
-    baseline = None if args.retrieval_only else constant_baseline(measured)
+    baseline = None if retrieval_only else constant_baseline(measured)
     # 후보 기록만으로 계산하므로 두 모드 모두 구한다.
     random = random_baseline(scores)
 
     print()
-    failures = [] if args.retrieval_only else scores
+    failures = [] if retrieval_only else scores
     print(
         render_summary(
             metrics, failures, measured, skipped, len(goldenset.cases), meta, baseline, random
         )
     )
 
-    out = results_dir / f"{started_at.strftime('%Y-%m-%dT%H-%M-%S')}.json"
     out.write_text(
         json.dumps(
             result_document(metrics, scores, skipped, meta, baseline, random),

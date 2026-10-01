@@ -1,11 +1,12 @@
 # src/whatfrom/eval/report.py
 from collections import Counter
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from statistics import median
 from unicodedata import east_asian_width
 
 from whatfrom.eval.goldenset import GoldenCase
 from whatfrom.eval.scoring import CaseScore, RetrievalScore
+from whatfrom.eval.timing import RunTrace
 
 
 @dataclass(frozen=True)
@@ -228,14 +229,13 @@ def render_summary(
         lines += ["", _format_baseline(baseline)]
 
     # 전체 모드에서 러너가 잰 시간. 검색 전용 모드와 시간을 재지 않은 실행에는 없다.
-    timed = [s for s in scores if s.seconds_total is not None]
+    timed = [(s.case_id, s.trace.seconds_total) for s in scores if s.trace is not None]
     if timed:
-        slowest = max(timed, key=lambda s: s.seconds_total)
-        middle = median(s.seconds_total for s in timed)
+        slowest_id, slowest_seconds = max(timed, key=lambda item: item[1])
+        middle = median(seconds for _, seconds in timed)
         lines += [
             "",
-            f"문항당 소요 시간: 중앙값 {middle:.1f}초, 최대 {slowest.seconds_total:.1f}초 "
-            f"({slowest.case_id})",
+            f"문항당 소요 시간: 중앙값 {middle:.1f}초, 최대 {slowest_seconds:.1f}초 ({slowest_id})",
         ]
 
     by_digest = [s.case_id for s in scores if s.accurate_by_digest]
@@ -255,6 +255,15 @@ def render_summary(
     return "\n".join(lines)
 
 
+def _case_record(score: CaseScore | RetrievalScore) -> dict:
+    """문항 하나의 JSON. 시간 기록은 trace로 묶지 않고 펼쳐 기존 결과 파일과 같은 key를 쓴다."""
+    record = asdict(score)
+    if isinstance(score, CaseScore):
+        trace = record.pop("trace")
+        record |= trace if trace is not None else dict.fromkeys(f.name for f in fields(RunTrace))
+    return record
+
+
 def result_document(
     metrics: list[Metric],
     scores: list[CaseScore] | list[RetrievalScore],
@@ -267,7 +276,7 @@ def result_document(
     document: dict = {
         "meta": meta,
         "metrics": [asdict(m) | {"ratio": m.ratio} for m in metrics],
-        "cases": [asdict(s) for s in scores],
+        "cases": [_case_record(s) for s in scores],
         "skipped": [asdict(s) for s in skipped],
     }
     # 전달받은 대조군을 저장한다. 검색 전용 실행에서는 호출자가 None을 넘긴다.

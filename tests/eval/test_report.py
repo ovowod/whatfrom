@@ -1,4 +1,6 @@
 # tests/eval/test_report.py
+from dataclasses import fields
+
 from whatfrom.eval.goldenset import GoldenCase, Rationale
 from whatfrom.eval.report import (
     ConstantBaseline,
@@ -14,6 +16,7 @@ from whatfrom.eval.report import (
     result_document,
 )
 from whatfrom.eval.scoring import CaseScore, RetrievalScore
+from whatfrom.eval.timing import RunTrace
 
 
 def make_score(**overrides: object) -> CaseScore:
@@ -37,6 +40,13 @@ def make_score(**overrides: object) -> CaseScore:
     }
     base.update(overrides)
     return CaseScore(**base)  # type: ignore[arg-type]
+
+
+def make_trace(**overrides: object) -> RunTrace:
+    base: dict[str, object] = dict.fromkeys(f.name for f in fields(RunTrace))
+    base["seconds_total"] = 0.0
+    base.update(overrides)
+    return RunTrace(**base)  # type: ignore[arg-type]
 
 
 def make_case(**overrides: object) -> GoldenCase:
@@ -601,9 +611,9 @@ def test_result_document_records_the_plan_and_notes_of_each_case():
 
 def test_render_summary_shows_the_median_and_slowest_case_time() -> None:
     scores = [
-        make_score(case_id="fast", seconds_total=10.0),
-        make_score(case_id="mid", seconds_total=20.0),
-        make_score(case_id="slow", seconds_total=90.0),
+        make_score(case_id="fast", trace=make_trace(seconds_total=10.0)),
+        make_score(case_id="mid", trace=make_trace(seconds_total=20.0)),
+        make_score(case_id="slow", trace=make_trace(seconds_total=90.0)),
     ]
 
     output = render_summary([], scores, [], [], 3, {})
@@ -620,10 +630,12 @@ def test_render_summary_omits_the_time_line_without_timings() -> None:
 
 def test_result_document_records_the_stage_times_and_the_advise_input() -> None:
     score = make_score(
-        seconds_total=3.0,
-        seconds_embedding=0.5,
-        seconds_plan=1.0,
-        advise_prompt="Requirement: q",
+        trace=make_trace(
+            seconds_total=3.0,
+            seconds_embedding=0.5,
+            seconds_plan=1.0,
+            advise_prompt="Requirement: q",
+        ),
         dockerfile="FROM python:3.13-slim@sha256:aaa",
     )
 

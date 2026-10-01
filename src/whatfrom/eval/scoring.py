@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from whatfrom.core.contracts import Candidate, Platform, RecommendResponse, SearchPlan
 from whatfrom.core.versions import extends_version
 from whatfrom.eval.goldenset import Conditions, ExpectedPlan, GoldenCase
+from whatfrom.eval.timing import RunTrace
 
 
 @dataclass(frozen=True)
@@ -179,13 +180,9 @@ class CaseScore:
     # JSON만으로 확인하려고 남긴다. 추천이 없으면 None이다.
     recommended: dict | None = None
     dockerfile: str | None = None
-    # 러너가 채운다. 추천 경로의 단계별 소요 시간(초)과 LLM #2에 보낸 프롬프트.
-    # 부르지 않은 단계는 None이다. 두 실행의 실제 입력을 비교할 때 프롬프트를 쓴다.
-    seconds_total: float | None = None
-    seconds_embedding: float | None = None
-    seconds_plan: float | None = None
-    seconds_advise: float | None = None
-    advise_prompt: str | None = None
+    # 러너가 채운다. 시간을 재지 않은 실행이면 None이다. 두 실행의 실제 입력을 비교할 때
+    # LLM #2에 보낸 prompt를 쓴다.
+    trace: RunTrace | None = None
 
 
 PLAN_LIST_FIELDS = ("architectures", "distributions", "exclude_distributions")
