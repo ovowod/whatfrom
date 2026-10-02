@@ -5,7 +5,6 @@ import json
 import random
 import time
 from collections.abc import Callable, Sequence
-from contextlib import AbstractContextManager
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -31,7 +30,7 @@ from whatfrom.collect.sync import (
 )
 from whatfrom.core.config import settings
 from whatfrom.core.contracts import RecommendResponse, split_image
-from whatfrom.core.db import make_engine, session_factory, session_scope
+from whatfrom.core.db import SessionFactory, make_engine, session_factory, session_scope
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.models import Base, Document, DocumentChunk, ImageTag, Repository
 from whatfrom.eval.timing import RunTrace, Timed
@@ -236,7 +235,7 @@ def accepted_digests(session: Session, accept: list[str]) -> frozenset[str]:
 
 
 def timed_recommendation(
-    open_session: Callable[[], AbstractContextManager[Session]],
+    open_session: SessionFactory,
     embedder: Embedder,
     provider: LLMProvider,
     question: str,
@@ -291,7 +290,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
 def _eval_cases(
     goldenset: "GoldenSet",
     tags: str | None,
-    open_session: Callable[[], AbstractContextManager[Session]],
+    open_session: SessionFactory,
 ) -> tuple[list, list]:
     """--tags로 거른 문항을, 필요한 repository가 색인된 것과 아닌 것으로 나눈다."""
     from whatfrom.eval.report import Skipped
@@ -315,7 +314,7 @@ def _eval_cases(
 
 def _score_case(
     case: "GoldenCase",
-    open_session: Callable[[], AbstractContextManager[Session]],
+    open_session: SessionFactory,
     embedder: Embedder,
     provider: LLMProvider | None,
 ):

@@ -1,19 +1,16 @@
 # src/whatfrom/api.py
 import time
-from collections.abc import Callable
-from contextlib import AbstractContextManager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, field_validator
 from sqlalchemy import Engine, select
-from sqlalchemy.orm import Session
 
 from whatfrom.admission import REJECTED_DETAIL, RecommendationLimiter, run_admitted
 from whatfrom.core.config import settings
 from whatfrom.core.contracts import Candidate, RecommendedImage, RecommendResponse, SearchPlan
-from whatfrom.core.db import make_engine, session_factory
+from whatfrom.core.db import SessionFactory, make_engine, session_factory
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import Repository
@@ -48,7 +45,7 @@ class RecommendRequest(BaseModel):
 
 
 def recommend_for_question(
-    open_session: Callable[[], AbstractContextManager[Session]],
+    open_session: SessionFactory,
     embedder: Embedder,
     provider: LLMProvider,
     question: str,

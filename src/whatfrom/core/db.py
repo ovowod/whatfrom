@@ -24,7 +24,11 @@ def make_engine(url: str, statement_timeout_ms: int | None = None) -> Engine:
     )
 
 
-def session_factory(engine: Engine) -> Callable[[], AbstractContextManager[Session]]:
+# DB 구간마다 session을 여는 factory. 추천 경로와 eval runner가 받는다.
+SessionFactory = Callable[[], AbstractContextManager[Session]]
+
+
+def session_factory(engine: Engine) -> SessionFactory:
     """DB 구간마다 session을 열고 닫는 factory. commit하지 않고 close만 한다.
 
     추천 경로(recommend_for_question)가 받는 형태다. embedding·LLM 응답을 기다리는 동안
