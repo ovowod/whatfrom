@@ -1,4 +1,6 @@
 # tests/eval/test_report.py
+from dataclasses import fields
+
 from whatfrom.eval.goldenset import GoldenCase, Rationale
 from whatfrom.eval.report import (
     ConstantBaseline,
@@ -14,6 +16,7 @@ from whatfrom.eval.report import (
     result_document,
 )
 from whatfrom.eval.scoring import CaseScore, RetrievalScore
+from whatfrom.eval.timing import RunTrace
 
 
 def make_score(**overrides: object) -> CaseScore:
@@ -37,6 +40,13 @@ def make_score(**overrides: object) -> CaseScore:
     }
     base.update(overrides)
     return CaseScore(**base)  # type: ignore[arg-type]
+
+
+def make_trace(**overrides: object) -> RunTrace:
+    base: dict[str, object] = dict.fromkeys(f.name for f in fields(RunTrace))
+    base["seconds_total"] = 0.0
+    base.update(overrides)
+    return RunTrace(**base)  # type: ignore[arg-type]
 
 
 def make_case(**overrides: object) -> GoldenCase:
@@ -217,7 +227,7 @@ def test_render_summary_shows_the_degraded_note_when_there_is_no_recommendation(
 
 
 def test_render_summary_explains_skipped_repos_as_not_indexed() -> None:
-    """collect와 index는 별도 단계라 리포가 수집됐어도 색인이 안 됐을 수 있다.
+    """collect와 index는 별도 단계라 repository가 수집됐어도 색인이 안 됐을 수 있다.
     '미수집'이라고 하면 이미 끝난 collect를 다시 하라고 잘못 안내하게 된다."""
     skipped = [Skipped(case_id="a", missing=["node"])]
 
@@ -346,7 +356,7 @@ def test_render_summary_omits_the_constant_baseline_in_retrieval_only_mode() -> 
 
 
 def test_render_summary_drops_the_constant_baseline_when_accuracy_is_absent() -> None:
-    """호출자가 실수로 넘겨도 추천 정확도가 없는 리포트에는 붙으면 안 된다."""
+    """호출자가 실수로 넘겨도 추천 정확도가 없는 report에는 붙으면 안 된다."""
     metrics = aggregate_retrieval([])
     baseline = ConstantBaseline(image="python:3.14-slim", hits=10, total=14)
 
@@ -567,15 +577,15 @@ def test_the_extraction_metrics_count_every_measured_case():
 
     metrics = aggregate_full(scores)
 
-    assert metric(metrics, "리포 추출 일치율") == Metric("리포 추출 일치율", 2, 3)
+    assert metric(metrics, "repository 추출 일치율") == Metric("repository 추출 일치율", 2, 3)
     assert metric(metrics, "조건 추출 일치율") == Metric("조건 추출 일치율", 1, 3)
-    assert [m.label for m in metrics][-2:] == ["리포 추출 일치율", "조건 추출 일치율"]
+    assert [m.label for m in metrics][-2:] == ["repository 추출 일치율", "조건 추출 일치율"]
 
 
 def test_retrieval_only_has_no_extraction_metrics():
     labels = [m.label for m in aggregate_retrieval([])]
 
-    assert "리포 추출 일치율" not in labels
+    assert "repository 추출 일치율" not in labels
     assert "조건 추출 일치율" not in labels
 
 
@@ -601,9 +611,9 @@ def test_result_document_records_the_plan_and_notes_of_each_case():
 
 def test_render_summary_shows_the_median_and_slowest_case_time() -> None:
     scores = [
-        make_score(case_id="fast", seconds_total=10.0),
-        make_score(case_id="mid", seconds_total=20.0),
-        make_score(case_id="slow", seconds_total=90.0),
+        make_score(case_id="fast", trace=make_trace(seconds_total=10.0)),
+        make_score(case_id="mid", trace=make_trace(seconds_total=20.0)),
+        make_score(case_id="slow", trace=make_trace(seconds_total=90.0)),
     ]
 
     output = render_summary([], scores, [], [], 3, {})
@@ -620,10 +630,12 @@ def test_render_summary_omits_the_time_line_without_timings() -> None:
 
 def test_result_document_records_the_stage_times_and_the_advise_input() -> None:
     score = make_score(
-        seconds_total=3.0,
-        seconds_embedding=0.5,
-        seconds_plan=1.0,
-        advise_prompt="Requirement: q",
+        trace=make_trace(
+            seconds_total=3.0,
+            seconds_embedding=0.5,
+            seconds_plan=1.0,
+            advise_prompt="Requirement: q",
+        ),
         dockerfile="FROM python:3.13-slim@sha256:aaa",
     )
 

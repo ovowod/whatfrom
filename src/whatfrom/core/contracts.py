@@ -4,9 +4,15 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
+def split_image(image: str) -> tuple[str, str] | None:
+    """image("repository:tag")를 첫 콜론에서 나눈다. 콜론이 없으면 None이다."""
+    repository, colon, tag = image.partition(":")
+    return (repository, tag) if colon else None
+
+
 class Evidence(BaseModel):
     # 제목만으로는 문서를 가릴 수 없다. 공식 이미지 README는 같은 틀에서 만들어져
-    # "Image Variants" 같은 제목이 리포지토리마다 있다.
+    # "Image Variants" 같은 제목이 repository마다 있다.
     repository: str
     section_title: str
     content: str

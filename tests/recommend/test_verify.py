@@ -8,7 +8,7 @@ import pytest
 from whatfrom.collect.hub import RepositoryRow, TagRow, VariantRow
 from whatfrom.collect.store import upsert_repository, upsert_tags
 from whatfrom.core.contracts import Candidate, Recommendation
-from whatfrom.recommend.verify import dockerfile_image_refs, verify_recommendation
+from whatfrom.recommend.verify import dockerfile_image_refs, image_exists, verify_recommendation
 
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
 
@@ -356,3 +356,11 @@ def test_a_lowercase_aware_parser_never_drops_a_ref_that_the_uppercase_only_pars
             dockerfile_image_refs(dockerfile)
         )
         assert not missing, dockerfile
+
+
+def test_image_exists_checks_the_collected_tags(session):
+    _seed(session)
+
+    assert image_exists(session, "python:3.13-slim") is True
+    assert image_exists(session, "python:3.99") is False
+    assert image_exists(session, "python") is False

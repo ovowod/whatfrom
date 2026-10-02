@@ -4,19 +4,18 @@ import hashlib
 import json
 import random
 import time
-from collections.abc import Callable, Generator, Sequence
-from contextlib import AbstractContextManager, contextmanager
-from dataclasses import dataclass, replace
+from collections.abc import Callable, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import httpx2
 from sqlalchemy import Engine, inspect, select, text, tuple_
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 if TYPE_CHECKING:
-    from whatfrom.eval.goldenset import GoldenSet
+    from whatfrom.eval.goldenset import GoldenCase, GoldenSet
 
 from whatfrom.api import recommend_for_question
 from whatfrom.collect import docs
@@ -30,13 +29,14 @@ from whatfrom.collect.sync import (
     collect_all,
 )
 from whatfrom.core.config import settings
-from whatfrom.core.contracts import RecommendResponse
-from whatfrom.core.db import make_engine, session_scope
+from whatfrom.core.contracts import RecommendResponse, split_image
+from whatfrom.core.db import SessionFactory, make_engine, session_factory, session_scope
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.models import Base, Document, DocumentChunk, ImageTag, Repository
-from whatfrom.eval.timing import Timed
+from whatfrom.eval.timing import RunTrace, Timed
 from whatfrom.index.indexer import index_readme
 from whatfrom.recommend.llm import LLMProvider, get_provider
+from whatfrom.recommend.verify import image_exists
 from whatfrom.search.retrieval import (
     search_candidates_by_vector,
     search_chunks,
@@ -90,8 +90,29 @@ def _format_collect_summary(outcomes: list[CollectOutcome]) -> str:
     return "\n".join(lines)
 
 
+def _target_repositories(args: argparse.Namespace) -> Sequence[str]:
+    return OFFICIAL_REPOSITORIES if args.all else (args.repository,)
+
+
+def _run_each(repositories: Sequence[str], run_one: Callable[[str], str]) -> int:
+    """repository마다 run_one을 부르고 그 결과 줄을 출력한다. 실패가 있으면 1을 돌려준다.
+
+    collect는 이 loop를 쓰지 않는다. 실패 격리와 실행 기록을 collect_all이 맡고,
+    결과를 표 하나로 모아 출력한다.
+    """
+    failed = 0
+    for repository in repositories:
+        try:
+            print(run_one(repository))
+        except Exception as exc:
+            # 한 repository의 실패가 나머지를 막지 않는다.
+            failed += 1
+            print(f"{repository:<16} failed: {type(exc).__name__}: {exc}")
+    return 1 if failed else 0
+
+
 def cmd_collect(args: argparse.Namespace) -> None:
-    repositories = OFFICIAL_REPOSITORIES if args.all else (args.repository,)
+    repositories = _target_repositories(args)
     engine = make_engine(args.database_url)
     with httpx2.Client(timeout=30.0) as http:
         code = run_collect(engine, HubClient(http), repositories, args.max_pages)
@@ -101,17 +122,12 @@ def cmd_collect(args: argparse.Namespace) -> None:
 
 def run_derive(engine: Engine, repositories: Sequence[str]) -> int:
     """이미 수집된 태그에 파생 값을 다시 채운다. Docker Hub를 부르지 않는다."""
-    failed = 0
-    for repository in repositories:
-        try:
-            with session_scope(engine) as session:
-                outcome = derive_repository(session, repository)
-            print(_format_derive_line(outcome))
-        except Exception as exc:
-            # 한 리포지토리의 실패가 나머지를 막지 않는다.
-            failed += 1
-            print(f"{repository:<16} failed: {type(exc).__name__}: {exc}")
-    return 1 if failed else 0
+
+    def derive_one(repository: str) -> str:
+        with session_scope(engine) as session:
+            return _format_derive_line(derive_repository(session, repository))
+
+    return _run_each(repositories, derive_one)
 
 
 def _format_derive_line(outcome: DeriveOutcome) -> str:
@@ -124,8 +140,7 @@ def _format_derive_line(outcome: DeriveOutcome) -> str:
 
 
 def cmd_derive(args: argparse.Namespace) -> None:
-    repositories = OFFICIAL_REPOSITORIES if args.all else (args.repository,)
-    code = run_derive(make_engine(args.database_url), repositories)
+    code = run_derive(make_engine(args.database_url), _target_repositories(args))
     if code:
         raise SystemExit(code)
 
@@ -139,30 +154,26 @@ def run_index(
 ) -> int:
     """README 본문은 fetch_readme(원본)에서 받는다. Hub 본문은 25,000자에서 잘린다.
 
-    원본을 받지 못하면 잘린 Hub 본문으로 대신하지 않고 그 리포를 실패로 센다.
+    원본을 받지 못하면 잘린 Hub 본문으로 대신하지 않고 그 repository를 실패로 센다.
     이전 색인은 그대로 남는다.
     """
-    failed = 0
-    for repository in repositories:
-        try:
-            repo_row = parse_repository(client.fetch_repository(repository))
-            readme = fetch_readme(repository)
-            now = datetime.now(UTC)
-            with session_scope(engine) as session:
-                upsert_repository(session, repo_row, now)
-                created = index_readme(
-                    session, repository, readme, docs.docs_page_url(repository), embedder, now
-                )
-            print(f"{repository:<16} indexed {created} chunks")
-        except Exception as exc:
-            # 한 리포지토리의 실패가 나머지 색인을 막지 않는다.
-            failed += 1
-            print(f"{repository:<16} failed: {type(exc).__name__}: {exc}")
-    return 1 if failed else 0
+
+    def index_one(repository: str) -> str:
+        repo_row = parse_repository(client.fetch_repository(repository))
+        readme = fetch_readme(repository)
+        now = datetime.now(UTC)
+        with session_scope(engine) as session:
+            upsert_repository(session, repo_row, now)
+            created = index_readme(
+                session, repository, readme, docs.docs_page_url(repository), embedder, now
+            )
+        return f"{repository:<16} indexed {created} chunks"
+
+    return _run_each(repositories, index_one)
 
 
 def cmd_index(args: argparse.Namespace) -> None:
-    repositories = OFFICIAL_REPOSITORIES if args.all else (args.repository,)
+    repositories = _target_repositories(args)
     engine = make_engine(args.database_url)
     embedder = get_embedder(args.embedder)
     with httpx2.Client(timeout=30.0) as http:
@@ -182,34 +193,15 @@ def cmd_search(args: argparse.Namespace) -> None:
     embedder = get_embedder(args.embedder)
     with session_scope(engine) as session:
         for chunk, distance in search_chunks(session, embedder, args.question, limit=args.limit):
-            # 여러 리포지토리의 같은 제목 섹션이 함께 나오므로 리포지토리를 같이 적는다.
+            # 여러 repository의 같은 제목 섹션이 함께 나오므로 repository를 같이 적는다.
             print(f"[{distance:.4f}] {chunk.document.repository} — {chunk.document.section_title}")
             print(f"    {chunk.content[:160].replace(chr(10), ' ')}")
 
 
-def _open_session_factory(engine: Engine):
-    """recommend_for_question이 요구하는 세션 팩토리를 만든다.
-
-    DB 조회 구간마다 세션을 열고 닫아, 임베딩·LLM 응답을 기다리는 동안
-    DB 연결과 트랜잭션을 유지하지 않도록 한다.
-    """
-    factory = sessionmaker(bind=engine, expire_on_commit=False)
-
-    @contextmanager
-    def open_session() -> Generator[Session]:
-        session = factory()
-        try:
-            yield session
-        finally:
-            session.close()
-
-    return open_session
-
-
 def indexed_repositories(session: Session) -> set[str]:
-    """임베딩이 있는 문서 청크를 하나 이상 가진 리포지터리 이름을 반환한다.
+    """임베딩이 있는 문서 청크를 하나 이상 가진 repository 이름을 반환한다.
 
-    수집과 색인은 별도 단계다. 필요한 리포지터리가 색인되지 않은 문항은
+    수집과 색인은 별도 단계다. 필요한 repository가 색인되지 않은 문항은
     검색 품질을 평가할 수 없으므로, 0점으로 채점하지 않고 미측정으로 분류한다.
     청크의 존재만 확인하며 색인이 완전하거나 최신인지는 검사하지 않는다.
     """
@@ -229,7 +221,7 @@ def accepted_digests(session: Session, accept: list[str]) -> frozenset[str]:
 
     측정 시점 DB 기준이다. 수집되지 않았거나 digest가 없는 태그는 빠진다.
     """
-    pairs = [tuple(image.split(":", 1)) for image in accept if ":" in image]
+    pairs = [parts for image in accept if (parts := split_image(image)) is not None]
     if not pairs:
         return frozenset()
     return frozenset(
@@ -242,19 +234,8 @@ def accepted_digests(session: Session, accept: list[str]) -> frozenset[str]:
     )
 
 
-@dataclass(frozen=True)
-class RunTrace:
-    """추천 경로 한 번의 단계별 소요 시간(초)과 LLM #2에 보낸 프롬프트. 부르지 않았으면 None."""
-
-    seconds_total: float
-    seconds_embedding: float | None
-    seconds_plan: float | None
-    seconds_advise: float | None
-    advise_prompt: str | None
-
-
 def timed_recommendation(
-    open_session: Callable[[], AbstractContextManager[Session]],
+    open_session: SessionFactory,
     embedder: Embedder,
     provider: LLMProvider,
     question: str,
@@ -283,26 +264,40 @@ def cmd_eval(args: argparse.Namespace) -> None:
     # eval은 dev 의존성인 PyYAML을 쓴다. 모듈 최상단에서 가져오면 PyYAML이 없는
     # 환경에서 collect·index 같은 다른 명령까지 import 단계에서 실패한다.
     from whatfrom.eval.goldenset import load_goldenset
-    from whatfrom.eval.report import (
-        Skipped,
-        aggregate_full,
-        aggregate_retrieval,
-        constant_baseline,
-        random_baseline,
-        render_summary,
-        result_document,
-    )
-    from whatfrom.eval.scoring import score_full, score_retrieval
 
     goldenset = load_goldenset(Path(args.goldenset))
-    wanted = {tag for tag in (args.tags or "").split(",") if tag}
+    open_session = session_factory(make_engine(args.database_url))
+    embedder = get_embedder(args.embedder)
+    measured, skipped = _eval_cases(goldenset, args.tags, open_session)
+    provider = None if args.retrieval_only else get_provider(args.llm_provider)
+    started_at = datetime.now(UTC)
+
+    results_dir = Path(args.results_dir)
+    # 결과 디렉터리를 생성할 수 없는 오류는 외부 모델 호출 전에 발견한다.
+    # 디렉터리가 이미 존재할 때의 파일 쓰기 권한까지 확인하는 것은 아니다.
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    scores = []
+    for index, case in enumerate(measured, start=1):
+        print(f"[{index}/{len(measured)}] {case.id}", flush=True)
+        scores.append(_score_case(case, open_session, embedder, provider))
+
+    meta = _eval_meta(args, goldenset, started_at)
+    out = results_dir / f"{started_at.strftime('%Y-%m-%dT%H-%M-%S')}.json"
+    _report_eval(args.retrieval_only, goldenset, measured, skipped, scores, meta, out)
+
+
+def _eval_cases(
+    goldenset: "GoldenSet",
+    tags: str | None,
+    open_session: SessionFactory,
+) -> tuple[list, list]:
+    """--tags로 거른 문항을, 필요한 repository가 색인된 것과 아닌 것으로 나눈다."""
+    from whatfrom.eval.report import Skipped
+
+    wanted = {tag for tag in (tags or "").split(",") if tag}
     # --tags는 OR다. 지정한 태그 중 하나라도 가진 문항을 남긴다.
     cases = [c for c in goldenset.cases if not wanted or wanted & set(c.tags)]
-
-    engine = make_engine(args.database_url)
-    open_session = _open_session_factory(engine)
-    embedder = get_embedder(args.embedder)
-
     with open_session() as session:
         available = indexed_repositories(session)
 
@@ -314,68 +309,49 @@ def cmd_eval(args: argparse.Namespace) -> None:
             skipped.append(Skipped(case_id=case.id, missing=missing))
         else:
             measured.append(case)
+    return measured, skipped
 
-    provider = None if args.retrieval_only else get_provider(args.llm_provider)
-    started_at = datetime.now(UTC)
-    scores: list = []
 
-    results_dir = Path(args.results_dir)
-    # 결과 디렉터리를 생성할 수 없는 오류는 외부 모델 호출 전에 발견한다.
-    # 디렉터리가 이미 존재할 때의 파일 쓰기 권한까지 확인하는 것은 아니다.
-    results_dir.mkdir(parents=True, exist_ok=True)
+def _score_case(
+    case: "GoldenCase",
+    open_session: SessionFactory,
+    embedder: Embedder,
+    provider: LLMProvider | None,
+):
+    """문항 하나를 채점한다. provider가 None이면 검색 지표만 잰다."""
+    from whatfrom.eval.scoring import score_full, score_retrieval
 
-    for index, case in enumerate(measured, start=1):
-        print(f"[{index}/{len(measured)}] {case.id}", flush=True)
+    # 임베딩 오류는 검색 품질의 0점으로 집계하지 않고 실행을 중단시킨다.
+    vector = embedder.embed([case.question])[0]
+    with open_session() as session:
+        hits = search_chunks_by_vector(session, vector, limit=5)
+        # 제목만 넘기면 다른 repository의 같은 이름 섹션도 히트가 된다. repository를
+        # 함께 넘겨 채점이 문항이 묻는 repository의 문서만 보게 한다.
+        sections = [(chunk.document.repository, chunk.document.section_title) for chunk, _ in hits]
 
-        # 임베딩 오류는 검색 품질의 0점으로 집계하지 않고 실행을 중단시킨다.
-        vector = embedder.embed([case.question])[0]
+    if provider is None:
         with open_session() as session:
-            hits = search_chunks_by_vector(session, vector, limit=5)
-            # 제목만 넘기면 다른 리포의 같은 이름 섹션도 히트가 된다. 리포를
-            # 함께 넘겨 채점이 문항이 묻는 리포의 문서만 보게 한다.
-            sections = [
-                (chunk.document.repository, chunk.document.section_title) for chunk, _ in hits
-            ]
-
-        if args.retrieval_only:
-            with open_session() as session:
-                candidates = search_candidates_by_vector(session, vector)
-                digests = accepted_digests(session, case.accept)
-            scores.append(score_retrieval(case, candidates, sections, digests))
-            continue
-
-        # Hit@5는 두 모드 모두 후보 선택 전의 상위 5개 청크로 계산한다.
-        # 추천 응답의 evidence에는 후보 선택에서 제외된 문서가 없을 수 있다.
-        # 추천 경로도 별도로 실행하므로 전체 모드는 질문을 두 번 임베딩한다.
-        response, trace = timed_recommendation(open_session, embedder, provider, case.question)
-
-        exists: bool | None = None
-        if response.recommendation is not None:
-            repository, _, tag = response.recommendation.image.partition(":")
-            with open_session() as session:
-                exists = (
-                    session.execute(
-                        select(ImageTag.id).where(
-                            ImageTag.repository == repository, ImageTag.tag == tag
-                        )
-                    ).scalar_one_or_none()
-                    is not None
-                )
-        with open_session() as session:
+            candidates = search_candidates_by_vector(session, vector)
             digests = accepted_digests(session, case.accept)
-        score = score_full(case, response, sections, exists, digests)
-        scores.append(
-            replace(
-                score,
-                seconds_total=trace.seconds_total,
-                seconds_embedding=trace.seconds_embedding,
-                seconds_plan=trace.seconds_plan,
-                seconds_advise=trace.seconds_advise,
-                advise_prompt=trace.advise_prompt,
-            )
-        )
+        return score_retrieval(case, candidates, sections, digests)
 
-    meta = {
+    # Hit@5는 두 모드 모두 후보 선택 전의 상위 5개 청크로 계산한다.
+    # 추천 응답의 evidence에는 후보 선택에서 제외된 문서가 없을 수 있다.
+    # 추천 경로도 별도로 실행하므로 전체 모드는 질문을 두 번 임베딩한다.
+    response, trace = timed_recommendation(open_session, embedder, provider, case.question)
+
+    exists: bool | None = None
+    if response.recommendation is not None:
+        with open_session() as session:
+            exists = image_exists(session, response.recommendation.image)
+    with open_session() as session:
+        digests = accepted_digests(session, case.accept)
+    return replace(score_full(case, response, sections, exists, digests), trace=trace)
+
+
+def _eval_meta(args: argparse.Namespace, goldenset: "GoldenSet", started_at: datetime) -> dict:
+    """결과 JSON의 실행 meta. 서로 다른 실행의 점수를 비교할 수 있는지 판단하는 근거다."""
+    return {
         "started_at": started_at.isoformat(timespec="seconds"),
         "mode": "retrieval-only" if args.retrieval_only else "full",
         "embedder": args.embedder,
@@ -398,22 +374,42 @@ def cmd_eval(args: argparse.Namespace) -> None:
             goldenset.verified_on.isoformat() if goldenset.verified_on is not None else None
         ),
     }
-    metrics = aggregate_retrieval(scores) if args.retrieval_only else aggregate_full(scores)
+
+
+def _report_eval(
+    retrieval_only: bool,
+    goldenset: "GoldenSet",
+    measured: list,
+    skipped: list,
+    scores: list,
+    meta: dict,
+    out: Path,
+) -> None:
+    """지표를 집계해 요약을 출력하고 결과 JSON을 저장한다."""
+    from whatfrom.eval.report import (
+        aggregate_full,
+        aggregate_retrieval,
+        constant_baseline,
+        random_baseline,
+        render_summary,
+        result_document,
+    )
+
+    metrics = aggregate_retrieval(scores) if retrieval_only else aggregate_full(scores)
     # 전체 모드의 추천 정확도와 비교할 고정답 기준선을 계산한다.
     # 측정 문항의 accept 목록만 사용하며 추가 DB 조회나 모델 호출은 없다.
-    baseline = None if args.retrieval_only else constant_baseline(measured)
+    baseline = None if retrieval_only else constant_baseline(measured)
     # 후보 기록만으로 계산하므로 두 모드 모두 구한다.
     random = random_baseline(scores)
 
     print()
-    failures = [] if args.retrieval_only else scores
+    failures = [] if retrieval_only else scores
     print(
         render_summary(
             metrics, failures, measured, skipped, len(goldenset.cases), meta, baseline, random
         )
     )
 
-    out = results_dir / f"{started_at.strftime('%Y-%m-%dT%H-%M-%S')}.json"
     out.write_text(
         json.dumps(
             result_document(metrics, scores, skipped, meta, baseline, random),
@@ -474,6 +470,13 @@ def _positive_int(value: str) -> int:
     return parsed
 
 
+def _add_repository_target(parser: argparse.ArgumentParser, all_help: str) -> None:
+    """repository 하나 또는 --all 중 하나를 반드시 받는다."""
+    target = parser.add_mutually_exclusive_group(required=True)
+    target.add_argument("repository", nargs="?")
+    target.add_argument("--all", action="store_true", help=all_help)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="whatfrom")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -483,27 +486,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.set_defaults(func=cmd_init_db)
 
     p_collect = sub.add_parser("collect", help="collect tags from Docker Hub")
-    collect_target = p_collect.add_mutually_exclusive_group(required=True)
-    collect_target.add_argument("repository", nargs="?")
-    collect_target.add_argument(
-        "--all", action="store_true", help="스펙의 공식 이미지 10개를 모두 수집"
-    )
-    # 익명 요청은 리포지토리당 10페이지(1,000개)까지만 닿는다.
+    _add_repository_target(p_collect, all_help="스펙의 공식 이미지 10개를 모두 수집")
+    # 익명 요청은 repository당 10페이지(1,000개)까지만 닿는다.
     p_collect.add_argument("--max-pages", type=_positive_int, default=None)
     p_collect.add_argument("--database-url", default=settings.database_url)
     p_collect.set_defaults(func=cmd_collect)
 
     p_derive = sub.add_parser("derive", help="fill derived tag columns from collected tags")
-    derive_target = p_derive.add_mutually_exclusive_group(required=True)
-    derive_target.add_argument("repository", nargs="?")
-    derive_target.add_argument("--all", action="store_true", help="공식 이미지 10개를 모두 채움")
+    _add_repository_target(p_derive, all_help="공식 이미지 10개를 모두 채움")
     p_derive.add_argument("--database-url", default=settings.database_url)
     p_derive.set_defaults(func=cmd_derive)
 
     p_index = sub.add_parser("index", help="fetch README, chunk it, embed it")
-    index_target = p_index.add_mutually_exclusive_group(required=True)
-    index_target.add_argument("repository", nargs="?")
-    index_target.add_argument("--all", action="store_true", help="공식 이미지 10개를 모두 색인")
+    _add_repository_target(p_index, all_help="공식 이미지 10개를 모두 색인")
     p_index.add_argument("--embedder", default=settings.embedder)
     p_index.add_argument("--database-url", default=settings.database_url)
     p_index.set_defaults(func=cmd_index)
@@ -525,7 +520,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_eval.add_argument("--database-url", default=settings.database_url)
     p_eval.set_defaults(func=cmd_eval)
 
-    p_load = sub.add_parser("load-questions", help="부하 시험용 질문과 고정 순서를 내보낸다")
+    p_load = sub.add_parser("load-questions", help="export load test questions and a fixed order")
     p_load.add_argument("--goldenset", default="eval/goldenset.yaml")
     p_load.add_argument("--out", default="load/questions.json")
     p_load.add_argument("--seed", type=int, default=0)

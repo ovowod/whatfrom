@@ -5,7 +5,7 @@ import pytest
 
 from whatfrom.collect.tagparse import TagFacts, major_minor, parse_tag
 
-# (리포지토리, 태그, 버전, 배포판, 코드네임, 변형)
+# (repository, 태그, 버전, 배포판, 코드네임, 변형)
 CASES = [
     # 버전 표기
     ("python", "3.14.7", "3.14.7", None, None, None),
@@ -79,7 +79,7 @@ CASES = [
     ("debian", "rc-buggy-20250908", None, "debian", None, None),
     ("debian", "oldstable-20260623", None, "debian", None, None),
     ("debian", "sid-20260316-slim", None, "debian", "sid", "slim"),
-    # OS 베이스 리포지토리
+    # OS 베이스 repository
     ("debian", "13", "13", "debian", None, None),
     ("debian", "13.6-slim", "13.6", "debian", None, "slim"),
     ("debian", "trixie-slim", None, "debian", "trixie", "slim"),
@@ -108,7 +108,7 @@ def test_there_are_at_least_fifty_cases():
 
 
 def test_a_debian_codename_outside_an_os_repository_still_names_debian():
-    """리포지토리 이름으로 분기하는 곳은 OS 베이스 리포지토리 규칙 하나뿐이다."""
+    """repository 이름으로 분기하는 곳은 OS 베이스 repository 규칙 하나뿐이다."""
     assert parse_tag("3.13-bookworm", "some-new-image").distribution == "debian"
 
 

@@ -39,7 +39,7 @@ def repository_payload(name: str) -> httpx2.Response:
 
 
 def readmes(texts: dict[str, str]):
-    """README 원본 받기를 흉내 낸다. 없는 리포는 GitHub 404처럼 실패한다."""
+    """README 원본 받기를 흉내 낸다. 없는 repository는 GitHub 404처럼 실패한다."""
 
     def fetch(repository: str) -> str:
         if repository not in texts:
@@ -161,7 +161,7 @@ def test_run_index_indexes_the_docs_readme_not_the_hub_description(engine, clean
 
 
 def test_run_index_fails_a_repository_whose_readme_cannot_be_fetched(engine, cleanup):
-    """잘린 Hub 본문으로 대신하지 않는다. 그 리포만 실패로 세고 이전 색인은 남긴다."""
+    """잘린 Hub 본문으로 대신하지 않는다. 그 repository만 실패로 세고 이전 색인은 남긴다."""
     cleanup.extend(["cli-index-kept", "cli-index-next"])
     client = hub(
         {

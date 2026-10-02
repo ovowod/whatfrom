@@ -1,5 +1,5 @@
 # tests/search/test_planned_search.py
-"""검색 조건으로 후보를 만드는 경로: 리포지토리 강제, 전체 기준 완화, 알림."""
+"""검색 조건으로 후보를 만드는 경로: repository 강제, 전체 기준 완화, 알림."""
 
 from whatfrom.core.contracts import SearchPlan
 from whatfrom.core.embed import FakeEmbedder
@@ -58,7 +58,7 @@ def test_an_empty_plan_gives_the_same_candidates_as_the_vector_path(session):
 
 
 def test_the_plan_repository_is_forced_even_when_the_vector_search_misses_it(session):
-    """ "Java 17"인데 검색이 temurin 문서를 못 찾은 경우. 지정 리포지토리만 후보를 낸다."""
+    """ "Java 17"인데 검색이 temurin 문서를 못 찾은 경우. 지정 repository만 후보를 낸다."""
     seed(session)
     v = vector("python slim alpine bookworm")
 
@@ -73,12 +73,12 @@ def test_the_plan_repository_is_forced_even_when_the_vector_search_misses_it(ses
 
 
 def test_a_repository_without_documents_is_not_forced(session):
-    """색인되지 않은 리포지토리는 근거가 없다.
+    """색인되지 않은 repository는 근거가 없다.
 
-    벡터 검색 리포지토리로 돌아가고 버전은 쓰지 않는다.
+    벡터 검색 repository로 돌아가고 버전은 쓰지 않는다.
     """
     seed(session)
-    # 태그만 있고 문서가 없는 리포지토리.
+    # 태그만 있고 문서가 없는 repository.
     session.add(
         Repository(name="ghost", is_official=True, source_url="https://x.invalid", collected_at=NOW)
     )
@@ -117,12 +117,12 @@ def test_a_version_without_a_repository_is_not_applied(session):
     )
 
     assert "py:3.14-trixie" in images(result)
-    assert result.notes == ["리포지토리를 특정하지 못해 버전 조건(3.13)을 쓰지 않았습니다."]
+    assert result.notes == ["repository를 특정하지 못해 버전 조건(3.13)을 쓰지 않았습니다."]
     assert result.degraded is False
 
 
 def test_repositories_that_fail_the_conditions_give_no_candidates(session):
-    """조건을 만족하는 python 후보가 있으면 alpine 리포지토리는 완화하지 않고 빠진다."""
+    """조건을 만족하는 python 후보가 있으면 alpine repository는 완화하지 않고 빠진다."""
     seed(session)
     v = vector("python slim alpine bookworm musl busybox base image")
 
@@ -237,7 +237,7 @@ def test_no_stale_line_note_after_the_version_was_relaxed(session):
 
 
 def add_noisy_repository(session) -> None:
-    """청크가 여럿인 태그 목록 섹션과 짧은 섹션을 가진 리포지토리."""
+    """청크가 여럿인 태그 목록 섹션과 짧은 섹션을 가진 repository."""
     tags = "java jdk jre temurin gradle build tag list. " * 150
     add_repository(
         session,
@@ -248,7 +248,7 @@ def add_noisy_repository(session) -> None:
 
 
 def test_a_long_section_does_not_crowd_out_other_repositories(session):
-    """태그 목록 섹션이 상위를 독차지하면 다른 리포지토리 후보가 사라진다."""
+    """태그 목록 섹션이 상위를 독차지하면 다른 repository 후보가 사라진다."""
     seed(session)
     add_noisy_repository(session)
 
@@ -281,3 +281,16 @@ def test_a_forced_repository_found_by_the_search_keeps_that_evidence(session):
     )
 
     assert [e.section_title for e in result.candidates[0].evidence] == ["How to use this Image"]
+
+
+def test_no_relaxation_note_when_relaxing_finds_no_candidate(session):
+    """조건을 모두 풀어도 후보가 없으면, 소용없던 완화를 알리지 않는다. 저하 표시는 남는다."""
+    add_repository(session, "py", PY_README)
+
+    result = search_candidates_with_plan(
+        session, vector("python slim"), SearchPlan(distributions=["bookworm"])
+    )
+
+    assert images(result) == []
+    assert result.notes == []
+    assert result.degraded is True

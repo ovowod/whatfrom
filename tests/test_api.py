@@ -355,6 +355,23 @@ def test_recommend_marks_a_relaxed_answer_degraded_but_keeps_the_recommendation(
     assert any("배포판 조건(bookworm)을 풀었습니다" in note for note in body["notes"])
 
 
+def test_recommend_without_candidates_after_relaxing_mentions_only_the_empty_search(session):
+    """조건을 모두 풀어도 후보가 없으면 "검색된 후보가 없습니다"만 남는다."""
+    row = parse_repository(json.loads((FIXTURES / "hub_repository.json").read_text()))
+    upsert_repository(session, row, NOW)
+    session.flush()
+    index_readme(session, "python", row.readme, row.source_url, FakeEmbedder(), NOW)
+    session.flush()
+    provider = FakeLLMProvider(recommendation=SLIM, plan=SearchPlan(distributions=["bookworm"]))
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    assert body["recommendation"] is None
+    assert body["degraded"] is True
+    assert not any("풀었습니다" in note for note in body["notes"])
+    assert any("검색된 후보가 없습니다" in note for note in body["notes"])
+
+
 def test_recommend_does_not_extract_a_plan_when_embedding_fails(session):
     """싼 호출을 먼저 한다. 어차피 실패할 요청에 LLM을 쓰지 않는다."""
     _seed(session)

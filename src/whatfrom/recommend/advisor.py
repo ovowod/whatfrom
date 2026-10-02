@@ -39,8 +39,8 @@ def build_prompt(question: str, candidates: list[Candidate]) -> str:
             f"- {candidate.image} | {_format_platforms(candidate.platforms)} | pushed: {pushed}"
         )
 
-    # 리포지토리까지 봐야 한다. 제목만으로 지우면 python과 node의 "Image Variants" 중
-    # 하나가 사라진다. 제목에도 리포지토리를 적어 어느 제품 문서인지 드러낸다.
+    # repository까지 봐야 한다. 제목만으로 지우면 python과 node의 "Image Variants" 중
+    # 하나가 사라진다. 제목에도 repository를 적어 어느 제품 문서인지 드러낸다.
     seen: set[tuple[str, str]] = set()
     lines += ["", "Evidence from the official README:"]
     for candidate in candidates:

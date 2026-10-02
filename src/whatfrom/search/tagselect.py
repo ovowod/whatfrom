@@ -1,7 +1,7 @@
 # src/whatfrom/search/tagselect.py
 """후보로 쓸 태그를 고르는 규칙.
 
-DB를 모른다. 값만 받아 값을 돌려준다. 리포지토리 이름으로 분기하지 않는다.
+DB를 모른다. 값만 받아 값을 돌려준다. repository 이름으로 분기하지 않는다.
 """
 
 import re
@@ -48,22 +48,23 @@ def select_tags(
 ) -> list[TagRef]:
     """후보로 쓸 태그를 고른다.
 
-    tags는 한 리포지토리의 태그여야 한다. 줄기 단위와 지원 여부를 리포지토리
+    tags는 한 repository의 태그여야 한다. 줄기 단위와 지원 여부를 repository
     안에서 상대적으로 판단하기 때문이다.
 
     1. Windows 전용 태그를 뺀다. 되살리지 않는다.
     2. 프리릴리스와 날짜 스냅샷, 그리고 이들과 같은 digest를 가리키는 태그를 뺀다.
-       이것만 남는 리포지토리는 이것들로 폴백한다. 후보가 없는 것보다 낫다.
+       이것만 남는 repository는 이것들로 폴백한다. 후보가 없는 것보다 낫다.
     3. 별칭 태그가 있는 릴리스 줄기를 찾고, 지원이 끝난 줄기를 뺀다. 지원 줄기 안에서도
        SUPPORT_GAP 넘게 뒤처진 변형 별칭은 뺀다.
     4. 줄기를 최신순으로 번갈아 돌며 limit까지 채운다. 한 줄기로 몰아 채우면
        최신 줄기의 변형만 들어가 LTS 줄기가 빠진다.
-    5. 줄기가 없으면 최근 푸시 순으로 고른다.
+    5. 줄기가 없으면 최근 푸시 순으로 고른다. 줄기는 있는데 지원 줄기의 별칭이 모두
+       빠졌으면, 지원 줄기의 tag(고정 tag 포함) 안에서만 최근 push 순으로 고른다.
 
     allowed_ids를 주면 그 태그만 고른다. 검색 조건을 통과한 태그다. 1~3단계의
     판정은 allowed_ids와 무관하게 tags 전체로 한다. 조건으로 먼저 거른 태그만 넘기면
     가장 최근 줄기가 바뀌어 지원이 끝난 줄기가 살아나고, 거른 결과가 프리릴리스뿐이면
-    프리릴리스 폴백까지 작동한다. 폴백은 리포지토리 전체의 성질로만 정한다.
+    프리릴리스 폴백까지 작동한다. 폴백은 repository 전체의 성질로만 정한다.
 
     pinned_version과 맞는 줄기는 지원이 끝났어도 고를 수 있다. 사용자가 그 버전을
     명시했다. 줄기 안의 낡은 변형 별칭은 그대로 뺀다.
@@ -72,7 +73,7 @@ def select_tags(
     아니라 그 버전으로 시작하는 고정 태그에서 고른다. 별칭 3.14는 3.14.7을 가리키므로
     3.14.6을 요구한 사람에게 줄 수 없고, 별칭만 고르면 존재하는 3.14.6을 버리게 된다.
     """
-    linux = [ref for ref in tags if not WINDOWS_ONLY.search(ref.tag)]
+    linux = _exclude_windows_only(tags)
     stable = _exclude_prerelease(linux)
     if not stable:
         return _by_recent_push(_fold_by_digest(_allowed(linux, allowed_ids)))[:limit]
@@ -88,22 +89,26 @@ def select_tags(
         ]
         return sorted(_fold_by_digest(fixed), key=lambda ref: (len(ref.tag), ref.tag))[:limit]
 
-    kept = [] if depth is None else _supported_aliases(stable, depth, pinned_version)
-    if not kept:
+    if depth is None:
         return _by_recent_push(_fold_by_digest(_allowed(stable, allowed_ids)))[:limit]
+    kept = _supported_aliases(stable, depth, pinned_version)
+    if not kept:
+        # 별칭이 모두 낡은 변형으로 빠진 경우다. 지원이 끝난 줄기를 되살리지 않는다.
+        lines = _supported_lines(stable, depth, pinned_version)
+        in_lines = [ref for ref in stable if _line_of(ref.tag, depth) in lines]
+        return _by_recent_push(_fold_by_digest(_allowed(in_lines, allowed_ids)))[:limit]
     # 같은 digest를 접기 전에 거른다. 접은 뒤에 거르면, 허용된 긴 이름이 허용되지 않은
     # 짧은 이름에 흡수되어 함께 사라진다.
-    assert depth is not None
     return _interleave(_group_lines(_fold_by_digest(_allowed(kept, allowed_ids)), depth), limit)
 
 
 def stale_pinned_lines(tags: list[TagRef], pinned_version: str, chosen: list[TagRef]) -> list[str]:
     """pinned_version 때문에 되살렸고, chosen에 실제로 들어간 줄기.
 
-    지원 판정은 현재 시각이 아니라 리포지토리의 가장 최근 줄기와의 차이로 한다.
+    지원 판정은 현재 시각이 아니라 repository의 가장 최근 줄기와의 차이로 한다.
     후보에 없는 줄기는 알리지 않는다.
     """
-    stable = _exclude_prerelease([ref for ref in tags if not WINDOWS_ONLY.search(ref.tag)])
+    stable = _exclude_prerelease(_exclude_windows_only(tags))
     depth = _line_depth(stable)
     if depth is None:
         return []
@@ -133,16 +138,28 @@ def _allowed(refs: list[TagRef], allowed_ids: frozenset[int] | None) -> list[Tag
     return [ref for ref in refs if ref.id in allowed_ids]
 
 
-def _exclude_prerelease(tags: list[TagRef]) -> list[TagRef]:
-    """이름으로 걸러진 태그와, 그것과 같은 digest를 가리키는 태그를 뺀다.
+def _exclude_windows_only(tags: list[TagRef]) -> list[TagRef]:
+    """Windows 전용 tag와, 그것과 같은 digest를 가리키는 tag를 뺀다."""
+    return _exclude_with_digest(tags, {ref.id for ref in tags if WINDOWS_ONLY.search(ref.tag)})
 
-    ubuntu의 devel과 26.10처럼 개발 브랜치가 안정 버전 이름으로도 배포된다.
-    digest가 None이면 동일성을 알 수 없으므로 전파의 대상으로도, 근거로도 쓰지 않는다.
+
+def _exclude_prerelease(tags: list[TagRef]) -> list[TagRef]:
+    """prerelease·날짜 snapshot 이름의 tag와, 그것과 같은 digest를 가리키는 tag를 뺀다.
+
+    ubuntu의 devel과 26.10처럼 개발 branch가 안정 version 이름으로도 배포된다.
     """
     named_ids = {
         ref.id for ref in tags if PRERELEASE.search(ref.tag) or DATE_SNAPSHOT.match(ref.tag)
     }
-    prerelease_digests = {
+    return _exclude_with_digest(tags, named_ids)
+
+
+def _exclude_with_digest(tags: list[TagRef], named_ids: set[int]) -> list[TagRef]:
+    """named_ids의 tag와, 그것과 같은 digest를 가리키는 tag를 뺀다.
+
+    digest가 None이면 동일성을 알 수 없으므로 전파의 대상으로도, 근거로도 쓰지 않는다.
+    """
+    named_digests = {
         ref.manifest_digest
         for ref in tags
         if ref.id in named_ids and ref.manifest_digest is not None
@@ -151,7 +168,7 @@ def _exclude_prerelease(tags: list[TagRef]) -> list[TagRef]:
         ref
         for ref in tags
         if ref.id not in named_ids
-        and not (ref.manifest_digest is not None and ref.manifest_digest in prerelease_digests)
+        and not (ref.manifest_digest is not None and ref.manifest_digest in named_digests)
     ]
 
 
@@ -182,10 +199,10 @@ def _line_depth(tags: list[TagRef]) -> int | None:
     별칭 줄기가 둘 이상인 가장 짧은 자릿수를 쓰고, 없으면 하나라도 있는 가장 짧은
     자릿수를 쓴다. python은 메이저 3 하나뿐이라 마이너 단위가 되고, node는 26·24·22가
     있어 메이저 단위가 된다. 지원 판정을 여기에 섞으면, 지원 줄기가 하나뿐인
-    리포지토리가 폴백으로 떨어져 끝난 줄기까지 되살아난다.
+    repository가 폴백으로 떨어져 끝난 줄기까지 되살아난다.
 
     패치 자릿수는 "둘 이상" 규칙에 넣지 않는다. 3.14.7과 3.14.6은 한 줄기의
-    스냅샷인데, 둘로 세면 마이너 줄기가 하나뿐인 리포지토리에서 별칭이 빠진다.
+    스냅샷인데, 둘로 세면 마이너 줄기가 하나뿐인 repository에서 별칭이 빠진다.
     """
     alias_lines: dict[int, set[str]] = {}
     for depth in range(1, MAX_LINE_DEPTH + 1):
@@ -228,16 +245,22 @@ def _aliases_by_line(
 def _supported_aliases(tags: list[TagRef], depth: int, pinned_version: str | None) -> list[TagRef]:
     """지원 중인 줄기의 별칭 태그. 명시한 버전의 줄기는 지원이 끝났어도 넣는다."""
     aliases, latest_push = _aliases_by_line(tags, depth)
+    return [
+        ref
+        for line in sorted(_supported_lines(tags, depth, pinned_version))
+        for ref in _drop_stale_variants(aliases[line], latest_push.get(line))
+    ]
+
+
+def _supported_lines(tags: list[TagRef], depth: int, pinned_version: str | None) -> set[str]:
+    """별칭이 있는 줄기 중 지원 중인 것. 명시한 version의 줄기는 지원이 끝났어도 넣는다."""
+    aliases, latest_push = _aliases_by_line(tags, depth)
     supported = _supported({line: latest_push.get(line) for line in aliases})
     if pinned_version is not None:
         # 줄기가 요구 버전의 앞부분일 때만 되살린다. "3.12"는 3.12 줄기를 되살리지만
         # "3"은 3.x 줄기 전체를 되살리지 않는다.
         supported |= {line for line in aliases if extends_version(line, pinned_version)}
-    return [
-        ref
-        for line in sorted(supported)
-        for ref in _drop_stale_variants(aliases[line], latest_push.get(line))
-    ]
+    return supported
 
 
 def _group_lines(refs: list[TagRef], depth: int) -> list[list[TagRef]]:

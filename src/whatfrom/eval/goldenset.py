@@ -49,7 +49,7 @@ class ExpectedPlan(BaseModel):
     Conditions와 다르다. 추출기는 질문에 적힌 것만 뽑아야 하므로, 문서 지식에서 나온
     조건은 여기에 적지 않는다. 적지 않은 필드는 비어 있다는 뜻이고 그대로 비교한다.
     모델이 질문에 없는 크기 상한을 만들어내면 실패로 잡아야 하기 때문이다.
-    리포지토리는 적지 않는다. requires_repositories가 정답이다.
+    repository는 적지 않는다. requires_repositories가 정답이다.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -89,12 +89,12 @@ class GoldenCase(BaseModel):
 
     id: str
     question: str
-    # 채점에 필요한 리포지터리. 하나라도 색인되지 않았으면 문항을 미측정으로 분류한다.
+    # 채점에 필요한 repository. 하나라도 색인되지 않았으면 문항을 미측정으로 분류한다.
     requires_repositories: list[str] = Field(min_length=1)
     tags: list[str] = Field(default_factory=list)
     # 정답으로 인정할 이미지 목록. 추천 이미지가 이 목록에 있으면 정확도로 집계한다.
     accept: list[str] = Field(min_length=1)
-    # 명시적 오답. 지표에는 들어가지 않고 리포트에 경보로 표시된다.
+    # 명시적 오답. 지표에는 들어가지 않고 report에 경보로 표시된다.
     reject: list[str] = Field(default_factory=list)
     conditions: Conditions = Field(default_factory=Conditions)
     # 기본값을 두지 않는다. 빠뜨린 문항이 조용히 "조건 없음"으로 채점되면 안 된다.

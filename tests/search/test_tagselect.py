@@ -134,7 +134,7 @@ def test_shorter_names_come_first_within_the_same_version():
 
 
 def test_falls_back_to_recent_push_when_no_tag_has_a_version():
-    """debian:bookworm처럼 숫자 버전이 없는 리포. 후보를 0개로 만들지 않는다."""
+    """debian:bookworm처럼 숫자 버전이 없는 repository. 후보를 0개로 만들지 않는다."""
     tags = [
         ref(1, "bookworm", pushed=datetime(2026, 9, 1, tzinfo=UTC)),
         ref(2, "trixie", pushed=datetime(2026, 9, 3, tzinfo=UTC)),
@@ -296,7 +296,7 @@ def test_a_date_snapshot_is_not_a_release_line():
 
 
 def test_new_prerelease_words_are_excluded():
-    """숫자 버전이 없는 리포지토리는 폴백으로 가므로, 이름만으로 걸러져야 한다."""
+    """숫자 버전이 없는 repository는 폴백으로 가므로, 이름만으로 걸러져야 한다."""
     tags = [
         ref(1, "19beta3", pushed=NOW),
         ref(2, "tip-bookworm", pushed=NOW),
@@ -334,6 +334,33 @@ def test_a_repo_with_only_windows_tags_has_no_candidates():
     """Linux 컨테이너만 추천한다. 프리릴리스와 달리 폴백으로 되살리지 않는다."""
     tags = [ref(1, "ltsc2022-windowsservercore"), ref(2, "3.14-nanoserver")]
     assert select_tags(tags, limit=10) == []
+
+
+def test_a_tag_sharing_a_digest_with_a_windows_only_tag_is_excluded_too():
+    """이름에 Windows 표시가 없어도 Windows 전용 tag와 같은 image면 함께 뺀다."""
+    tags = [
+        ref(1, "3.14-windowsservercore", digest="sha256:win"),
+        ref(2, "3.14-win", digest="sha256:win"),
+        ref(3, "3.14-slim"),
+    ]
+    assert [t.tag for t in select_tags(tags, limit=10)] == ["3.14-slim"]
+
+
+def test_a_windows_only_tag_without_a_digest_excludes_nothing_else():
+    tags = [ref(1, "3.14-nanoserver", digest=None), ref(2, "3.14-slim", digest=None)]
+    assert [t.tag for t in select_tags(tags, limit=10)] == ["3.14-slim"]
+
+
+def test_a_line_made_only_of_windows_images_is_not_reported_as_stale():
+    """Windows 전용 tag와 digest가 같은 별칭은 줄기로 세지 않는다."""
+    now = datetime(2026, 9, 17, tzinfo=UTC)
+    old = now - timedelta(days=300)
+    tags = [
+        ref(1, "3.14", pushed=now),
+        ref(2, "3.9-windowsservercore", digest="sha256:win", pushed=old),
+        ref(3, "3.9", digest="sha256:win", pushed=old),
+    ]
+    assert stale_pinned_lines(tags, "3.9", [tags[2]]) == []
 
 
 def test_a_line_without_push_times_is_dropped_when_others_have_them():
@@ -436,10 +463,10 @@ def test_undated_aliases_are_kept_when_the_whole_line_has_no_push_time():
 
 
 def test_the_variant_check_uses_its_own_lines_latest_push_not_the_repos():
-    """변형 판정은 그 줄기 자신의 최신 푸시를 기준으로 한다. 리포 전체의 최신 줄기가 아니다.
+    """변형 판정은 그 줄기 자신의 최신 푸시를 기준으로 한다. repository 전체의 최신 줄기가 아니다.
 
-    19가 리포에서 가장 최근에 푸시됐어도, 18-alpine은 자기 줄기 18의 최신 푸시(55일 전)
-    기준으로 55일 뒤처졌을 뿐이라 후보로 남는다. 리포 전체 기준(19의 지금)으로 재면
+    19가 repository에서 가장 최근에 푸시됐어도, 18-alpine은 자기 줄기 18의 최신 푸시(55일 전)
+    기준으로 55일 뒤처졌을 뿐이라 후보로 남는다. repository 전체 기준(19의 지금)으로 재면
     110일 뒤처져 잘못 빠진다.
     """
     tags = [
@@ -468,7 +495,7 @@ def test_allowed_ids_do_not_revive_an_unsupported_line():
 
 
 def test_allowed_ids_that_leave_only_prereleases_do_not_trigger_the_fallback():
-    """프리릴리스 폴백은 리포지토리에 안정 태그가 하나도 없을 때만이다."""
+    """프리릴리스 폴백은 repository에 안정 태그가 하나도 없을 때만이다."""
     tags = [
         ref(1, "3.14-trixie", pushed=NOW),
         ref(2, "3.15.0rc2-bookworm", pushed=NOW),
@@ -590,3 +617,29 @@ def test_a_stale_line_not_in_the_chosen_tags_is_not_reported():
     tags = [ref(1, "3.14", pushed=NOW), ref(2, "3.9", pushed=NOW - 300 * DAY)]
 
     assert stale_pinned_lines(tags, "3.9", [tags[0]]) == []
+
+
+def test_the_fallback_after_stale_aliases_stays_within_supported_lines():
+    """지원 줄기의 별칭이 모두 낡아 빠져도, 지원이 끝난 줄기는 되살리지 않는다.
+
+    3.14는 고정 tag 3.14.7이 최근에 push돼 지원 줄기지만, 별칭 3.14는 100일 전에 멈췄다.
+    fallback은 지원 줄기의 tag 안에서만 최근 push 순으로 고른다.
+    """
+    tags = [
+        ref(1, "3.14", pushed=NOW - 100 * DAY),
+        ref(2, "3.14.7", pushed=NOW),
+        ref(3, "3.9", pushed=NOW - 200 * DAY),
+        ref(4, "3.9.20", pushed=NOW - 200 * DAY),
+    ]
+    assert [t.tag for t in select_tags(tags, limit=10)] == ["3.14.7", "3.14"]
+
+
+def test_the_supported_line_fallback_filters_allowed_ids_before_folding():
+    """같은 digest 중 긴 이름만 허용됐으면 그 tag가 남는다. 접은 뒤 거르면 둘 다 사라진다."""
+    tags = [
+        ref(1, "3.14", pushed=NOW - 100 * DAY),
+        ref(2, "3.14.7", digest="sha256:same", pushed=NOW),
+        ref(3, "3.14.7-slim", digest="sha256:same", pushed=NOW),
+    ]
+    allowed = ids(tags, "3.14.7-slim")
+    assert [t.tag for t in select_tags(tags, limit=10, allowed_ids=allowed)] == ["3.14.7-slim"]

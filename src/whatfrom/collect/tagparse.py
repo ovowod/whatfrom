@@ -23,8 +23,8 @@ VARIANT_WORDS = frozenset(
     "slim jre jdk minimal perl otel 32bit windowsservercore nanoserver".split()
 )
 WINDOWS_WORDS = frozenset({"windowsservercore", "nanoserver"})
-# 리포지토리 자체가 배포판인 공식 이미지. 이름에 배포판이 드러나지 않는다.
-# 리포지토리 이름을 쓰는 곳은 이 표 하나뿐이다.
+# repository 자체가 배포판인 공식 이미지. 이름에 배포판이 드러나지 않는다.
+# repository 이름을 쓰는 곳은 이 표 하나뿐이다.
 OS_REPOSITORIES = frozenset({"debian", "ubuntu", "alpine"})
 
 VERSION_TOKEN = re.compile(r"^\d[0-9A-Za-z._]*$")

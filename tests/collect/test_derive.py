@@ -104,5 +104,5 @@ def _count_statements(engine, n: int) -> int:
 
 
 def test_statement_count_does_not_grow_with_the_repository(engine):
-    """태그마다 UPDATE가 나가면 리포지토리 하나(1,000개)가 1,000번 왕복한다."""
+    """태그마다 UPDATE가 나가면 repository 하나(1,000개)가 1,000번 왕복한다."""
     assert _count_statements(engine, 2) == _count_statements(engine, 50)

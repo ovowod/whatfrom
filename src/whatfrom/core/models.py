@@ -89,7 +89,7 @@ class ImageVariant(Base):
 class CollectionRun(Base):
     """수집 실행 한 번의 기록. 수집 판단에는 쓰지 않고, 무엇이 어떻게 끝났는지 남긴다.
 
-    repository에 FK를 걸지 않는다. 리포지토리 행을 만들기 전에 실패한 실행도
+    repository에 FK를 걸지 않는다. repository 행을 만들기 전에 실패한 실행도
     기록해야 한다. finished_at이 NULL이면 완료되지 않은 실행이다.
     """
 

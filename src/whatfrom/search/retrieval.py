@@ -10,7 +10,7 @@ from whatfrom.core.models import Document, DocumentChunk, ImageTag, Repository
 from whatfrom.search.filters import TagConditions, relaxations, tag_filters
 from whatfrom.search.tagselect import TagRef, select_tags, stale_pinned_lines
 
-# 지정 리포지토리가 벡터 검색 상위 청크에 없을 때 그 안에서 따로 찾아 붙일 근거 수.
+# 지정 repository가 벡터 검색 상위 청크에 없을 때 그 안에서 따로 찾아 붙일 근거 수.
 FORCED_EVIDENCE_CHUNKS = 2
 
 
@@ -31,14 +31,14 @@ def search_chunks_by_vector(
     """코사인 거리 기준 최근접 청크. 거리는 0(동일)~2(정반대).
 
     한 섹션(documents 한 행)에서는 가장 가까운 청크 하나만 돌려준다. 태그 목록처럼
-    청크가 많은 섹션이 상위를 독차지하면 다른 리포지토리의 문서가 밀려나고,
+    청크가 많은 섹션이 상위를 독차지하면 다른 repository의 문서가 밀려나고,
     LLM에 넘기는 근거도 같은 섹션 전문이 중복된다.
 
     거리가 같으면 청크 id가 작은 쪽이 앞이다. 공식 이미지 README는 같은 틀에서
     만들어져서 이미지 이름만 다른 청크가 있다. 그 거리가 같게 나오므로 규칙이
     없으면 limit에 따라 순서가 달라진다.
 
-    repository를 주면 그 리포지토리의 청크 안에서만 찾는다.
+    repository를 주면 그 repository의 청크 안에서만 찾는다.
     """
     distance = DocumentChunk.embedding.cosine_distance(vector).label("distance")
     ranked = (
@@ -88,7 +88,7 @@ def search_candidates_by_vector(
     chunk_k: int = 5,
     tags_per_repo: int = 20,
 ) -> list[Candidate]:
-    """벡터 검색으로 리포와 근거를 찾고, 그 리포의 태그 중에서 후보를 세운다.
+    """벡터 검색으로 repository와 근거를 찾고, 그 repository의 태그 중에서 후보를 세운다.
 
     태그 선택 규칙은 tagselect.select_tags에 있다.
 
@@ -109,7 +109,7 @@ def search_candidates_by_vector(
 @dataclass(frozen=True)
 class PlannedSearch:
     candidates: list[Candidate]
-    # 조건 완화, 리포지토리를 강제하지 못한 이유 같은 사용자에게 알릴 말.
+    # 조건 완화, repository를 강제하지 못한 이유 같은 사용자에게 알릴 말.
     notes: list[str]
     # 스펙 §8의 정상 경로가 아닌 단계로 후보를 만들었는가. 완화, 강제 실패가 그렇다.
     degraded: bool
@@ -124,13 +124,13 @@ def search_candidates_with_plan(
 ) -> PlannedSearch:
     """검색 조건으로 후보를 만든다.
 
-    plan.repository가 있으면 그 리포지토리에서만 후보를 낸다. 조건의 뜻이 리포지토리마다
+    plan.repository가 있으면 그 repository에서만 후보를 낸다. 조건의 뜻이 repository마다
     다르고("3.12"는 python의 버전이다), 다른 제품을 섞으면 LLM #2가 조건을 거치지 않은
-    후보를 고를 수 있다. 문서나 태그가 없어 강제할 수 없으면 벡터 검색 리포지토리로
+    후보를 고를 수 있다. 문서나 태그가 없어 강제할 수 없으면 벡터 검색 repository로
     돌아가고 버전 조건은 쓰지 않는다.
 
-    완화는 후보 전체를 기준으로 한다. 한 리포지토리라도 조건을 만족하면 그 후보만 낸다.
-    리포지토리별로 완화하면 조건을 만족하는 후보 사이에 위반 후보가 섞인다.
+    완화는 후보 전체를 기준으로 한다. 한 repository라도 조건을 만족하면 그 후보만 낸다.
+    repository별로 완화하면 조건을 만족하는 후보 사이에 위반 후보가 섞인다.
     """
     notes: list[str] = []
     degraded = False
@@ -150,7 +150,7 @@ def search_candidates_with_plan(
             )
     if plan.version_prefix is not None and not forced:
         notes.append(
-            f"리포지토리를 특정하지 못해 버전 조건({plan.version_prefix})을 쓰지 않았습니다."
+            f"repository를 특정하지 못해 버전 조건({plan.version_prefix})을 쓰지 않았습니다."
         )
 
     conditions = TagConditions(
@@ -178,7 +178,9 @@ def search_candidates_with_plan(
 
     if relaxed:
         degraded = True
-        notes.append(f"조건에 맞는 태그가 없어 {', '.join(relaxed)}을 풀었습니다.")
+        # 풀어도 후보가 없으면 소용없던 완화다. 후보가 없다는 안내는 호출한 쪽이 한다.
+        if chosen_by_repo:
+            notes.append(f"조건에 맞는 태그가 없어 {', '.join(relaxed)}을 풀었습니다.")
     # 실제로 쓰인 단계의 버전으로, 최종 후보에 들어간 줄기만 알린다. 버전 조건을 풀었으면
     # 되살린 줄기가 없으므로 알릴 것도 없다.
     if stage.version_prefix is not None:
@@ -196,7 +198,7 @@ def search_candidates_with_plan(
 
 
 def _evidence_by_repo(hits: list[tuple[DocumentChunk, float]]) -> dict[str, list[Evidence]]:
-    """청크가 걸린 리포지토리별 근거. 순서는 먼저 걸린 리포지토리부터다."""
+    """청크가 걸린 repository별 근거. 순서는 먼저 걸린 repository부터다."""
     evidence_by_repo: dict[str, list[Evidence]] = {}
     for chunk, _distance in hits:
         document: Document = chunk.document
@@ -218,7 +220,7 @@ def _forced_evidence(
     repository: str,
     evidence_by_repo: dict[str, list[Evidence]],
 ) -> list[Evidence]:
-    """지정 리포지토리의 근거. 상위 청크에 없으면 그 안에서 따로 찾는다.
+    """지정 repository의 근거. 상위 청크에 없으면 그 안에서 따로 찾는다.
 
     근거 없이 후보를 내면 LLM #2가 문서 없이 고른다. 색인되지 않아 청크가 없으면 빈 목록이다.
     """
@@ -249,7 +251,7 @@ def _allowed_ids(session: Session, repository: str, conditions: TagConditions) -
 
 def _tag_refs(session: Session, repository: str) -> list[TagRef]:
     """선택에 필요한 네 컬럼만 가볍게 전부 가져온다. variants까지 붙이면
-    python 리포 기준 태그 300개에 변종 1868행이 딸려온다."""
+    python repository 기준 태그 300개에 변종 1868행이 딸려온다."""
     return [
         TagRef(
             id=row.id,
