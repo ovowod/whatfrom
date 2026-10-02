@@ -16,7 +16,7 @@ from typing import Any
 class RunTrace:
     """추천 경로 한 번의 단계별 소요 시간(초)과 LLM #2에 보낸 prompt. 부르지 않았으면 None.
 
-    러너가 Timed로 재서 채우고, 채점 결과(CaseScore)가 그대로 싣는다.
+    runner가 Timed로 재서 채우고, 채점 결과(CaseScore)가 그대로 싣는다.
     """
 
     seconds_total: float

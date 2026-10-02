@@ -98,7 +98,7 @@ def _target_repositories(args: argparse.Namespace) -> Sequence[str]:
 def _run_each(repositories: Sequence[str], run_one: Callable[[str], str]) -> int:
     """repository마다 run_one을 부르고 그 결과 줄을 출력한다. 실패가 있으면 1을 돌려준다.
 
-    collect는 이 루프를 쓰지 않는다. 실패 격리와 실행 기록을 collect_all이 맡고,
+    collect는 이 loop를 쓰지 않는다. 실패 격리와 실행 기록을 collect_all이 맡고,
     결과를 표 하나로 모아 출력한다.
     """
     failed = 0

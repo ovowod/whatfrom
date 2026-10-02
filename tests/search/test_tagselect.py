@@ -622,8 +622,8 @@ def test_a_stale_line_not_in_the_chosen_tags_is_not_reported():
 def test_the_fallback_after_stale_aliases_stays_within_supported_lines():
     """지원 줄기의 별칭이 모두 낡아 빠져도, 지원이 끝난 줄기는 되살리지 않는다.
 
-    3.14는 고정 tag 3.14.7이 최근에 푸시돼 지원 줄기지만, 별칭 3.14는 100일 전에 멈췄다.
-    폴백은 지원 줄기의 tag 안에서만 최근 푸시 순으로 고른다.
+    3.14는 고정 tag 3.14.7이 최근에 push돼 지원 줄기지만, 별칭 3.14는 100일 전에 멈췄다.
+    fallback은 지원 줄기의 tag 안에서만 최근 push 순으로 고른다.
     """
     tags = [
         ref(1, "3.14", pushed=NOW - 100 * DAY),
