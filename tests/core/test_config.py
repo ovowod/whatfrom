@@ -61,3 +61,59 @@ def test_an_empty_stage_api_key_stays_empty(monkeypatch):
     monkeypatch.setenv("WHATFROM_PLAN_LLM_API_KEY", "")
 
     assert Settings(_env_file=None).plan_llm_api_key == ""
+
+
+@pytest.mark.parametrize("stage", ["PLAN", "RECOMMEND"])
+def test_a_stage_api_accepts_anthropic(monkeypatch, stage):
+    monkeypatch.setenv(f"WHATFROM_{stage}_LLM_API", "anthropic")
+
+    assert getattr(Settings(_env_file=None), f"{stage.lower()}_llm_api") == "anthropic"
+
+
+def test_an_empty_stage_api_counts_as_unset(monkeypatch):
+    monkeypatch.setenv("WHATFROM_RECOMMEND_LLM_API", "")
+
+    assert Settings(_env_file=None).recommend_llm_api is None
+
+
+def test_an_unknown_stage_api_stops_startup():
+    with pytest.raises(ValidationError, match="recommend_llm_api"):
+        Settings(_env_file=None, recommend_llm_api="anthropc")
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"system": "x"},
+        {"max_tokens": 10},
+        {"output_config": {"format": {"type": "json_schema"}}},
+    ],
+)
+def test_an_anthropic_extra_body_cannot_override_what_the_code_decides(extra):
+    with pytest.raises(ValidationError, match="extra body"):
+        Settings(_env_file=None, recommend_llm_api="anthropic", recommend_llm_extra_body=extra)
+
+
+@pytest.mark.parametrize("value", [None, 42, "low", ["effort"]])
+def test_an_anthropic_output_config_must_be_an_object(value):
+    with pytest.raises(ValidationError, match="output_config"):
+        Settings(
+            _env_file=None,
+            recommend_llm_api="anthropic",
+            recommend_llm_extra_body={"output_config": value},
+        )
+
+
+def test_an_anthropic_extra_body_may_set_thinking_and_effort():
+    extra = {"thinking": {"type": "between_tools"}, "output_config": {"effort": "low"}}
+
+    config = Settings(_env_file=None, plan_llm_api="anthropic", plan_llm_extra_body=extra)
+
+    assert config.plan_llm_extra_body == extra
+
+
+def test_an_openai_compatible_stage_may_still_send_max_tokens():
+    """Anthropic 전용 금지 키는 OpenAI 호환 단계에 적용하지 않는다."""
+    config = Settings(_env_file=None, recommend_llm_extra_body={"max_tokens": 10})
+
+    assert config.recommend_llm_extra_body == {"max_tokens": 10}

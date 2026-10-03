@@ -7,6 +7,7 @@ from whatfrom.core.config import Settings
 from whatfrom.core.contracts import Recommendation, SearchPlan
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.recommend.llm import (
+    AnthropicProvider,
     FakeLLMProvider,
     LLMCall,
     OpenAICompatibleProvider,
@@ -308,3 +309,211 @@ def test_a_response_without_usage_records_unknown_token_counts():
 
     assert call.ok is True
     assert (call.input_tokens, call.output_tokens, call.reasoning_tokens) == (None, None, None)
+
+
+ANTHROPIC_USAGE = {
+    "input_tokens": 1500,
+    "output_tokens": 400,
+    "output_tokens_details": {"thinking_tokens": 320},
+}
+
+
+def _anthropic_reply(text: str, *, stop_reason: str = "end_turn", usage: dict | None = None):
+    return {
+        "content": [{"type": "text", "text": text}],
+        "stop_reason": stop_reason,
+        "usage": ANTHROPIC_USAGE if usage is None else usage,
+    }
+
+
+def _capture_any(seen: list, reply=None):
+    """두 API의 요청을 모두 seen에 남긴다. Anthropic 요청에는 reply(body)를 돌려준다."""
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        body = json.loads(request.content)
+        seen.append({"url": str(request.url), "headers": request.headers, "body": body})
+        if str(request.url).endswith("/messages"):
+            payload = reply(body) if reply else _anthropic_reply(VALID_CONTENT)
+            return httpx2.Response(200, json=payload)
+        stage = body["response_format"]["json_schema"]["name"]
+        content = PLAN_CONTENT if stage == "search_plan" else VALID_CONTENT
+        return httpx2.Response(200, json={"choices": [{"message": {"content": content}}]})
+
+    return handler
+
+
+def _anthropic_config(**overrides) -> Settings:
+    values = {
+        "_env_file": None,
+        "llm_base_url": "http://common.invalid/v1",
+        "recommend_llm_api": "anthropic",
+        "recommend_llm_base_url": "http://anthropic.invalid/v1",
+        "recommend_llm_model": "claude-test",
+        "recommend_llm_api_key": "anthropic-key",
+    }
+    return Settings(**(values | overrides))
+
+
+def _anthropic_staged(config: Settings, seen: list, reply=None, on_call=None):
+    client = httpx2.Client(transport=httpx2.MockTransport(_capture_any(seen, reply)))
+    return get_provider("openai_compatible", config=config, client=client, on_call=on_call)
+
+
+def test_a_stage_set_to_anthropic_calls_the_messages_api_and_the_other_stage_does_not():
+    seen: list = []
+    provider = _anthropic_staged(_anthropic_config(), seen)
+
+    provider.plan("sys", "q")
+    result = provider.recommend("system prompt", "user prompt")
+
+    urls = [call["url"] for call in seen]
+    assert urls == [
+        "http://common.invalid/v1/chat/completions",
+        "http://anthropic.invalid/v1/messages",
+    ]
+    assert result.image == "python:3.13-slim"
+
+
+def test_an_anthropic_request_carries_its_headers_system_output_limit_and_schema():
+    seen: list = []
+
+    _anthropic_staged(_anthropic_config(), seen).recommend("system prompt", "user prompt")
+
+    [call] = seen
+    assert call["headers"]["x-api-key"] == "anthropic-key"
+    assert call["headers"]["anthropic-version"] == "2023-06-01"
+    assert "authorization" not in call["headers"]
+    body = call["body"]
+    assert body["model"] == "claude-test"
+    assert body["system"] == "system prompt"
+    assert body["messages"] == [{"role": "user", "content": "user prompt"}]
+    assert body["max_tokens"] == 16_000
+    assert body["output_config"] == {
+        "format": {"type": "json_schema", "schema": strict_json_schema(Recommendation)}
+    }
+
+
+def test_an_empty_anthropic_key_sends_no_api_key_header():
+    seen: list = []
+
+    _anthropic_staged(_anthropic_config(recommend_llm_api_key=""), seen).recommend("s", "p")
+
+    [call] = seen
+    assert call["url"].endswith("/messages")
+    assert "x-api-key" not in call["headers"]
+
+
+def test_an_anthropic_call_records_its_usage_with_thinking_as_reasoning():
+    calls: list[LLMCall] = []
+
+    _anthropic_staged(_anthropic_config(), [], on_call=calls.append).recommend("s", "p")
+
+    [call] = calls
+    assert (call.stage, call.attempts, call.ok) == ("recommend", 1, True)
+    assert (call.input_tokens, call.output_tokens, call.reasoning_tokens) == (1500, 400, 320)
+
+
+def test_an_anthropic_call_without_thinking_tokens_records_none_for_reasoning():
+    calls: list[LLMCall] = []
+
+    def reply(body: dict) -> dict:
+        return _anthropic_reply(VALID_CONTENT, usage={"input_tokens": 10, "output_tokens": 5})
+
+    _anthropic_staged(_anthropic_config(), [], reply, calls.append).recommend("s", "p")
+
+    assert (calls[0].input_tokens, calls[0].output_tokens, calls[0].reasoning_tokens) == (
+        10,
+        5,
+        None,
+    )
+
+
+def test_thinking_and_effort_from_extra_body_stay_beside_the_schema():
+    seen: list = []
+    extra = {"thinking": {"type": "between_tools"}, "output_config": {"effort": "low"}}
+
+    _anthropic_staged(_anthropic_config(recommend_llm_extra_body=extra), seen).recommend("s", "p")
+
+    body = seen[0]["body"]
+    assert body["thinking"] == {"type": "between_tools"}
+    assert body["output_config"] == {
+        "effort": "low",
+        "format": {"type": "json_schema", "schema": strict_json_schema(Recommendation)},
+    }
+
+
+def _anthropic_calls(reply) -> tuple[list[LLMCall], Exception | None]:
+    """reply(body)를 돌려주는 Anthropic 추천 호출 하나의 기록과 오류."""
+    calls: list[LLMCall] = []
+    provider = _anthropic_staged(_anthropic_config(), [], reply, calls.append)
+    try:
+        provider.recommend("s", "p")
+    except RemoteCallError as exc:
+        return calls, exc
+    return calls, None
+
+
+def test_a_thinking_block_before_the_answer_is_skipped():
+    def reply(body: dict) -> dict:
+        answer = _anthropic_reply(VALID_CONTENT)
+        answer["content"].insert(0, {"type": "thinking", "thinking": "hmm", "signature": "x"})
+        return answer
+
+    calls, error = _anthropic_calls(reply)
+
+    assert error is None
+    assert calls[0].ok
+
+
+@pytest.mark.parametrize(
+    ("stop_reason", "reason"), [("max_tokens", "truncated"), ("refusal", "refused")]
+)
+def test_a_cut_off_or_refused_answer_fails_with_its_reason_and_keeps_its_usage(stop_reason, reason):
+    calls, error = _anthropic_calls(
+        lambda body: _anthropic_reply('{"image": "py', stop_reason=stop_reason)
+    )
+
+    assert reason in str(error)
+    [call] = calls
+    assert (call.ok, call.input_tokens, call.output_tokens) == (False, 1500, 400)
+    assert reason in call.error
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        [],
+        None,
+        ["not a block"],
+        [{"type": "text", "text": None}],
+    ],
+)
+def test_an_answer_of_the_wrong_shape_breaks_the_response_contract(content):
+    """응답 계약 위반은 모두 RemoteCallError여야 기록이 남고 호출자가 저하 사다리를 탄다."""
+    calls, error = _anthropic_calls(
+        lambda body: {"content": content, "stop_reason": "end_turn", "usage": ANTHROPIC_USAGE}
+    )
+
+    assert "malformed messages response" in str(error)
+    assert not calls[0].ok
+
+
+@pytest.mark.parametrize("status", [429, 529])
+def test_a_rate_limited_or_overloaded_anthropic_api_is_retried(status):
+    """529는 Anthropic의 overloaded_error다(Claude API errors 문서)."""
+    calls: list[LLMCall] = []
+    replies = iter(
+        [httpx2.Response(status), httpx2.Response(200, json=_anthropic_reply(VALID_CONTENT))]
+    )
+    provider = AnthropicProvider(
+        base_url="http://anthropic.invalid/v1",
+        model="claude-test",
+        api_key="k",
+        client=httpx2.Client(transport=httpx2.MockTransport(lambda request: next(replies))),
+        sleep=lambda _: None,
+        on_call=calls.append,
+    )
+
+    provider.recommend("s", "p")
+
+    assert (calls[0].attempts, calls[0].ok) == (2, True)
