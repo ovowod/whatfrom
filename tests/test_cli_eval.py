@@ -67,6 +67,7 @@ def run_document(
     retrieval_only: bool = True,
     llm_provider: str = "fake",
     plan_only: bool = False,
+    plans: str | None = None,
 ) -> dict:
     args = argparse.Namespace(
         goldenset=str(goldenset),
@@ -74,6 +75,7 @@ def run_document(
         tags="",
         retrieval_only=retrieval_only,
         plan_only=plan_only,
+        plans=plans,
         embedder="fake",
         llm_provider=llm_provider,
         database_url="",
@@ -439,21 +441,27 @@ cases:
 """
 
 
+def _use_test_session(monkeypatch: pytest.MonkeyPatch, session: Session, provider) -> None:
+    """cmd_eval이 테스트 세션의 데이터를 보고, 넘긴 provider를 쓰게 한다."""
+    _seed_python(session)
+    monkeypatch.setattr(cli, "session_factory", lambda _engine: _fixed_session(session))
+    monkeypatch.setattr(cli, "get_provider", lambda *_args, **_kwargs: provider)
+
+
+def _plan_goldenset(tmp_path: Path) -> Path:
+    goldenset = tmp_path / "goldenset.yaml"
+    goldenset.write_text(PLAN_GOLDENSET, encoding="utf-8")
+    return goldenset
+
+
 def _run_plan_only(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, provider
 ) -> dict:
-    """테스트 세션의 데이터를 보도록 세션 팩토리를 바꾸고 --plan-only로 돌린다.
-
-    임베더가 불리면 실패하도록 BrokenEmbedder를 넣는다.
-    """
-    _seed_python(session)
-    monkeypatch.setattr(cli, "session_factory", lambda _engine: _fixed_session(session))
+    """--plan-only로 돌린다. 임베더가 불리면 실패하도록 BrokenEmbedder를 넣는다."""
+    _use_test_session(monkeypatch, session, provider)
     monkeypatch.setattr(cli, "get_embedder", lambda _name: BrokenEmbedder())
-    monkeypatch.setattr(cli, "get_provider", lambda *_args, **_kwargs: provider)
-    goldenset = tmp_path / "goldenset.yaml"
-    goldenset.write_text(PLAN_GOLDENSET, encoding="utf-8")
     return run_document(
-        goldenset,
+        _plan_goldenset(tmp_path),
         tmp_path / "results",
         retrieval_only=False,
         llm_provider="openai_compatible",
@@ -497,3 +505,105 @@ def test_plan_only_cannot_be_combined_with_retrieval_only() -> None:
     assert cli.build_parser().parse_args(["eval", "--plan-only"]).plan_only is True
     with pytest.raises(SystemExit):
         cli.build_parser().parse_args(["eval", "--plan-only", "--retrieval-only"])
+
+
+ARM64_PLAN = SearchPlan(repository="python", architectures=["arm64"])
+
+
+def _full_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session) -> Path:
+    """전체 모드로 한 번 돌려 고정할 결과 파일을 만든다."""
+    provider = FakeLLMProvider(recommendation=RECOMMENDATION, plan=ARM64_PLAN)
+    _use_test_session(monkeypatch, session, provider)
+    run_document(
+        _plan_goldenset(tmp_path),
+        tmp_path / "baseline",
+        retrieval_only=False,
+        llm_provider="openai_compatible",
+    )
+    return next((tmp_path / "baseline").glob("*.json"))
+
+
+def _run_fixed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, plans: Path, provider) -> dict:
+    monkeypatch.setattr(cli, "get_provider", lambda *_args, **_kwargs: provider)
+    return run_document(
+        _plan_goldenset(tmp_path),
+        tmp_path / "fixed",
+        retrieval_only=False,
+        llm_provider="openai_compatible",
+        plans=str(plans),
+    )
+
+
+def _plan_must_not_be_called() -> FakeLLMProvider:
+    return FakeLLMProvider(
+        recommendation=RECOMMENDATION, plan_error=RemoteCallError("plan must not be called")
+    )
+
+
+def test_fixed_plans_skip_the_plan_stage_and_build_the_same_candidates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    plans = _full_run(tmp_path, monkeypatch, session)
+    baseline = json.loads(plans.read_text(encoding="utf-8"))
+    provider = _plan_must_not_be_called()
+
+    document = _run_fixed(tmp_path, monkeypatch, plans, provider)
+
+    assert provider.plan_calls == []
+    assert len(provider.calls) == 1
+    [case], [before] = document["cases"], baseline["cases"]
+    assert case["plan"] == before["plan"]
+    assert case["candidate_images"] == before["candidate_images"]
+    assert document["meta"]["mode"] == "fixed-plans"
+    assert document["meta"]["plans_from"] == plans.name
+    assert document["meta"]["llm_stages"]["plan"] is None
+    labels = {m["label"] for m in document["metrics"]}
+    assert "추천 정확도" in labels
+    assert not labels & {"repository 추출 일치율", "조건 추출 일치율"}
+
+
+def test_a_recorded_extraction_failure_stays_a_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """같은 입력을 주려는 것이므로, 기준선에서 추출이 실패한 문항은 이번에도 실패다."""
+    plans = _full_run(tmp_path, monkeypatch, session)
+    recorded = json.loads(plans.read_text(encoding="utf-8"))
+    recorded["cases"][0]["plan"] = None
+    plans.write_text(json.dumps(recorded), encoding="utf-8")
+    provider = _plan_must_not_be_called()
+
+    document = _run_fixed(tmp_path, monkeypatch, plans, provider)
+
+    [case] = document["cases"]
+    assert case["plan"] is None
+    assert any("검색 조건 추출에 실패" in note for note in case["notes"])
+    assert provider.plan_calls == []
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (lambda doc: doc["meta"].update(mode="retrieval-only"), "full"),
+        (lambda doc: doc["meta"].update(goldenset_sha256="other"), "골든셋"),
+        (lambda doc: doc.update(cases=[]), "python-arm64"),
+    ],
+)
+def test_a_mismatched_plans_file_stops_before_calling_any_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, change, message: str
+) -> None:
+    plans = _full_run(tmp_path, monkeypatch, session)
+    recorded = json.loads(plans.read_text(encoding="utf-8"))
+    change(recorded)
+    plans.write_text(json.dumps(recorded), encoding="utf-8")
+    provider = _plan_must_not_be_called()
+
+    with pytest.raises(SystemExit, match=message):
+        _run_fixed(tmp_path, monkeypatch, plans, provider)
+
+    assert provider.calls == []
+
+
+def test_fixed_plans_cannot_be_combined_with_another_mode() -> None:
+    assert cli.build_parser().parse_args(["eval", "--plans", "a.json"]).plans == "a.json"
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(["eval", "--plans", "a.json", "--plan-only"])

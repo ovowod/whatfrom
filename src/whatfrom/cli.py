@@ -29,7 +29,12 @@ from whatfrom.collect.sync import (
     collect_all,
 )
 from whatfrom.core.config import settings
-from whatfrom.core.contracts import RecommendResponse, split_image
+from whatfrom.core.contracts import (
+    Recommendation,
+    RecommendResponse,
+    SearchPlan,
+    split_image,
+)
 from whatfrom.core.db import SessionFactory, make_engine, session_factory, session_scope
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.httpclient import RemoteCallError
@@ -277,6 +282,10 @@ def cmd_eval(args: argparse.Namespace) -> None:
     open_session = session_factory(make_engine(args.database_url))
     embedder = get_embedder(args.embedder)
     measured, skipped = _eval_cases(goldenset, args.tags, open_session)
+    # 결과 파일이 맞지 않으면 모델을 부르기 전에 멈춘다.
+    fixed_plans = (
+        _load_fixed_plans(Path(args.plans), Path(args.goldenset), measured) if args.plans else None
+    )
     # provider가 호출마다 기록을 쌓는다. 문항별로 나누는 일은 timed_recommendation이 한다.
     call_log: list[LLMCall] = []
     provider = (
@@ -298,7 +307,12 @@ def cmd_eval(args: argparse.Namespace) -> None:
             assert provider is not None
             scores.append(_score_plan_case(case, open_session, provider, call_log))
         else:
-            scores.append(_score_case(case, open_session, embedder, provider, call_log))
+            case_provider = (
+                provider
+                if fixed_plans is None or provider is None
+                else FixedPlanProvider(fixed_plans[case.id], provider)
+            )
+            scores.append(_score_case(case, open_session, embedder, case_provider, call_log))
 
     meta = _eval_meta(args, goldenset, started_at)
     out = results_dir / f"{started_at.strftime('%Y-%m-%dT%H-%M-%S')}.json"
@@ -310,7 +324,44 @@ def _eval_mode(args: argparse.Namespace) -> str:
         return "retrieval-only"
     if args.plan_only:
         return "plan-only"
+    if args.plans:
+        return "fixed-plans"
     return "full"
+
+
+class FixedPlanProvider:
+    """조건 추출 단계 대신 이전 실행의 검색 조건을 돌려준다(--plans). 추천 단계는 그대로 부른다.
+
+    기록된 검색 조건이 None이면 그때 추출이 실패한 것이다. 같은 입력을 주기 위해 이번에도
+    실패로 다룬다.
+    """
+
+    def __init__(self, plan: dict | None, inner: LLMProvider) -> None:
+        self._plan = plan
+        self._inner = inner
+
+    def plan(self, system: str, prompt: str) -> SearchPlan:
+        if self._plan is None:
+            raise RemoteCallError("고정한 결과에서 검색 조건 추출이 실패한 문항이다")
+        return SearchPlan.model_validate(self._plan)
+
+    def recommend(self, system: str, prompt: str) -> Recommendation:
+        return self._inner.recommend(system, prompt)
+
+
+def _load_fixed_plans(path: Path, goldenset: Path, measured: list) -> dict[str, dict | None]:
+    """--plans 결과 파일에서 문항별 검색 조건을 읽는다. 비교할 수 없는 파일이면 멈춘다."""
+    document = json.loads(path.read_text(encoding="utf-8"))
+    meta = document.get("meta", {})
+    if meta.get("mode") != "full":
+        raise SystemExit(f"--plans에는 전체 모드(full) 결과가 필요하다: {path}")
+    if meta.get("goldenset_sha256") != hashlib.sha256(goldenset.read_bytes()).hexdigest():
+        raise SystemExit(f"--plans 결과의 골든셋이 지금 골든셋과 다르다: {path}")
+    plans = {case["case_id"]: case.get("plan") for case in document.get("cases", [])}
+    missing = [case.id for case in measured if case.id not in plans]
+    if missing:
+        raise SystemExit(f"--plans 결과에 없는 문항: {', '.join(missing)}")
+    return plans
 
 
 def _eval_cases(
@@ -382,7 +433,10 @@ def _eval_meta(args: argparse.Namespace, goldenset: "GoldenSet", started_at: dat
     """결과 JSON의 실행 meta. 서로 다른 실행의 점수를 비교할 수 있는지 판단하는 근거다."""
     mode = _eval_mode(args)
     # 부르지 않은 단계는 None이다.
-    stages = {"plan": True, "recommend": mode == "full"}
+    stages = {
+        "plan": mode in ("full", "plan-only"),
+        "recommend": mode in ("full", "fixed-plans"),
+    }
     return {
         "started_at": started_at.isoformat(timespec="seconds"),
         "mode": mode,
@@ -399,6 +453,8 @@ def _eval_meta(args: argparse.Namespace, goldenset: "GoldenSet", started_at: dat
         ),
         "llm_provider": None if args.retrieval_only else args.llm_provider,
         "tags": args.tags or None,
+        # 검색 조건을 고정한 결과 파일. 두 실행이 같은 입력을 받았는지 확인하는 근거다.
+        "plans_from": Path(args.plans).name if args.plans else None,
         "goldenset_version": goldenset.version,
         # 버전 번호를 유지한 채 라벨을 수정할 수 있으므로 파일 해시도 기록한다.
         # 해시가 다르면 두 실행이 사용한 골든셋 내용이 달랐다는 뜻이다.
@@ -480,17 +536,23 @@ def _report_eval(
         "retrieval-only": aggregate_retrieval,
         "plan-only": aggregate_plan,
         "full": aggregate_full,
+        "fixed-plans": aggregate_full,
     }[mode]
     metrics = aggregate(scores)
-    # 전체 모드의 추천 정확도와 비교할 고정답 기준선을 계산한다.
+    if mode == "fixed-plans":
+        # 조건 추출 단계를 부르지 않았으므로 추출 지표는 이번 실행의 것이 아니다.
+        extraction = {m.label for m in aggregate_plan([])}
+        metrics = [m for m in metrics if m.label not in extraction]
+    recommended = mode in ("full", "fixed-plans")
+    # 추천 정확도와 비교할 고정답 기준선을 계산한다.
     # 측정 문항의 accept 목록만 사용하며 추가 DB 조회나 모델 호출은 없다.
-    baseline = constant_baseline(measured) if mode == "full" else None
+    baseline = constant_baseline(measured) if recommended else None
     # 후보 기록만으로 계산하므로 후보가 있는 두 모드가 구한다. --plan-only는 후보가 없다.
     random = None if mode == "plan-only" else random_baseline(scores)
 
     print()
     # 실패 목록은 추천 결과를 보여 준다. 추천이 없는 두 모드에는 놓일 자리가 없다.
-    failures = scores if mode == "full" else []
+    failures = scores if recommended else []
     print(
         render_summary(
             metrics, failures, measured, skipped, len(goldenset.cases), meta, baseline, random
@@ -604,6 +666,11 @@ def build_parser() -> argparse.ArgumentParser:
     modes = p_eval.add_mutually_exclusive_group()
     modes.add_argument("--retrieval-only", action="store_true", help="LLM 없이 검색 지표만")
     modes.add_argument("--plan-only", action="store_true", help="조건 추출 단계만 돌려 추출 지표만")
+    modes.add_argument(
+        "--plans",
+        metavar="RESULT_JSON",
+        help="이전 전체 평가 결과의 검색 조건을 고정하고 추천 단계만 바꿔 잰다",
+    )
     p_eval.add_argument("--embedder", default=settings.embedder)
     p_eval.add_argument("--llm-provider", default=settings.llm_provider)
     p_eval.add_argument("--database-url", default=settings.database_url)
