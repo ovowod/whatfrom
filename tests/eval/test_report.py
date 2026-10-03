@@ -238,7 +238,7 @@ def test_render_summary_explains_skipped_repos_as_not_indexed() -> None:
 
 
 def test_render_summary_falls_back_to_the_provider_name_when_llm_stages_are_absent() -> None:
-    """fake 프로바이더는 llm_stages를 None으로 남긴다. llm=None으로 찍히면 LLM이
+    """fake provider는 llm_stages를 None으로 남긴다. llm=None으로 찍히면 LLM이
     아예 안 돈 것처럼 보인다 — 프로바이더 이름이라도 보여줘야 fake 실행임을 알 수 있다."""
     output = render_summary([], [], [], [], 0, {"llm_stages": None, "llm_provider": "fake"})
 

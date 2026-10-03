@@ -144,7 +144,7 @@ class OpenAICompatibleProvider:
         self._sleep = sleep
         self._extra_body = extra_body or {}
         # 평가가 호출 기록을 모을 때만 넘긴다. API는 provider 하나를 여러 요청이 함께
-        # 쓰므로 마지막 호출 정보를 provider에 두지 않고 콜백으로 내보낸다.
+        # 쓰므로 마지막 호출 정보를 provider에 두지 않고 callback으로 내보낸다.
         self._on_call = on_call
 
     def recommend(self, system: str, prompt: str) -> Recommendation:
@@ -193,7 +193,7 @@ class OpenAICompatibleProvider:
             self._client,
             f"{self._base_url}/chat/completions",
             {
-                # reasoning 설정처럼 공급자마다 이름이 다른 파라미터. 설정 검증이
+                # reasoning 설정처럼 공급자마다 이름이 다른 parameter. 설정 검증이
                 # model·messages·response_format을 막으므로 아래 값을 덮어쓰지 않는다.
                 **self._extra_body,
                 "model": self._model,

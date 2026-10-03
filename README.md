@@ -121,10 +121,10 @@ LLM 공급자를 바꿀 때는 `.env`의 `WHATFROM_LLM_BASE_URL`, `WHATFROM_LLM_
 | 설정 | 설정하지 않았을 때 |
 | --- | --- |
 | `..._BASE_URL`, `..._MODEL` | 공통 설정(`WHATFROM_LLM_BASE_URL`, `WHATFROM_LLM_MODEL`)을 쓴다 |
-| `..._API_KEY` | 공통 키를 쓴다. 빈 값으로 설정하면 인증 헤더를 보내지 않는다 |
+| `..._API_KEY` | 공통 키를 쓴다. 빈 값으로 설정하면 인증 header를 보내지 않는다 |
 | `..._EXTRA_BODY` | 아무것도 덧붙이지 않는다 |
 
-`..._EXTRA_BODY`는 요청 본문에 덧붙일 JSON 객체다. reasoning 설정처럼 공급자마다 이름이 다른 파라미터를 넣는다.
+`..._EXTRA_BODY`는 요청 본문에 덧붙일 JSON 객체다. reasoning 설정처럼 공급자마다 이름이 다른 parameter를 넣는다.
 
 ```dotenv
 WHATFROM_RECOMMEND_LLM_BASE_URL=https://api.openai.com/v1

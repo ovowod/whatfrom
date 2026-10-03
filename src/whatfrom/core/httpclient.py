@@ -41,7 +41,7 @@ def post_json(
 ) -> dict:
     """on_attempt는 요청을 보낼 때마다 몇 번째 시도인지(1부터) 받는다.
 
-    반환값이 아니라 콜백으로 알리는 이유는 실패한 호출도 시도 횟수를 남겨야 해서다.
+    반환값이 아니라 callback으로 알리는 이유는 실패한 호출도 시도 횟수를 남겨야 해서다.
     """
     headers = {"Content-Type": "application/json"}
     if api_key:

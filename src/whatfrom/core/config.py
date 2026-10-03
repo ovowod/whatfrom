@@ -39,9 +39,9 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("WHATFROM_LLM_API_KEY", "MOONSHOT_API_KEY"),
     )
 
-    # 단계별 LLM 설정(스펙 F14). 조건 추출 단계(plan)와 추천 단계(recommend)가 다른
+    # 단계별 LLM 설정(spec F14). 조건 추출 단계(plan)와 추천 단계(recommend)가 다른
     # 공급자와 모델을 쓸 수 있다. None(설정하지 않음)이면 위의 공통 설정을 쓴다.
-    # API 키는 빈 값과 None을 구분한다. 빈 값이면 인증 헤더를 보내지 않는다 — 인증이
+    # API 키는 빈 값과 None을 구분한다. 빈 값이면 인증 header를 보내지 않는다 — 인증이
     # 필요 없는 endpoint로 다른 공급자의 키가 나가지 않게 한다.
     plan_llm_base_url: str | None = None
     plan_llm_model: str | None = None

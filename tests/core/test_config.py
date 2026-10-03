@@ -57,7 +57,7 @@ def test_an_empty_stage_setting_counts_as_unset(monkeypatch, name):
 
 
 def test_an_empty_stage_api_key_stays_empty(monkeypatch):
-    """API 키만 빈 값이 뜻을 갖는다. 인증 헤더를 보내지 않는다."""
+    """API 키만 빈 값이 뜻을 갖는다. 인증 header를 보내지 않는다."""
     monkeypatch.setenv("WHATFROM_PLAN_LLM_API_KEY", "")
 
     assert Settings(_env_file=None).plan_llm_api_key == ""

@@ -223,7 +223,7 @@ def render_summary(
     by_id = {case.id: case for case in cases}
     missing_repos = sorted({repo for s in skipped for repo in s.missing})
 
-    # llm_stages는 fake 프로바이더일 때 일부러 None이다. 그대로 찍으면 LLM이 아예
+    # llm_stages는 fake provider일 때 일부러 None이다. 그대로 찍으면 LLM이 아예
     # 안 돈 것처럼 보이니, 모델명이 없으면 프로바이더 이름으로 대신한다.
     # retrieval-only에서는 llm_provider도 None이라 결국 '-'로 떨어진다.
     llm_label = _llm_label(meta.get("llm_stages")) or meta.get("llm_provider") or "-"

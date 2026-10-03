@@ -46,7 +46,7 @@ class RecommendRequest(BaseModel):
 
 
 def repository_names(session: Session) -> list[str]:
-    """조건 추출 단계의 프롬프트에 줄 목록이자, 추출한 repository를 대조할 목록이다.
+    """조건 추출 단계의 prompt에 줄 목록이자, 추출한 repository를 대조할 목록이다.
 
     평가의 --plan-only도 이 함수를 써서 전체 경로와 같은 목록으로 추출한다.
     """
