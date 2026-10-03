@@ -1,0 +1,12 @@
+{
+  "alpine": 6,
+  "debian": 9,
+  "eclipse-temurin": 13,
+  "golang": 15,
+  "nginx": 17,
+  "node": 9,
+  "postgres": 20,
+  "python": 13,
+  "redis": 13,
+  "ubuntu": 10
+}
