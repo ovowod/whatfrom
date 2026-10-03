@@ -1,4 +1,5 @@
 import time
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol, TypeVar
@@ -103,15 +104,11 @@ def _validated[M: BaseModel](text: str, model: type[M]) -> M:
         raise RemoteCallError(f"response did not match {model.__name__} schema: {exc}") from exc
 
 
-class OpenAICompatibleProvider:
-    """OpenAI 호환 `/v1/chat/completions` 클라이언트.
+class SchemaLLMProvider(ABC):
+    """JSON schema를 강제해 부르고 응답을 다시 검증하는 공급자의 공통 흐름.
 
-    vLLM·Ollama·Kimi·대부분의 호스팅 API가 이 규약을 쓴다. base_url만 바꾸면
-    구현을 그대로 두고 백엔드를 갈아끼울 수 있다 (스펙 §12).
-
-    temperature는 보내지 않는다. 공급자마다 허용값이 달라서 — kimi-k3는 1만
-    받고 0을 400으로 거부한다 — 하나를 박아두면 base_url만 바꾸면 된다는
-    전제가 깨진다. 결정성이 필요해지면 그때 설정으로 노출한다.
+    공급자마다 다른 것은 요청 모양(_post), 응답 해석(_parse), usage 읽기(_token_counts)다.
+    호출 기록은 공급자와 상관없이 같다.
 
     타임아웃·재시도 정책은 httpclient.post_json이 갖는다 — 임베딩과 같은 정책이라
     같은 루프를 두 번 적지 않는다.
@@ -180,6 +177,36 @@ class OpenAICompatibleProvider:
             return
         self._on_call(LLMCall(stage, attempts, error is None, error, *self._token_counts(usage)))
 
+    @abstractmethod
+    def _post(
+        self,
+        system: str,
+        prompt: str,
+        model: type[BaseModel],
+        name: str,
+        on_attempt: Callable[[int], None],
+    ) -> dict: ...
+
+    @staticmethod
+    @abstractmethod
+    def _parse(body: dict, model: type[T]) -> T: ...
+
+    @staticmethod
+    @abstractmethod
+    def _token_counts(usage: object) -> tuple[int | None, int | None, int | None]: ...
+
+
+class OpenAICompatibleProvider(SchemaLLMProvider):
+    """OpenAI 호환 `/v1/chat/completions` 클라이언트.
+
+    vLLM·Ollama·Kimi·대부분의 호스팅 API가 이 규약을 쓴다. base_url만 바꾸면
+    구현을 그대로 두고 백엔드를 갈아끼울 수 있다 (스펙 §12).
+
+    temperature는 보내지 않는다. 공급자마다 허용값이 달라서 — kimi-k3는 1만
+    받고 0을 400으로 거부한다 — 하나를 박아두면 base_url만 바꾸면 된다는
+    전제가 깨진다. 결정성이 필요해지면 그때 설정으로 노출한다.
+    """
+
     @staticmethod
     def _token_counts(usage: object) -> tuple[int | None, int | None, int | None]:
         """OpenAI 형식의 usage에서 입력·출력·reasoning token 수를 읽는다. 없는 값은 None."""
@@ -242,12 +269,11 @@ ANTHROPIC_VERSION = "2023-06-01"
 ANTHROPIC_MAX_TOKENS = 16_000
 
 
-class AnthropicProvider(OpenAICompatibleProvider):
+class AnthropicProvider(SchemaLLMProvider):
     """Anthropic native Messages API 클라이언트 (spec F15).
 
     Anthropic의 OpenAI 호환 layer는 response_format과 reasoning_effort를 무시한다. 그러면
-    schema가 강제되지 않고 effort도 정할 수 없어 native API로 부른다. 호출 기록, timeout,
-    재시도는 OpenAI 호환 provider와 같다.
+    schema가 강제되지 않고 effort도 정할 수 없어 native API로 부른다.
     """
 
     def _post(
@@ -358,7 +384,7 @@ def stage_llm(config: Settings, stage: str) -> StageLLM:
     )
 
 
-PROVIDERS: dict[LLMApi, type[OpenAICompatibleProvider]] = {
+PROVIDERS: dict[LLMApi, type[SchemaLLMProvider]] = {
     "openai_compatible": OpenAICompatibleProvider,
     "anthropic": AnthropicProvider,
 }
