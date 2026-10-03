@@ -498,6 +498,7 @@ def _stage_meta(stage: str) -> dict:
         "base_url": resolved.base_url,
         "model": resolved.model,
         "extra_body": resolved.extra_body,
+        "api": resolved.api,
     }
 
 

@@ -1,9 +1,23 @@
 # src/whatfrom/core/config.py
-from pydantic import AliasChoices, Field, field_validator
+from typing import Literal
+
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 덧붙일 JSON이 덮어쓰면 안 되는 요청 키. 코드가 정하는 값이다.
 RESERVED_LLM_BODY_KEYS = frozenset({"model", "messages", "response_format"})
+# Anthropic 단계에서 더 막는 키. output_config는 effort를 받으므로 그 안의 format만 막는다.
+RESERVED_ANTHROPIC_BODY_KEYS = frozenset({"system", "max_tokens"})
+
+# 단계마다 부를 LLM API 종류(spec F15).
+LLMApi = Literal["openai_compatible", "anthropic"]
+DEFAULT_LLM_API: LLMApi = "openai_compatible"
+
+
+def _reject_reserved(extra: dict | None, reserved_keys: frozenset[str]) -> None:
+    reserved = sorted(reserved_keys & set(extra or {}))
+    if reserved:
+        raise ValueError(f"extra body cannot set {', '.join(reserved)}")
 
 
 class Settings(BaseSettings):
@@ -51,6 +65,10 @@ class Settings(BaseSettings):
     recommend_llm_model: str | None = None
     recommend_llm_api_key: str | None = None
     recommend_llm_extra_body: dict | None = None
+    # 단계마다 부를 API 종류(spec F15). None이면 OpenAI 호환이다. 공급자 이름이나 URL로
+    # 짐작하지 않는다(F14와 같은 이유).
+    plan_llm_api: LLMApi | None = None
+    recommend_llm_api: LLMApi | None = None
 
     @field_validator(
         "plan_llm_base_url",
@@ -59,6 +77,8 @@ class Settings(BaseSettings):
         "recommend_llm_base_url",
         "recommend_llm_model",
         "recommend_llm_extra_body",
+        "plan_llm_api",
+        "recommend_llm_api",
         mode="before",
     )
     @classmethod
@@ -70,10 +90,26 @@ class Settings(BaseSettings):
     @classmethod
     def _keep_reserved_keys(cls, value: dict | None) -> dict | None:
         """응답 형식을 바꾸는 키(stream, n 등)는 막지 않는다. 넣으면 첫 호출이 실패한다."""
-        reserved = sorted(RESERVED_LLM_BODY_KEYS & set(value or {}))
-        if reserved:
-            raise ValueError(f"extra body cannot set {', '.join(reserved)}")
+        _reject_reserved(value, RESERVED_LLM_BODY_KEYS)
         return value
+
+    @model_validator(mode="after")
+    def _keep_anthropic_reserved_keys(self) -> "Settings":
+        """Anthropic 단계는 output_config에 코드의 schema를 병합한다. 객체가 아니면 병합할 수
+        없고, 그 오류는 요청 전에 나서 호출 기록에도 남지 않으므로 시작할 때 막는다.
+        """
+        for stage in ("plan", "recommend"):
+            if getattr(self, f"{stage}_llm_api") != "anthropic":
+                continue
+            extra = getattr(self, f"{stage}_llm_extra_body") or {}
+            _reject_reserved(extra, RESERVED_ANTHROPIC_BODY_KEYS)
+            if "output_config" in extra:
+                output_config = extra["output_config"]
+                if not isinstance(output_config, dict):
+                    raise ValueError("extra body output_config must be a JSON object")
+                if "format" in output_config:
+                    raise ValueError("extra body cannot set output_config.format")
+        return self
 
     # 동시에 수락하는 추천 작업 수(스펙 F11-a). 스레드 풀(기본 40)보다 작게 둬 /health 같은
     # 동기 요청이 쓸 스레드를 남긴다. 최적값으로 검증한 값이 아니라 시작값이다.

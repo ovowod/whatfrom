@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] `EXTRA_BODY`의 `thinking`이 요청에 그대로 남는다.
-- [ ] `EXTRA_BODY`의 `output_config.effort`와 코드의 `output_config.format`이 한 `output_config`에 함께 남는다.
-- [ ] `anthropic` 단계의 `EXTRA_BODY`에 `model`, `messages`, `system`, `max_tokens`, `output_config.format`이 있으면 시작할 때 실패한다.
-- [ ] `anthropic` 단계의 `EXTRA_BODY`에 `output_config`가 있으면 JSON 객체여야 한다. null, 숫자, 문자열, 배열이면 시작할 때 실패한다.
-- [ ] OpenAI 호환 단계의 기존 검증(`model`, `messages`, `response_format`)은 그대로다.
-- [ ] `make lint`, `make test` 통과.
+- [x] `EXTRA_BODY`의 `thinking`이 요청에 그대로 남는다.
+- [x] `EXTRA_BODY`의 `output_config.effort`와 코드의 `output_config.format`이 한 `output_config`에 함께 남는다.
+- [x] `anthropic` 단계의 `EXTRA_BODY`에 `model`, `messages`, `system`, `max_tokens`, `output_config.format`이 있으면 시작할 때 실패한다.
+- [x] `anthropic` 단계의 `EXTRA_BODY`에 `output_config`가 있으면 JSON 객체여야 한다. null, 숫자, 문자열, 배열이면 시작할 때 실패한다.
+- [x] OpenAI 호환 단계의 기존 검증(`model`, `messages`, `response_format`)은 그대로다.
+- [x] `make lint`, `make test` 통과.

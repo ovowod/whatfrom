@@ -154,11 +154,13 @@ def test_run_metadata_records_each_stage_llm_without_api_keys(
             "base_url": "http://common.invalid/v1",
             "model": "plan-model",
             "extra_body": None,
+            "api": "openai_compatible",
         },
         "recommend": {
             "base_url": "http://common.invalid/v1",
             "model": "common-model",
             "extra_body": {"reasoning_effort": "low"},
+            "api": "openai_compatible",
         },
     }
     assert "secret" not in json.dumps(document)

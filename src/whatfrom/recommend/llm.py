@@ -6,7 +6,7 @@ from typing import Protocol, TypeVar
 import httpx2
 from pydantic import BaseModel, ValidationError
 
-from whatfrom.core.config import Settings, settings
+from whatfrom.core.config import DEFAULT_LLM_API, LLMApi, Settings, settings
 from whatfrom.core.contracts import Recommendation, SearchPlan
 from whatfrom.core.httpclient import RemoteCallError, post_json
 
@@ -95,13 +95,12 @@ class LLMCall:
     reasoning_tokens: int | None
 
 
-def _token_counts(usage: object) -> tuple[int | None, int | None, int | None]:
-    """OpenAI 형식의 usage에서 입력·출력·reasoning token 수를 읽는다. 없는 값은 None."""
-    if not isinstance(usage, dict):
-        return None, None, None
-    details = usage.get("completion_tokens_details")
-    reasoning = details.get("reasoning_tokens") if isinstance(details, dict) else None
-    return usage.get("prompt_tokens"), usage.get("completion_tokens"), reasoning
+def _validated[M: BaseModel](text: str, model: type[M]) -> M:
+    """응답 text를 schema 모델로 검증한다. 서버의 schema 강제를 믿지 않는다."""
+    try:
+        return model.model_validate_json(text)
+    except ValidationError as exc:
+        raise RemoteCallError(f"response did not match {model.__name__} schema: {exc}") from exc
 
 
 class OpenAICompatibleProvider:
@@ -179,7 +178,16 @@ class OpenAICompatibleProvider:
     def _record(self, stage: str, attempts: int, usage: object, error: str | None) -> None:
         if self._on_call is None:
             return
-        self._on_call(LLMCall(stage, attempts, error is None, error, *_token_counts(usage)))
+        self._on_call(LLMCall(stage, attempts, error is None, error, *self._token_counts(usage)))
+
+    @staticmethod
+    def _token_counts(usage: object) -> tuple[int | None, int | None, int | None]:
+        """OpenAI 형식의 usage에서 입력·출력·reasoning token 수를 읽는다. 없는 값은 None."""
+        if not isinstance(usage, dict):
+            return None, None, None
+        details = usage.get("completion_tokens_details")
+        reasoning = details.get("reasoning_tokens") if isinstance(details, dict) else None
+        return usage.get("prompt_tokens"), usage.get("completion_tokens"), reasoning
 
     def _post(
         self,
@@ -225,10 +233,85 @@ class OpenAICompatibleProvider:
 
         # json_schema 강제 수준은 서버마다 다르다 — 무시하는 서버도 있다.
         # 그래서 스키마 준수를 서버에 맡기지 않고 항상 여기서 다시 검증한다.
+        return _validated(content, model)
+
+
+ANTHROPIC_VERSION = "2023-06-01"
+# native Messages API에서 필수다. thinking token을 포함한다. M1-a 기준선의 추천 단계
+# 출력은 reasoning 포함 최대 약 3,600 token이었다. 바꿀 필요가 생기면 그때 설정으로 연다.
+ANTHROPIC_MAX_TOKENS = 16_000
+
+
+class AnthropicProvider(OpenAICompatibleProvider):
+    """Anthropic native Messages API 클라이언트 (spec F15).
+
+    Anthropic의 OpenAI 호환 layer는 response_format과 reasoning_effort를 무시한다. 그러면
+    schema가 강제되지 않고 effort도 정할 수 없어 native API로 부른다. 호출 기록, timeout,
+    재시도는 OpenAI 호환 provider와 같다.
+    """
+
+    def _post(
+        self,
+        system: str,
+        prompt: str,
+        model: type[BaseModel],
+        name: str,
+        on_attempt: Callable[[int], None],
+    ) -> dict:
+        headers = {"anthropic-version": ANTHROPIC_VERSION}
+        # 빈 key면 인증 header를 보내지 않는다(F14의 빈 key 규칙).
+        if self._api_key:
+            headers["x-api-key"] = self._api_key
+        return post_json(
+            self._client,
+            f"{self._base_url}/messages",
+            {
+                **self._extra_body,
+                "model": self._model,
+                "system": system,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": ANTHROPIC_MAX_TOKENS,
+                # effort와 schema가 같은 객체에 들어간다. 덮어쓰면 EXTRA_BODY의 effort가 지워진다.
+                "output_config": {
+                    **self._extra_body.get("output_config", {}),
+                    "format": {"type": "json_schema", "schema": strict_json_schema(model)},
+                },
+            },
+            max_retries=self._max_retries,
+            sleep=self._sleep,
+            on_attempt=on_attempt,
+            headers=headers,
+        )
+
+    @staticmethod
+    def _parse(body: dict, model: type[T]) -> T:
+        """thinking block은 건너뛰고 text block만 검증한다.
+
+        잘리거나 거부된 답은 schema 검증 실패로 뭉뚱그리지 않고 그 이유로 실패한다.
+        """
+        stop_reason = body.get("stop_reason") if isinstance(body, dict) else None
+        if stop_reason == "max_tokens":
+            raise RemoteCallError(f"response truncated at max_tokens={ANTHROPIC_MAX_TOKENS}")
+        if stop_reason == "refusal":
+            raise RemoteCallError("model refused to answer")
         try:
-            return model.model_validate_json(content)
-        except ValidationError as exc:
-            raise RemoteCallError(f"response did not match {model.__name__} schema: {exc}") from exc
+            texts = [block["text"] for block in body["content"] if block.get("type") == "text"]
+        except (KeyError, TypeError, AttributeError) as exc:
+            raise RemoteCallError(f"malformed messages response: {exc}") from exc
+        if not texts:
+            raise RemoteCallError("malformed messages response: no text block")
+        if not all(isinstance(text, str) for text in texts):
+            raise RemoteCallError("malformed messages response: text block is not a string")
+        return _validated("".join(texts), model)
+
+    @staticmethod
+    def _token_counts(usage: object) -> tuple[int | None, int | None, int | None]:
+        """output_tokens는 thinking token을 포함한다(과금 기준)."""
+        if not isinstance(usage, dict):
+            return None, None, None
+        details = usage.get("output_tokens_details")
+        thinking = details.get("thinking_tokens") if isinstance(details, dict) else None
+        return usage.get("input_tokens"), usage.get("output_tokens"), thinking
 
 
 class StagedProvider:
@@ -253,6 +336,7 @@ class StageLLM:
     model: str
     api_key: str
     extra_body: dict | None
+    api: LLMApi
 
 
 def stage_llm(config: Settings, stage: str) -> StageLLM:
@@ -270,7 +354,14 @@ def stage_llm(config: Settings, stage: str) -> StageLLM:
         model=or_common("model"),
         api_key=or_common("api_key"),
         extra_body=getattr(config, f"{stage}_llm_extra_body"),
+        api=getattr(config, f"{stage}_llm_api") or DEFAULT_LLM_API,
     )
+
+
+PROVIDERS: dict[LLMApi, type[OpenAICompatibleProvider]] = {
+    "openai_compatible": OpenAICompatibleProvider,
+    "anthropic": AnthropicProvider,
+}
 
 
 def _stage_provider(
@@ -278,9 +369,9 @@ def _stage_provider(
     stage: str,
     client: httpx2.Client | None,
     on_call: Callable[[LLMCall], None] | None,
-) -> OpenAICompatibleProvider:
+) -> LLMProvider:
     resolved = stage_llm(config, stage)
-    return OpenAICompatibleProvider(
+    return PROVIDERS[resolved.api](
         base_url=resolved.base_url,
         model=resolved.model,
         api_key=resolved.api_key,
