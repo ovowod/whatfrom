@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, field_validator
 from sqlalchemy import Engine, select
+from sqlalchemy.orm import Session
 
 from whatfrom.admission import REJECTED_DETAIL, RecommendationLimiter, run_admitted
 from whatfrom.core.config import settings
@@ -42,6 +43,14 @@ class RecommendRequest(BaseModel):
         if not value.strip():
             raise ValueError("question must not be blank")
         return value
+
+
+def repository_names(session: Session) -> list[str]:
+    """조건 추출 단계의 프롬프트에 줄 목록이자, 추출한 repository를 대조할 목록이다.
+
+    평가의 --plan-only도 이 함수를 써서 전체 경로와 같은 목록으로 추출한다.
+    """
+    return sorted(session.execute(select(Repository.name)).scalars())
 
 
 def recommend_for_question(
@@ -88,7 +97,7 @@ def recommend_for_question(
 
     # 추출 프롬프트에 줄 목록이자 추출 결과를 대조할 목록이다.
     with open_session() as session:
-        repositories = sorted(session.execute(select(Repository.name)).scalars())
+        repositories = repository_names(session)
 
     plan: SearchPlan | None
     try:

@@ -1,4 +1,4 @@
-.PHONY: up down test lint fmt eval eval-retrieval load load-smoke
+.PHONY: up down test lint fmt eval eval-retrieval eval-plan load load-smoke
 
 up:
 	docker compose up -d --wait
@@ -21,6 +21,9 @@ eval:
 
 eval-retrieval:
 	uv run python -m whatfrom.cli eval --retrieval-only
+
+eval-plan:
+	uv run python -m whatfrom.cli eval --plan-only
 
 # 부하 기준선(F10). 앱(:8000)과 모의 LLM 서버(:8081)를 먼저 띄운다. README "부하 측정" 참고.
 LOAD_LABEL ?= run

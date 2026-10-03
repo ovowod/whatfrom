@@ -26,7 +26,7 @@ from whatfrom.cli import accepted_digests, cmd_eval, indexed_repositories
 from whatfrom.collect.hub import TagRow, VariantRow
 from whatfrom.collect.store import upsert_tags
 from whatfrom.core.config import Settings
-from whatfrom.core.contracts import Recommendation
+from whatfrom.core.contracts import Recommendation, SearchPlan
 from whatfrom.core.embed import FakeEmbedder
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import Document, DocumentChunk, ImageTag, Repository
@@ -62,13 +62,18 @@ def shared_engine(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def run_document(
-    goldenset: Path, results_dir: Path, retrieval_only: bool = True, llm_provider: str = "fake"
+    goldenset: Path,
+    results_dir: Path,
+    retrieval_only: bool = True,
+    llm_provider: str = "fake",
+    plan_only: bool = False,
 ) -> dict:
     args = argparse.Namespace(
         goldenset=str(goldenset),
         results_dir=str(results_dir),
         tags="",
         retrieval_only=retrieval_only,
+        plan_only=plan_only,
         embedder="fake",
         llm_provider=llm_provider,
         database_url="",
@@ -374,7 +379,7 @@ def test_timed_recommendation_times_a_failed_embedding(session: Session) -> None
 
 def _recording_provider(log: list) -> LLMProvider:
     """두 단계 모두 성공하는 OpenAI 호환 provider. 호출 기록을 log에 남긴다."""
-    plan = json.dumps({"repository": "python", "semantic_question": "slim python"})
+    plan = json.dumps({"repository": "python"})
     recommendation = RECOMMENDATION.model_dump_json()
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -406,4 +411,89 @@ def test_timed_recommendation_keeps_the_llm_calls_of_its_question_only(session: 
 
     for trace in (first, second):
         assert [call["stage"] for call in trace.llm_calls] == ["plan", "recommend"]
+        assert all(call["ok"] for call in trace.llm_calls)
         assert trace.llm_calls[0]["input_tokens"] == 10
+
+
+PLAN_GOLDENSET = """
+version: 1
+verified_on: 2026-09-12
+cases:
+  - id: python-arm64
+    question: ARM64에서 도는 python 이미지
+    requires_repositories: [python]
+    accept: [python:3.13-slim]
+    expected_plan:
+      architectures: [arm64]
+    rationale:
+      note: 근거
+      sources: [https://example.invalid/doc]
+  - id: not-indexed
+    question: 색인되지 않은 repository를 요구해 미측정으로 빠진다
+    requires_repositories: [there-is-no-such-repository]
+    accept: [there-is-no-such-repository:1]
+    expected_plan: {}
+    rationale:
+      note: 근거
+      sources: [https://example.invalid/doc]
+"""
+
+
+def _run_plan_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, provider
+) -> dict:
+    """테스트 세션의 데이터를 보도록 세션 팩토리를 바꾸고 --plan-only로 돌린다.
+
+    임베더가 불리면 실패하도록 BrokenEmbedder를 넣는다.
+    """
+    _seed_python(session)
+    monkeypatch.setattr(cli, "session_factory", lambda _engine: _fixed_session(session))
+    monkeypatch.setattr(cli, "get_embedder", lambda _name: BrokenEmbedder())
+    monkeypatch.setattr(cli, "get_provider", lambda *_args, **_kwargs: provider)
+    goldenset = tmp_path / "goldenset.yaml"
+    goldenset.write_text(PLAN_GOLDENSET, encoding="utf-8")
+    return run_document(
+        goldenset,
+        tmp_path / "results",
+        retrieval_only=False,
+        llm_provider="openai_compatible",
+        plan_only=True,
+    )
+
+
+def test_plan_only_scores_extraction_without_embedding_or_the_recommend_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    provider = FakeLLMProvider(plan=SearchPlan(repository="python", architectures=["arm64"]))
+
+    document = _run_plan_only(tmp_path, monkeypatch, session, provider)
+
+    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
+    assert metrics == {"repository 추출 일치율": (1, 1), "조건 추출 일치율": (1, 1)}
+    assert provider.calls == []
+    [case] = document["cases"]
+    assert case["plan"]["architectures"] == ["arm64"]
+    assert case["seconds_plan"] is not None
+    assert document["skipped"] == [
+        {"case_id": "not-indexed", "missing": ["there-is-no-such-repository"]}
+    ]
+    assert document["meta"]["mode"] == "plan-only"
+    assert document["meta"]["llm_stages"]["recommend"] is None
+
+
+def test_plan_only_counts_a_failed_extraction_as_a_miss_on_both_metrics(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    provider = FakeLLMProvider(plan_error=RemoteCallError("plan down"))
+
+    document = _run_plan_only(tmp_path, monkeypatch, session, provider)
+
+    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
+    assert metrics == {"repository 추출 일치율": (0, 1), "조건 추출 일치율": (0, 1)}
+    assert document["cases"][0]["plan"] is None
+
+
+def test_plan_only_cannot_be_combined_with_retrieval_only() -> None:
+    assert cli.build_parser().parse_args(["eval", "--plan-only"]).plan_only is True
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(["eval", "--plan-only", "--retrieval-only"])

@@ -200,6 +200,33 @@ def plan_field_matches(expected: ExpectedPlan, plan: SearchPlan) -> dict[str, bo
     return matches
 
 
+@dataclass(frozen=True)
+class PlanScore:
+    """조건 추출 단계만 돌린 문항의 채점 결과(--plan-only). 전체 모드와 같은 규칙으로 채점한다."""
+
+    case_id: str
+    # 추출에 실패했으면 plan과 plan_fields가 None이다.
+    plan: dict | None
+    repository_extracted: bool
+    plan_fields: dict[str, bool] | None
+    plan_matched: bool
+    notes: list[str] = field(default_factory=list)
+    trace: RunTrace | None = None
+
+
+def score_plan(case: GoldenCase, plan: SearchPlan | None, notes: list[str]) -> PlanScore:
+    """검색 조건 추출의 두 지표를 채점한다. 전체 모드의 score_full도 이 함수를 쓴다."""
+    fields = plan_field_matches(case.expected_plan, plan) if plan is not None else None
+    return PlanScore(
+        case_id=case.id,
+        plan=plan.model_dump() if plan is not None else None,
+        repository_extracted=plan is not None and plan.repository in case.requires_repositories,
+        plan_fields=fields,
+        plan_matched=fields is not None and all(fields.values()),
+        notes=list(notes),
+    )
+
+
 def _sources_ok(response: RecommendResponse) -> bool:
     """출처 URL과 수집 시점이 갖춰졌는가.
 
@@ -244,9 +271,7 @@ def score_full(
         recommended is not None and _is_accepted(case, recommended, accepted_digests)
     )
 
-    fields = (
-        plan_field_matches(case.expected_plan, response.plan) if response.plan is not None else None
-    )
+    extraction = score_plan(case, response.plan, response.notes)
 
     return CaseScore(
         case_id=case.id,
@@ -273,12 +298,10 @@ def score_full(
         hit_at5=retrieval.hit_at5,
         # 추천을 못 한 사유는 API가 맨 뒤에 붙인다. 앞에는 검색 단계의 알림이 올 수 있다.
         degraded_note=response.notes[-1] if recommendation is None and response.notes else None,
-        plan=response.plan.model_dump() if response.plan is not None else None,
-        repository_extracted=(
-            response.plan is not None and response.plan.repository in case.requires_repositories
-        ),
-        plan_fields=fields,
-        plan_matched=fields is not None and all(fields.values()),
+        plan=extraction.plan,
+        repository_extracted=extraction.repository_extracted,
+        plan_fields=extraction.plan_fields,
+        plan_matched=extraction.plan_matched,
         notes=list(response.notes),
         recommended=(
             response.recommended.model_dump(mode="json") if response.recommended else None

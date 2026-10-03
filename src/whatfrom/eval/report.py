@@ -5,7 +5,7 @@ from statistics import median
 from unicodedata import east_asian_width
 
 from whatfrom.eval.goldenset import GoldenCase
-from whatfrom.eval.scoring import CaseScore, RetrievalScore
+from whatfrom.eval.scoring import CaseScore, PlanScore, RetrievalScore
 from whatfrom.eval.timing import RunTrace
 
 
@@ -117,6 +117,14 @@ def aggregate_full(scores: list[CaseScore]) -> list[Metric]:
         # 검색 조건 추출(LLM #1)의 품질. 추출에 실패한 문항은 실패로 센다.
         Metric("repository 추출 일치율", sum(s.repository_extracted for s in scores), len(scores)),
         # 분모가 전체다. 조건이 없는 문항에서 없는 조건을 만들어내는 것도 실패다.
+        Metric("조건 추출 일치율", sum(s.plan_matched for s in scores), len(scores)),
+    ]
+
+
+def aggregate_plan(scores: list[PlanScore]) -> list[Metric]:
+    """--plan-only의 지표. 이름과 분모는 전체 모드의 두 추출 지표와 같다."""
+    return [
+        Metric("repository 추출 일치율", sum(s.repository_extracted for s in scores), len(scores)),
         Metric("조건 추출 일치율", sum(s.plan_matched for s in scores), len(scores)),
     ]
 
@@ -267,10 +275,10 @@ def render_summary(
     return "\n".join(lines)
 
 
-def _case_record(score: CaseScore | RetrievalScore) -> dict:
+def _case_record(score: CaseScore | RetrievalScore | PlanScore) -> dict:
     """문항 하나의 JSON. 시간 기록은 trace로 묶지 않고 펼쳐 기존 결과 파일과 같은 key를 쓴다."""
     record = asdict(score)
-    if isinstance(score, CaseScore):
+    if isinstance(score, CaseScore | PlanScore):
         trace = record.pop("trace")
         record |= trace if trace is not None else dict.fromkeys(f.name for f in fields(RunTrace))
     return record
@@ -278,7 +286,7 @@ def _case_record(score: CaseScore | RetrievalScore) -> dict:
 
 def result_document(
     metrics: list[Metric],
-    scores: list[CaseScore] | list[RetrievalScore],
+    scores: list[CaseScore] | list[RetrievalScore] | list[PlanScore],
     skipped: list[Skipped],
     meta: dict,
     baseline: ConstantBaseline | None = None,

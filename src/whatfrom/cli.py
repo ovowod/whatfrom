@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 if TYPE_CHECKING:
     from whatfrom.eval.goldenset import GoldenCase, GoldenSet
 
-from whatfrom.api import recommend_for_question
+from whatfrom.api import recommend_for_question, repository_names
 from whatfrom.collect import docs
 from whatfrom.collect.derive import DeriveOutcome, derive_repository
 from whatfrom.collect.hub import HubClient, parse_repository
@@ -32,10 +32,12 @@ from whatfrom.core.config import settings
 from whatfrom.core.contracts import RecommendResponse, split_image
 from whatfrom.core.db import SessionFactory, make_engine, session_factory, session_scope
 from whatfrom.core.embed import Embedder, get_embedder
+from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import Base, Document, DocumentChunk, ImageTag, Repository
 from whatfrom.eval.timing import RunTrace, Timed
 from whatfrom.index.indexer import index_readme
 from whatfrom.recommend.llm import LLMCall, LLMProvider, get_provider, stage_llm
+from whatfrom.recommend.planner import extract_plan
 from whatfrom.recommend.verify import image_exists
 from whatfrom.search.retrieval import (
     search_candidates_by_vector,
@@ -292,11 +294,23 @@ def cmd_eval(args: argparse.Namespace) -> None:
     scores = []
     for index, case in enumerate(measured, start=1):
         print(f"[{index}/{len(measured)}] {case.id}", flush=True)
-        scores.append(_score_case(case, open_session, embedder, provider, call_log))
+        if args.plan_only:
+            assert provider is not None
+            scores.append(_score_plan_case(case, open_session, provider, call_log))
+        else:
+            scores.append(_score_case(case, open_session, embedder, provider, call_log))
 
     meta = _eval_meta(args, goldenset, started_at)
     out = results_dir / f"{started_at.strftime('%Y-%m-%dT%H-%M-%S')}.json"
-    _report_eval(args.retrieval_only, goldenset, measured, skipped, scores, meta, out)
+    _report_eval(meta["mode"], goldenset, measured, skipped, scores, meta, out)
+
+
+def _eval_mode(args: argparse.Namespace) -> str:
+    if args.retrieval_only:
+        return "retrieval-only"
+    if args.plan_only:
+        return "plan-only"
+    return "full"
 
 
 def _eval_cases(
@@ -366,9 +380,12 @@ def _score_case(
 
 def _eval_meta(args: argparse.Namespace, goldenset: "GoldenSet", started_at: datetime) -> dict:
     """결과 JSON의 실행 meta. 서로 다른 실행의 점수를 비교할 수 있는지 판단하는 근거다."""
+    mode = _eval_mode(args)
+    # 부르지 않은 단계는 None이다.
+    stages = {"plan": True, "recommend": mode == "full"}
     return {
         "started_at": started_at.isoformat(timespec="seconds"),
-        "mode": "retrieval-only" if args.retrieval_only else "full",
+        "mode": mode,
         "embedder": args.embedder,
         # get_embedder/get_provider와 같은 기준(이름이 "fake"인지)으로 판단한다.
         # fake로 돌린 실행에 실제 모델 이름을 붙이면 서로 다른 모델의 점수를
@@ -378,7 +395,7 @@ def _eval_meta(args: argparse.Namespace, goldenset: "GoldenSet", started_at: dat
         "llm_stages": (
             None
             if args.retrieval_only or args.llm_provider == "fake"
-            else {stage: _stage_meta(stage) for stage in ("plan", "recommend")}
+            else {stage: _stage_meta(stage) if used else None for stage, used in stages.items()}
         ),
         "llm_provider": None if args.retrieval_only else args.llm_provider,
         "tags": args.tags or None,
@@ -403,8 +420,44 @@ def _stage_meta(stage: str) -> dict:
     }
 
 
+def _score_plan_case(
+    case: "GoldenCase",
+    open_session: SessionFactory,
+    provider: LLMProvider,
+    call_log: list[LLMCall],
+):
+    """조건 추출 단계만 돌려 채점한다(--plan-only). 임베딩과 추천 단계는 부르지 않는다.
+
+    repository 목록과 정규화는 추천 경로와 같은 함수를 쓴다. 그래야 전체 모드의 추출
+    지표와 비교할 수 있다.
+    """
+    from whatfrom.eval.scoring import score_plan
+
+    with open_session() as session:
+        repositories = repository_names(session)
+    timed = Timed(provider, ["plan"])
+    already = len(call_log)
+    notes: list[str] = []
+    start = time.perf_counter()
+    try:
+        plan = extract_plan(timed, case.question, repositories)
+    except RemoteCallError as exc:
+        plan = None
+        notes.append(f"검색 조건 추출에 실패했습니다: {exc}")
+    total = time.perf_counter() - start
+    trace = RunTrace(
+        seconds_total=total,
+        seconds_embedding=None,
+        seconds_plan=timed.seconds.get("plan"),
+        seconds_advise=None,
+        advise_prompt=None,
+        llm_calls=[asdict(call) for call in call_log[already:]],
+    )
+    return replace(score_plan(case, plan, notes), trace=trace)
+
+
 def _report_eval(
-    retrieval_only: bool,
+    mode: str,
     goldenset: "GoldenSet",
     measured: list,
     skipped: list,
@@ -415,6 +468,7 @@ def _report_eval(
     """지표를 집계해 요약을 출력하고 결과 JSON을 저장한다."""
     from whatfrom.eval.report import (
         aggregate_full,
+        aggregate_plan,
         aggregate_retrieval,
         constant_baseline,
         random_baseline,
@@ -422,15 +476,21 @@ def _report_eval(
         result_document,
     )
 
-    metrics = aggregate_retrieval(scores) if retrieval_only else aggregate_full(scores)
+    aggregate = {
+        "retrieval-only": aggregate_retrieval,
+        "plan-only": aggregate_plan,
+        "full": aggregate_full,
+    }[mode]
+    metrics = aggregate(scores)
     # 전체 모드의 추천 정확도와 비교할 고정답 기준선을 계산한다.
     # 측정 문항의 accept 목록만 사용하며 추가 DB 조회나 모델 호출은 없다.
-    baseline = None if retrieval_only else constant_baseline(measured)
-    # 후보 기록만으로 계산하므로 두 모드 모두 구한다.
-    random = random_baseline(scores)
+    baseline = constant_baseline(measured) if mode == "full" else None
+    # 후보 기록만으로 계산하므로 후보가 있는 두 모드가 구한다. --plan-only는 후보가 없다.
+    random = None if mode == "plan-only" else random_baseline(scores)
 
     print()
-    failures = [] if retrieval_only else scores
+    # 실패 목록은 추천 결과를 보여 준다. 추천이 없는 두 모드에는 놓일 자리가 없다.
+    failures = scores if mode == "full" else []
     print(
         render_summary(
             metrics, failures, measured, skipped, len(goldenset.cases), meta, baseline, random
@@ -541,7 +601,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_eval.add_argument("--goldenset", default="eval/goldenset.yaml")
     p_eval.add_argument("--results-dir", default="eval/results")
     p_eval.add_argument("--tags", default="", help="쉼표로 구분. 하나라도 가진 문항만 (OR)")
-    p_eval.add_argument("--retrieval-only", action="store_true", help="LLM 없이 검색 지표만")
+    modes = p_eval.add_mutually_exclusive_group()
+    modes.add_argument("--retrieval-only", action="store_true", help="LLM 없이 검색 지표만")
+    modes.add_argument("--plan-only", action="store_true", help="조건 추출 단계만 돌려 추출 지표만")
     p_eval.add_argument("--embedder", default=settings.embedder)
     p_eval.add_argument("--llm-provider", default=settings.llm_provider)
     p_eval.add_argument("--database-url", default=settings.database_url)
