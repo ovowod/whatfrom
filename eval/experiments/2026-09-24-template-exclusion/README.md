@@ -12,7 +12,7 @@
 | --- | --- |
 | 코드 | 브랜치 `feat/digest-and-timing`, 틀 문장 제외 커밋 `788c8b7` 이후 |
 | 임베딩 | bge-m3 (ollama) |
-| 골든셋 | `fe366444`, 40문항 |
+| golden set | `fe366444`, 40문항 |
 | 다시 색인하기 전 | 청크 344개, 섹션 135개 (`sections-before.json`) |
 | 다시 색인한 뒤 | 청크 334개, 섹션 125개 (`sections-after.json`) |
 | 검색 규칙 | 섹션마다 가장 가까운 청크 1개, 거리가 같으면 청크 id 순 |

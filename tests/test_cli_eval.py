@@ -1,8 +1,8 @@
 # tests/test_cli_eval.py
-"""러너가 실행 메타에 남기는 골든셋 출처와, 측정/미측정을 가르는 조회를 확인한다.
+"""러너가 실행 메타에 남기는 golden set 출처와, 측정/미측정을 가르는 조회를 확인한다.
 
 cli.py는 stage들을 조합하는 지점이라 단위 테스트가 아니라 여기서 본다. 측정
-문항이 0이 되도록(색인되지 않은 repository를 요구하는 문항만) 골든셋을 짜서 LLM도
+문항이 0이 되도록(색인되지 않은 repository를 요구하는 문항만) golden set을 짜서 LLM도
 임베딩도 타지 않게 한다 — 보려는 것은 점수가 아니라 메타다.
 """
 
@@ -100,7 +100,7 @@ def test_run_metadata_records_the_goldenset_content_hash(tmp_path: Path) -> None
 
 def test_editing_a_label_changes_the_hash_though_the_version_does_not(tmp_path: Path) -> None:
     """version은 라벨을 고쳐도 그대로다. 그것만 남기면 비교할 수 없는 두 실행이
-    같은 골든셋을 돌린 것처럼 보인다."""
+    같은 golden set을 돌린 것처럼 보인다."""
     first = tmp_path / "first.yaml"
     first.write_text(GOLDENSET, encoding="utf-8")
     second = tmp_path / "second.yaml"
@@ -119,7 +119,7 @@ def test_editing_a_label_changes_the_hash_though_the_version_does_not(tmp_path: 
 
 
 def test_run_metadata_records_when_the_goldenset_was_verified(tmp_path: Path) -> None:
-    """골든셋의 latest·LTS 주장이 언제 기준인지 결과 파일만 보고 알 수 있어야 한다."""
+    """golden set의 latest·LTS 주장이 언제 기준인지 결과 파일만 보고 알 수 있어야 한다."""
     goldenset = tmp_path / "goldenset.yaml"
     goldenset.write_text(GOLDENSET, encoding="utf-8")
 
@@ -584,7 +584,7 @@ def test_a_recorded_extraction_failure_stays_a_failure(
     ("change", "message"),
     [
         (lambda doc: doc["meta"].update(mode="retrieval-only"), "full"),
-        (lambda doc: doc["meta"].update(goldenset_sha256="other"), "골든셋"),
+        (lambda doc: doc["meta"].update(goldenset_sha256="other"), "golden set"),
         (lambda doc: doc.update(cases=[]), "python-arm64"),
     ],
 )

@@ -32,7 +32,7 @@ def test_the_system_prompt_forbids_conditions_the_question_does_not_state():
 def test_the_system_prompt_separates_ubuntu_itself_from_ubuntu_as_a_base():
     """ubuntu 이미지 자체는 버전 번호로, 다른 이미지의 베이스는 코드네임으로 적는다.
 
-    골든셋 라벨과 같은 규칙이다. 다르면 올바른 후보를 만든 추출도 불필요한
+    golden set 라벨과 같은 규칙이다. 다르면 올바른 후보를 만든 추출도 불필요한
     distributions 때문에 오답으로 채점된다.
     """
     assert 'ubuntu image itself, write its required release number here ("24.04")' in PLAN_SYSTEM
@@ -66,7 +66,7 @@ def test_a_repository_is_matched_regardless_of_case_and_spaces():
 def test_the_system_prompt_says_compared_tags_are_not_requirements():
     """ "python:3.14랑 3.14-slim이 뭐가 달라?"의 3.14는 비교 대상이지 요구가 아니다.
 
-    골든셋 라벨과 같은 규칙이다.
+    golden set 라벨과 같은 규칙이다.
     """
     assert "Tags the user only compares or asks about" in PLAN_SYSTEM
     assert "are not requirements" in PLAN_SYSTEM

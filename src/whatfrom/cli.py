@@ -383,7 +383,7 @@ def _load_fixed_plans(path: Path, goldenset: Path, measured: list) -> dict[str, 
     if meta.get("mode") != "full":
         raise SystemExit(f"--plans에는 전체 모드(full) 결과가 필요하다: {path}")
     if meta.get("goldenset_sha256") != hashlib.sha256(goldenset.read_bytes()).hexdigest():
-        raise SystemExit(f"--plans 결과의 골든셋이 지금 골든셋과 다르다: {path}")
+        raise SystemExit(f"--plans 결과의 golden set이 지금 golden set과 다르다: {path}")
     plans = {case["case_id"]: case.get("plan") for case in document.get("cases", [])}
     missing = [case.id for case in measured if case.id not in plans]
     if missing:
@@ -482,9 +482,9 @@ def _eval_meta(
         "plans_from": Path(args.plans).name if args.plans else None,
         "goldenset_version": goldenset.version,
         # 버전 번호를 유지한 채 라벨을 수정할 수 있으므로 파일 해시도 기록한다.
-        # 해시가 다르면 두 실행이 사용한 골든셋 내용이 달랐다는 뜻이다.
+        # 해시가 다르면 두 실행이 사용한 golden set 내용이 달랐다는 뜻이다.
         "goldenset_sha256": hashlib.sha256(Path(args.goldenset).read_bytes()).hexdigest(),
-        # 골든셋이 인용한 출처를 마지막으로 확인한 날. latest·LTS·최신 패치 주장은
+        # golden set이 인용한 출처를 마지막으로 확인한 날. latest·LTS·최신 패치 주장은
         # 시간이 지나면 낡는다. 언제 기준의 라벨인지 결과에 남긴다.
         "goldenset_verified_on": (
             goldenset.verified_on.isoformat() if goldenset.verified_on is not None else None

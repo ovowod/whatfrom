@@ -52,7 +52,7 @@ def constant_baseline(cases: list[GoldenCase]) -> ConstantBaseline:
         return ConstantBaseline(image=None, hits=0, total=len(cases))
 
     # 동점은 이미지 이름 오름차순으로 깬다. Counter.most_common은 동점일 때
-    # 입력 순서를 따르므로 골든셋 문항 순서만 바뀌어도 답이 달라진다.
+    # 입력 순서를 따르므로 golden set 문항 순서만 바뀌어도 답이 달라진다.
     image = min(counts, key=lambda candidate: (-counts[candidate], candidate))
     return ConstantBaseline(image=image, hits=counts[image], total=len(cases))
 
@@ -233,7 +233,7 @@ def render_summary(
     ]
     # 측정 문항 수는 cases에서 센다. scores로 세면 --retrieval-only가 빈 scores를
     # 넘기는 탓에 '0문항 측정'으로 찍힌다.
-    headline = f"골든셋 {total_cases}문항 중 {len(cases)}문항 측정"
+    headline = f"golden set {total_cases}문항 중 {len(cases)}문항 측정"
     if skipped:
         headline += f" · {len(skipped)}문항 미측정 ({', '.join(missing_repos)} 미색인)"
     # --tags로 걸러진 문항은 measured에도 skipped에도 없어 그냥 사라진 것처럼 보인다.

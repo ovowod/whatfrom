@@ -106,7 +106,7 @@ collector (CLI 배치)  →  PostgreSQL + pgvector  ←  indexer (chunk 나누�
 | `verify` | 실재성 검증 | `Recommendation` → 통과/거부 | ✗ |
 | `llm` | 공급자 추상화 | Protocol. 외부 API / Ollama / Fake | — |
 | `api` | HTTP 경계 | FastAPI 라우터·검증·에러 매핑 | ✗ |
-| `eval` | 채점 | 골든셋 → 지표 report | ✗ |
+| `eval` | 채점 | golden set → 지표 report | ✗ |
 
 LLM을 쓰는 모듈은 `query`와 `advisor` 둘뿐이고, 둘 다 입출력이 Pydantic 모델이다. 그래서 다음이 가능하다.
 
@@ -271,16 +271,16 @@ LLM을 두 모듈에 가둔 설계의 이득을 여기서 얻는다.
 | `query`·`advisor` | `FakeLLMProvider` 계약 테스트 | 없음 |
 | `collector` | 녹화한 HTTP 응답 fixture(respx) | 없음 |
 | `verify` | **없는 태그를 내놓는 FakeLLM**으로 환각 시나리오를 명시해 테스트 | 없음 |
-| 품질 평가 | 골든셋 러너, 수동 `make eval` | 있음(비용) |
+| 품질 평가 | golden set 러너, 수동 `make eval` | 있음(비용) |
 
 CI는 네트워크와 API 비용 없이 모두 통과해야 한다.
-골든셋 평가만 수동이다. 비결정적이고 돈이 들어서, 테스트가 아니라 측정 도구로 따로 둔다.
+golden set 평가만 수동이다. 비결정적이고 돈이 들어서, 테스트가 아니라 측정 도구로 따로 둔다.
 
 구현은 TDD로 한다. 태그 파서와 `verify`는 특히 테스트를 먼저 쓰는 쪽이 훨씬 빠르다.
 
 ## 10. 평가 지표
 
-골든셋 40문항(YAML)으로 잰다.
+golden set 40문항(YAML)으로 잰다.
 
 | 지표 | 정의 |
 | --- | --- |
@@ -308,10 +308,10 @@ CI는 네트워크와 API 비용 없이 모두 통과해야 한다.
 - Docker Compose
 - k6, Prometheus, Grafana (Phase 3)
 
-## 12. 리스크: 골든셋의 순환논리
+## 12. 리스크: golden set의 순환논리
 
 "python 3.12 + numpy + arm64에 무엇이 맞나"의 정답은 결국 작성자의 판단이다.
 자기가 만든 채점표로 자기 시스템을 채점하면 순환논리가 된다.
 
 **완화책:** 정답 라벨마다 근거 URL을 반드시 남긴다(공식 문서, numpy 설치 가이드 등).
-그러면 라벨이 "내 생각"이 아니라 "문서에 근거한 판단"이 된다. 골든셋을 읽을 때 이 규칙을 강제한다.
+그러면 라벨이 "내 생각"이 아니라 "문서에 근거한 판단"이 된다. golden set을 읽을 때 이 규칙을 강제한다.

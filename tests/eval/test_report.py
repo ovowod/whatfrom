@@ -320,7 +320,7 @@ def test_constant_baseline_scores_the_cases_whose_accept_contains_the_image() ->
 
 
 def test_constant_baseline_breaks_ties_by_image_name_not_by_case_order() -> None:
-    """동점일 때 입력 순서를 따르면 골든셋 문항 순서만 바꿔도 대조군이 달라진다."""
+    """동점일 때 입력 순서를 따르면 golden set 문항 순서만 바꿔도 대조군이 달라진다."""
     cases = [
         make_case(id="a", accept=["python:3.14-slim"]),
         make_case(id="b", accept=["python:3.13-slim"]),

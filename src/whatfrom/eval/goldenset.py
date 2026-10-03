@@ -15,7 +15,7 @@ from pydantic import (
 
 
 class GoldenSetError(ValueError):
-    """골든셋 파일이 스키마를 만족하지 못한다."""
+    """golden set 파일이 스키마를 만족하지 못한다."""
 
 
 class Conditions(BaseModel):

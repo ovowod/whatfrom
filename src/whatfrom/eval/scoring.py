@@ -117,7 +117,7 @@ def conditions_satisfied(conditions: Conditions, candidate: Candidate) -> bool:
         if not _linux_platforms(candidate, architecture):
             return False
 
-    # 골든셋은 배포판(alpine)과 코드네임(trixie)을 둘 다 제외 값으로 쓴다.
+    # golden set은 배포판(alpine)과 코드네임(trixie)을 둘 다 제외 값으로 쓴다.
     derived = {candidate.distribution, candidate.distro_codename} - {None}
     for excluded in conditions.exclude_distributions:
         if derived:
