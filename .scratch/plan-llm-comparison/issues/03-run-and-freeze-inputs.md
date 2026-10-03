@@ -6,10 +6,10 @@
 
 **Status:** ready-for-agent
 
-- [ ] kimi-max는 전체 평가, 나머지는 `--plan-only`로 돌린다.
-- [ ] 항상 `--llm-provider openai_compatible`을 넘기고, LLM timeout을 120초로 고정한다.
-- [ ] 측정 설정을 `WHATFROM_PLAN_LLM_*`로 넣고, 공급자 키는 `WHATFROM_PLAN_LLM_API_KEY`로만 넘긴다. 키는 결과와 출력에 남지 않는다.
-- [ ] 결과 JSON을 측정 설정 이름과 회차를 붙여 실험 폴더에 복사한다.
-- [ ] DB의 repository 목록과 repository별 색인 문서 수를 기록하는 명령이 있다.
-- [ ] 미측정 문항이 있는 결과면 실패로 알리고 복사하지 않는다.
-- [ ] fake provider와 fixture DB로 명령 조립, 결과 복사, 미측정 문항 거부를 확인하는 테스트가 있다.
+- [x] kimi-max는 전체 평가, 나머지는 `--plan-only`로 돌린다.
+- [x] 항상 `--llm-provider openai_compatible`을 넘기고, LLM timeout을 120초로 고정한다.
+- [x] 측정 설정을 `WHATFROM_PLAN_LLM_*`로 넣고, 공급자 키는 `WHATFROM_PLAN_LLM_API_KEY`로만 넘긴다. 키는 결과와 출력에 남지 않는다.
+- [x] 결과 JSON을 측정 설정 이름과 회차를 붙여 실험 폴더에 복사한다.
+- [x] DB의 repository 목록과 repository별 색인 문서 수를 기록하는 명령이 있다.
+- [x] 미측정 문항이 있는 결과면 실패로 알리고 복사하지 않는다.
+- [x] 평가를 대신하는 함수와 fixture DB로 명령 조립, 결과 복사, 미측정 문항 거부를 확인하는 테스트가 있다. 실제 `cli eval` 출력과의 일치는 04의 첫 측정에서 확인한다.
