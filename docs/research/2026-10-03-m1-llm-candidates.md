@@ -19,7 +19,7 @@ M1-a(조건 추출 단계)와 M1-b(추천 단계)에서 비교할 model의 API �
 
 | model | ID 확인 | base URL | 최소 reasoning `EXTRA_BODY` | `low` `EXTRA_BODY` | structured output | reasoning token 보고 | 가격 (1M token당 input / cached / output, USD) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| kimi-k3 | `kimi-k3` 확인 | `https://api.moonshot.ai/v1` | `{"reasoning_effort": "low"}` (끌 수 없음, 기본값은 `max`) | 최소와 같음 | `json_schema` + `strict: true` 지원 | `reasoning_tokens` field 없음 | $3.00 / $0.30 / $15.00 |
+| kimi-k3 | `kimi-k3` 확인 | `https://api.moonshot.ai/v1` | `{"reasoning_effort": "low"}` (끌 수 없음, 기본값은 `max`) | 최소와 같음 | `json_schema` + `strict: true` 지원 | 문서 예시에는 `reasoning_tokens` field가 없다. 실측에서는 보고했다(아래 정정) | $3.00 / $0.30 / $15.00 |
 | gpt-6-luna | `gpt-6-luna` 확인, GA | `https://api.openai.com/v1` | `{"reasoning_effort": "none"}` (기본값은 `medium`) | `{"reasoning_effort": "low"}` | Structured Outputs 지원 | `completion_tokens_details.reasoning_tokens` | $0.10 / $0.01 / $0.50 |
 | grok-4.3 | `grok-4.3` 확인 (alias `grok-4.3-latest`) | `https://api.x.ai/v1` | `{"reasoning_effort": "none"}` (기본값은 `low`) | `{"reasoning_effort": "low"}` 또는 생략 | `json_schema` 지원 | `completion_tokens_details.reasoning_tokens`. 단, `completion_tokens`에 reasoning이 빠져 있다 | $1.25 / $0.20 / $2.50 |
 | gemini-3.5-flash-lite | `gemini-3.5-flash-lite` 확인, Stable | `https://generativelanguage.googleapis.com/v1beta/openai` | 생략 (기본값이 `minimal`). 명시하려면 `{"extra_body": {"google": {"thinking_config": {"thinking_level": "minimal"}}}}` | `{"extra_body": {"google": {"thinking_config": {"thinking_level": "low"}}}}` | OpenAI 호환 layer의 strict `json_schema` 처리 범위는 문서에 없음 | OpenAI 호환 응답의 field는 문서에 없음 | $0.30 / $0.03 / $2.50 (output에 thinking 포함) |
@@ -49,7 +49,9 @@ M1-a(조건 추출 단계)와 M1-b(추천 단계)에서 비교할 model의 API �
 
 **structured output.** "Use `json_schema` with `strict: true` to constrain the final `message.content`. Parse only that field, not `reasoning_content`." ([Kimi K3 quickstart](https://platform.kimi.ai/docs/guide/kimi-k3-quickstart)). chat API reference는 `response_format`으로 `text`, `json_object`, `json_schema`(`strict` 기본값 true)를 받는다 ([platform.kimi.com chat API](https://platform.kimi.com/docs/api/chat)). 우리 요청 방식과 그대로 맞고, 이미 운영에서 쓰고 있다.
 
-**usage.** chat API reference의 응답 예시 `usage`는 `prompt_tokens`, `completion_tokens`, `total_tokens`, `cached_tokens`, `prompt_tokens_details.{cached_tokens, cache_write_tokens}`뿐이다. `completion_tokens_details.reasoning_tokens`는 없다 ([Kimi chat API](https://platform.kimi.ai/docs/api/chat)). 그래서 우리 기록의 `reasoning_tokens`는 kimi-k3에서 항상 None이 된다. reasoning은 `message.reasoning_content`로 돌아오고, thinking 문서는 "`reasoning_content` counts toward token consumption"이라고 한다 ([Thinking models](https://platform.kimi.ai/docs/guide/use-thinking-models)).
+**usage.** chat API reference의 응답 예시 `usage`는 `prompt_tokens`, `completion_tokens`, `total_tokens`, `cached_tokens`, `prompt_tokens_details.{cached_tokens, cache_write_tokens}`뿐이다. `completion_tokens_details.reasoning_tokens`는 없다 ([Kimi chat API](https://platform.kimi.ai/docs/api/chat)). 문서대로라면 우리 기록의 `reasoning_tokens`는 kimi-k3에서 항상 None이 된다.
+
+> **실측 정정 (2026-10-03, M1-a 사전 확인):** 실제 응답은 `completion_tokens_details.reasoning_tokens`를 보고했고, `completion_tokens`가 reasoning token을 포함했다(prompt 927 + completion 321 = total 1248, reasoning 259). 공식 문서의 응답 예시와 다르다. 자세한 내용은 [M1-a 실험 기록](../../eval/experiments/2026-10-03-plan-llm-comparison/README.md)에 있다. reasoning은 `message.reasoning_content`로 돌아오고, thinking 문서는 "`reasoning_content` counts toward token consumption"이라고 한다 ([Thinking models](https://platform.kimi.ai/docs/guide/use-thinking-models)).
 
 **가격.** 1M token당 input $3.00, cached input $0.30, output $15.00, cache write $3.00(TTL 5분)·$6.00(TTL 1시간) ([Kimi pricing](https://platform.kimi.ai/docs/pricing/chat)). reasoning token을 output 단가로 받는다는 명시 문장은 pricing 문서에서 찾지 못했다.
 
@@ -153,7 +155,7 @@ OpenAI 호환 layer에서 reasoning을 정하는 방법은 두 가지다 ([OpenA
 
 1. **kimi-k3 기준선의 reasoning 수준.** `reasoning_effort`를 보내지 않으면 `max`다. 지금 기준선은 `max`로 측정한 값이다. M1의 "각 model의 reasoning 최소 수준" 원칙을 kimi-k3에도 적용하려면 `{"reasoning_effort": "low"}`로도 재야 한다. roadmap은 kimi-k3를 최소 수준·`low` 측정에서 뺐는데, 이 전제를 다시 볼 필요가 있다.
 2. **reasoning token 기록의 공급자별 차이.**
-   - kimi-k3: `completion_tokens_details`가 없어 `reasoning_tokens`가 항상 None이다.
+   - kimi-k3: 문서 예시에는 `completion_tokens_details`가 없지만, 실측에서는 `reasoning_tokens`를 보고했다(위 정정).
    - grok-4.3: `completion_tokens`가 reasoning을 빼고 센다. 비용을 `output_tokens × 단가`로 계산하면 reasoning만큼 적게 나온다. `completion_tokens + reasoning_tokens`로 계산해야 한다.
    - OpenAI: `completion_tokens`가 reasoning을 포함한다. 위 식을 OpenAI에 쓰면 두 번 센다.
    - gemini: 문서로 확인하지 못했다. 첫 호출에서 `usage`를 직접 봐야 한다.
@@ -171,7 +173,7 @@ OpenAI 호환 layer에서 reasoning을 정하는 방법은 두 가지다 ([OpenA
 - **Gemini OpenAI 호환 응답의 `usage` 형식.** `completion_tokens_details.reasoning_tokens`를 주는지, `completion_tokens`가 thinking을 포함하는지 문서에 없다.
 - **Gemini OpenAI 호환 layer의 strict `json_schema` 처리.** `strict`의 의미, `anyOf`+`null`, `default` keyword 지원 여부가 문서에 없다.
 - **OpenAI strict 모드가 `"default": null`을 받는지.** 문서에 언급이 없다. SDK가 지우는 것만 확인했다.
-- **kimi-k3의 `completion_tokens`가 reasoning token을 포함하는지,** reasoning token을 output 단가로 받는지. pricing 문서에 명시 문장이 없다.
+- **kimi-k3가 reasoning token을 output 단가로 받는지.** pricing 문서에 명시 문장이 없다. `completion_tokens`가 reasoning을 포함한다는 것은 실측으로 확인했다.
 - **grok-4.3 reasoning token의 과금 단가.** "billed as part of your total consumption"이라고만 한다.
 - **gpt-6.1-sol에 `none`을 보냈을 때의 응답.** 미지원이라고만 하고 400인지 명시하지 않았다 (Astra는 400이라고 명시).
 - **Gemini 3.5 Flash-Lite의 model별 RPM·TPM.** AI Studio에서만 보인다.

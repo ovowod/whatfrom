@@ -1,0 +1,1537 @@
+{
+  "meta": {
+    "started_at": "2026-10-03T11:32:21+00:00",
+    "mode": "plan-only",
+    "embedder": "fake",
+    "embedding_model": null,
+    "llm_stages": {
+      "plan": {
+        "base_url": "https://api.openai.com/v1",
+        "model": "gpt-6.1-sol",
+        "extra_body": {
+          "reasoning_effort": "low"
+        }
+      },
+      "recommend": null
+    },
+    "llm_provider": "openai_compatible",
+    "tags": null,
+    "plans_from": null,
+    "goldenset_version": 1,
+    "goldenset_sha256": "fe366444652466a3b945448f1de99e14b3fc86f13e9cf8b07d3ba2cfad12765e",
+    "goldenset_verified_on": "2026-09-12"
+  },
+  "metrics": [
+    {
+      "label": "repository 추출 일치율",
+      "hits": 34,
+      "total": 40,
+      "ratio": 0.85
+    },
+    {
+      "label": "조건 추출 일치율",
+      "hits": 37,
+      "total": 40,
+      "ratio": 0.925
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "python-numpy-arm64",
+      "plan": {
+        "repository": "python",
+        "version_prefix": null,
+        "architectures": [
+          "arm64"
+        ],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 3.3618345860013505,
+      "seconds_embedding": null,
+      "seconds_plan": 3.3617908870000974,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1032,
+          "output_tokens": 65,
+          "reasoning_tokens": 20
+        }
+      ]
+    },
+    {
+      "case_id": "python-size-first",
+      "plan": {
+        "repository": "python",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.0881887080031447,
+      "seconds_embedding": null,
+      "seconds_plan": 2.0881510409963084,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1089,
+          "output_tokens": 57,
+          "reasoning_tokens": 15
+        }
+      ]
+    },
+    {
+      "case_id": "python-version-pinned-312",
+      "plan": {
+        "repository": "python",
+        "version_prefix": "3.12",
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.9466661949991249,
+      "seconds_embedding": null,
+      "seconds_plan": 1.946630242993706,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1056,
+          "output_tokens": 38,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "python-fastapi-prod",
+      "plan": {
+        "repository": null,
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": false,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 4.003263186001277,
+      "seconds_embedding": null,
+      "seconds_plan": 4.003231809998397,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1056,
+          "output_tokens": 137,
+          "reasoning_tokens": 95
+        }
+      ]
+    },
+    {
+      "case_id": "python-scientific-stack",
+      "plan": {
+        "repository": null,
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": false,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.6620906930038473,
+      "seconds_embedding": null,
+      "seconds_plan": 2.662059070993564,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1044,
+          "output_tokens": 67,
+          "reasoning_tokens": 25
+        }
+      ]
+    },
+    {
+      "case_id": "python-build-stage",
+      "plan": {
+        "repository": "python",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.811106054999982,
+      "seconds_embedding": null,
+      "seconds_plan": 1.8110780959978001,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1063,
+          "output_tokens": 36,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "python-latest-stable",
+      "plan": {
+        "repository": "python",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.143263598998601,
+      "seconds_embedding": null,
+      "seconds_plan": 2.143230996996863,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1050,
+          "output_tokens": 36,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "python-alpine-explicit",
+      "plan": {
+        "repository": "python",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [
+          "alpine"
+        ],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.340740748993994,
+      "seconds_embedding": null,
+      "seconds_plan": 2.3407123509969097,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1037,
+          "output_tokens": 39,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "python-debian-codename",
+      "plan": {
+        "repository": "python",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [
+          "bookworm"
+        ],
+        "exclude_distributions": [
+          "trixie"
+        ],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.207099928004027,
+      "seconds_embedding": null,
+      "seconds_plan": 2.207047720999981,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1053,
+          "output_tokens": 43,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "python-arm64-only",
+      "plan": {
+        "repository": "python",
+        "version_prefix": null,
+        "architectures": [
+          "arm64"
+        ],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.9481739940019906,
+      "seconds_embedding": null,
+      "seconds_plan": 1.9480791539972415,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1063,
+          "output_tokens": 39,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "python-small-cli",
+      "plan": {
+        "repository": "python",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.7244971340041957,
+      "seconds_embedding": null,
+      "seconds_plan": 1.7244575139993685,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1059,
+          "output_tokens": 36,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "python-ml-torch",
+      "plan": {
+        "repository": null,
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": false,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 3.3974595260006026,
+      "seconds_embedding": null,
+      "seconds_plan": 3.3974270559992874,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1044,
+          "output_tokens": 108,
+          "reasoning_tokens": 66
+        }
+      ]
+    },
+    {
+      "case_id": "python-slim-vs-full",
+      "plan": {
+        "repository": "python",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.4928916380013106,
+      "seconds_embedding": null,
+      "seconds_plan": 2.492849230999127,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1046,
+          "output_tokens": 36,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "python-musl-explained",
+      "plan": {
+        "repository": null,
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": false,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": false,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": false,
+      "notes": [],
+      "seconds_total": 3.39659811599995,
+      "seconds_embedding": null,
+      "seconds_plan": 3.396568626994849,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1034,
+          "output_tokens": 101,
+          "reasoning_tokens": 59
+        }
+      ]
+    },
+    {
+      "case_id": "node-lts-prod",
+      "plan": {
+        "repository": "node",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.8455222740012687,
+      "seconds_embedding": null,
+      "seconds_plan": 2.845478083996568,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1056,
+          "output_tokens": 64,
+          "reasoning_tokens": 22
+        }
+      ]
+    },
+    {
+      "case_id": "node-size-first",
+      "plan": {
+        "repository": "node",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 3.18495146100031,
+      "seconds_embedding": null,
+      "seconds_plan": 3.184906875001616,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1040,
+          "output_tokens": 73,
+          "reasoning_tokens": 31
+        }
+      ]
+    },
+    {
+      "case_id": "node-native-addon",
+      "plan": {
+        "repository": "node",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": false,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": false,
+      "notes": [],
+      "seconds_total": 4.228830131003633,
+      "seconds_embedding": null,
+      "seconds_plan": 4.2287888580030994,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1045,
+          "output_tokens": 117,
+          "reasoning_tokens": 75
+        }
+      ]
+    },
+    {
+      "case_id": "node-arm64-graviton",
+      "plan": {
+        "repository": "node",
+        "version_prefix": null,
+        "architectures": [
+          "arm64"
+        ],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.6121593290008605,
+      "seconds_embedding": null,
+      "seconds_plan": 2.612129755994829,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1039,
+          "output_tokens": 39,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "node-alpine-vs-slim",
+      "plan": {
+        "repository": "node",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.0737246299977414,
+      "seconds_embedding": null,
+      "seconds_plan": 2.0736795269986033,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1034,
+          "output_tokens": 36,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "postgres-prod-default",
+      "plan": {
+        "repository": "postgres",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.7774614989975817,
+      "seconds_embedding": null,
+      "seconds_plan": 1.7774297150026541,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1048,
+          "output_tokens": 36,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "postgres-postgis-extension",
+      "plan": {
+        "repository": "postgres",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.6844122109978343,
+      "seconds_embedding": null,
+      "seconds_plan": 2.6843832400045358,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1030,
+          "output_tokens": 68,
+          "reasoning_tokens": 26
+        }
+      ]
+    },
+    {
+      "case_id": "postgres-version-pinned-16",
+      "plan": {
+        "repository": "postgres",
+        "version_prefix": "16",
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.7311596819999977,
+      "seconds_embedding": null,
+      "seconds_plan": 2.731132187000185,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1047,
+          "output_tokens": 36,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "postgres-ci-ephemeral",
+      "plan": {
+        "repository": "postgres",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.7423829210019903,
+      "seconds_embedding": null,
+      "seconds_plan": 1.7423546710051596,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1083,
+          "output_tokens": 36,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "redis-cache-sidecar",
+      "plan": {
+        "repository": "redis",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.8343486149969976,
+      "seconds_embedding": null,
+      "seconds_plan": 1.834302117000334,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1051,
+          "output_tokens": 36,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "redis-version-pinned-7",
+      "plan": {
+        "repository": "redis",
+        "version_prefix": "7",
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.8083190799952717,
+      "seconds_embedding": null,
+      "seconds_plan": 1.808287437997933,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1048,
+          "output_tokens": 36,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "redis-persistence-docs",
+      "plan": {
+        "repository": "redis",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.7263371500012,
+      "seconds_embedding": null,
+      "seconds_plan": 1.7262982800020836,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1036,
+          "output_tokens": 36,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "nginx-static-spa",
+      "plan": {
+        "repository": "nginx",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.7978176129981875,
+      "seconds_embedding": null,
+      "seconds_plan": 1.797780959001102,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1050,
+          "output_tokens": 37,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "nginx-stable-branch",
+      "plan": {
+        "repository": "nginx",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.7956887190011912,
+      "seconds_embedding": null,
+      "seconds_plan": 1.7956625389997498,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1036,
+          "output_tokens": 37,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "nginx-otel-tracing",
+      "plan": {
+        "repository": "nginx",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.750097646996437,
+      "seconds_embedding": null,
+      "seconds_plan": 1.7500640309954179,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1042,
+          "output_tokens": 37,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "golang-multistage-build",
+      "plan": {
+        "repository": "golang",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.036602143001801,
+      "seconds_embedding": null,
+      "seconds_plan": 2.036571559998265,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1044,
+          "output_tokens": 37,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "golang-cgo-sqlite",
+      "plan": {
+        "repository": "golang",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.8318029889996978,
+      "seconds_embedding": null,
+      "seconds_plan": 1.8317748539993772,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1046,
+          "output_tokens": 37,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "golang-cross-compile-arm64",
+      "plan": {
+        "repository": "golang",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 3.024130295998475,
+      "seconds_embedding": null,
+      "seconds_plan": 3.0240875279996544,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1052,
+          "output_tokens": 109,
+          "reasoning_tokens": 66
+        }
+      ]
+    },
+    {
+      "case_id": "temurin-jre-runtime",
+      "plan": {
+        "repository": "eclipse-temurin",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.4721912710010656,
+      "seconds_embedding": null,
+      "seconds_plan": 2.472161876001337,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1041,
+          "output_tokens": 63,
+          "reasoning_tokens": 18
+        }
+      ]
+    },
+    {
+      "case_id": "temurin-jdk-build-stage",
+      "plan": {
+        "repository": null,
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": false,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.2459235770002124,
+      "seconds_embedding": null,
+      "seconds_plan": 2.245894045001478,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1038,
+          "output_tokens": 56,
+          "reasoning_tokens": 14
+        }
+      ]
+    },
+    {
+      "case_id": "temurin-17-jammy-pinned",
+      "plan": {
+        "repository": "eclipse-temurin",
+        "version_prefix": "17",
+        "architectures": [],
+        "distributions": [
+          "jammy"
+        ],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.6210393309956999,
+      "seconds_embedding": null,
+      "seconds_plan": 1.6209912670019548,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1050,
+          "output_tokens": 42,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "debian-slim-runtime",
+      "plan": {
+        "repository": "debian",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [
+          "debian"
+        ],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.242242995002016,
+      "seconds_embedding": null,
+      "seconds_plan": 2.2422047760046553,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1040,
+          "output_tokens": 40,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "debian-codename-vs-number",
+      "plan": {
+        "repository": "debian",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.860360482001852,
+      "seconds_embedding": null,
+      "seconds_plan": 2.8603289689999656,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1029,
+          "output_tokens": 37,
+          "reasoning_tokens": 0
+        }
+      ]
+    },
+    {
+      "case_id": "ubuntu-lts-base",
+      "plan": {
+        "repository": "ubuntu",
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": false,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": false,
+      "notes": [],
+      "seconds_total": 3.4927714959994773,
+      "seconds_embedding": null,
+      "seconds_plan": 3.492738859000383,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1044,
+          "output_tokens": 103,
+          "reasoning_tokens": 61
+        }
+      ]
+    },
+    {
+      "case_id": "ubuntu-noble-pinned",
+      "plan": {
+        "repository": "ubuntu",
+        "version_prefix": "24.04",
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": true,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 2.071771387003537,
+      "seconds_embedding": null,
+      "seconds_plan": 2.0717433390018414,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1044,
+          "output_tokens": 56,
+          "reasoning_tokens": 12
+        }
+      ]
+    },
+    {
+      "case_id": "alpine-static-binary",
+      "plan": {
+        "repository": null,
+        "version_prefix": null,
+        "architectures": [],
+        "distributions": [],
+        "exclude_distributions": [],
+        "max_size_mb": null
+      },
+      "repository_extracted": false,
+      "plan_fields": {
+        "architectures": true,
+        "distributions": true,
+        "exclude_distributions": true,
+        "version_prefix": true,
+        "max_size_mb": true
+      },
+      "plan_matched": true,
+      "notes": [],
+      "seconds_total": 1.6836627910015523,
+      "seconds_embedding": null,
+      "seconds_plan": 1.6836219739998342,
+      "seconds_advise": null,
+      "advise_prompt": null,
+      "llm_calls": [
+        {
+          "stage": "plan",
+          "attempts": 1,
+          "ok": true,
+          "error": null,
+          "input_tokens": 1044,
+          "output_tokens": 36,
+          "reasoning_tokens": 0
+        }
+      ]
+    }
+  ],
+  "skipped": []
+}

@@ -145,7 +145,8 @@ def _stage_env(stage: str, config: Config, api_key: str) -> dict[str, str]:
 
 def eval_command(config: Config, results_dir: Path) -> list[str]:
     # --llm-provider를 빠뜨리면 기본값 fake로 돌아 fake 응답을 모델 이름 아래 잰다.
-    mode = ["--plan-only"] if config.mode == "plan-only" else []
+    # 전체 평가는 embedder도 기본값이 fake라 운영과 같은 embedder(설정의 bge-m3)를 지정한다.
+    mode = ["--plan-only"] if config.mode == "plan-only" else ["--embedder", "openai_compatible"]
     return [
         *["uv", "run", "python", "-m", "whatfrom.cli", "eval", *mode],
         *["--llm-provider", "openai_compatible", "--results-dir", str(results_dir)],

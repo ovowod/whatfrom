@@ -104,6 +104,7 @@ def result(config: str, *, skipped: list | None = None) -> dict:
         "meta": {
             "mode": settings.mode,
             "llm_provider": "openai_compatible",
+            "embedder": "openai_compatible" if settings.mode == "full" else "fake",
             "goldenset_sha256": "golden",
             "llm_stages": {"plan": stage, "recommend": stage if settings.mode == "full" else None},
         },
@@ -159,6 +160,8 @@ def test_the_baseline_runs_the_full_evaluation_with_kimi_k3_in_both_stages(tmp_p
     run_measure("kimi-max", tmp_path, fake)
 
     assert "--plan-only" not in fake.command
+    # 기본값 fake로 돌면 검색이 달라져 추천 단계 지연과 정확도가 운영과 달라진다.
+    assert fake.command[fake.command.index("--embedder") + 1] == "openai_compatible"
     for stage in ("PLAN", "RECOMMEND"):
         assert fake.env[f"WHATFROM_{stage}_LLM_MODEL"] == "kimi-k3"
         assert fake.env[f"WHATFROM_{stage}_LLM_API_KEY"] == "moonshot-key"

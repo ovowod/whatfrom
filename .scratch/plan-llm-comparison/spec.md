@@ -63,6 +63,16 @@ kimi-k3를 유지하는 결론도 될 수 있다.
 | luna-none | `https://api.openai.com/v1` | `gpt-6-luna` | `{"reasoning_effort": "none"}` | `OPENAI_API_KEY` |
 | grok-none | `https://api.x.ai/v1` | `grok-4.3` | `{"reasoning_effort": "none"}` | `XAI_API_KEY` |
 | gemini-minimal | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-3.5-flash-lite` | `{"extra_body": {"google": {"thinking_config": {"thinking_level": "minimal"}}}}` | `GEMINI_API_KEY` |
+| luna-low (추가) | `https://api.openai.com/v1` | `gpt-6-luna` | `{"reasoning_effort": "low"}` | `OPENAI_API_KEY` |
+| sol-low (추가) | `https://api.openai.com/v1` | `gpt-6.1-sol` | `{"reasoning_effort": "low"}` | `OPENAI_API_KEY` |
+
+**추가 측정 설정 (2026-10-03, 1·2회차 결과를 본 뒤 추가)**
+
+- luna-low와 sol-low는 처음 비교 대상에 없었다. 결과를 본 뒤 추가했다는 사실을 실험 README에 남긴다.
+- 이유: 고른 kimi-low는 40문항에 $0.172인데, luna-none은 $0.005다. luna-none은 repository 추출이 회차마다 흔들려(36, 31) 하한에 0.5 모자랐다. 그보다 비싸도 kimi-low보다 훨씬 싼 GPT에 reasoning을 조금 준 설정이 비교 대상에 없었다.
+- `gpt-6.1-sol`은 `none`과 `minimal`을 지원하지 않아 `low`가 가장 낮은 수준이다.
+- 같은 규칙과 같은 입력으로 재고, 고르는 기준도 바꾸지 않는다. 같은 날 측정 규칙을 지키기 위해 오늘 안에 끝낸다.
+- 측정 뒤 repository 목록 기록은 추가 측정이 끝난 뒤에 다시 남긴다.
 
 - Gemini는 기본값도 `minimal`이지만 명시한다. 결과 meta에 설정이 남는다.
 - Gemini에 `reasoning_effort`는 쓰지 않는다. 3.5 Flash-Lite 대응이 문서에 없고, `thinking_level`과 같이 쓰면 안 된다.
@@ -120,7 +130,7 @@ M0처럼 실험 폴더에 스크립트를 둔다. 하는 일은 세 가지다.
 
 ### 측정 규칙
 
-- 모든 측정을 같은 날 한다. 순서는 kimi-max, kimi-low, luna-none, grok-none, gemini-minimal이다.
+- 모든 측정을 같은 날 한다. 순서는 kimi-max, kimi-low, luna-none, grok-none, gemini-minimal이다. 추가 측정 설정은 그 뒤에 luna-low, sol-low 순서로 잰다.
 - 측정 설정마다 1회 돌린다.
 - 두 일치율 중 하나라도 하한 ±2문항 안에 들면 한 번 더 돌린다. 기준선은 하한을 정하는 쪽이라 다시 돌리지 않는다. 정확도 하한은 기준선 1회차로 정하고, 2회차 이상인 기준선 결과는 결과 검증에서 거부한다.
 
@@ -170,8 +180,8 @@ M0처럼 실험 폴더에 스크립트를 둔다. 하는 일은 세 가지다.
 roadmap 규칙을 숫자로 정한다.
 
 1. **정확도 하한:** 두 일치율이 모두 kimi-max 기준선보다 2문항 넘게 떨어지지 않아야 한다. 두 번 이상 돈 설정은 회차 평균으로 판정한다.
-2. **동점 묶음:** 하한을 넘은 설정 중 가장 낮은 p95를 찾고, `p95 ≤ 최소 p95 × 1.10`인 설정을 모두 묶는다.
-3. **묶음 안에서 고르기:** 두 일치율의 합이 가장 높은 설정을 고른다. 그래도 같으면 40문항 비용이 낮은 쪽을 고른다. 비용이 "알 수 없음"인 설정이 끼면 비용으로 가르지 않고 둘 다 결과에 적은 뒤 결론 없음으로 둔다.
+2. **성능이 비슷한 묶음:** 하한을 넘은 설정 중 가장 낮은 p95를 찾고, 그 차이가 기준선 요청 전체 p95의 5% 안인 설정을 모두 묶는다. (결과를 본 뒤 고쳤다. 처음에는 `p95 ≤ 최소 p95 × 1.10`이었다)
+3. **묶음 안에서 고르기:** 40문항 비용이 가장 낮은 설정을 고른다. 가장 싼 비용의 110% 안에 여럿이면 두 일치율의 합이 높은 쪽을 고른다. 비용이 "알 수 없음"인 설정이 끼면 결론 없음으로 둔다. (결과를 본 뒤 고쳤다. 처음에는 정확도를 먼저 보고 비용은 마지막 동점 판정에만 썼다)
 4. **재시도 확인:** 고른 설정의 지연에 재시도 섞인 회차만 있으면 확인 회차를 돌린다.
    - 확인 회차는 설정마다 최대 2번이다.
    - 확인 회차도 정확도 하한을 넘어야 한다. 그 일치율은 회차 평균에 넣는다.

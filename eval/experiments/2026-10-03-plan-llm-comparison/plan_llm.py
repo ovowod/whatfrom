@@ -70,6 +70,31 @@ CONFIGS = {
             output_price=0.50,
             output_rule=COMPLETION,
         ),
+        # luna-low와 sol-low는 1회차 결과를 본 뒤 추가했다. luna-none이 하한에 못 미쳤고,
+        # 고른 kimi-low보다 훨씬 싼 GPT에 reasoning을 조금 준 설정이 비교 대상에 없었다.
+        Config(
+            name="luna-low",
+            base_url="https://api.openai.com/v1",
+            model="gpt-6-luna",
+            extra_body={"reasoning_effort": "low"},
+            key_env="OPENAI_API_KEY",
+            mode="plan-only",
+            input_price=0.10,
+            output_price=0.50,
+            output_rule=COMPLETION,
+        ),
+        # none과 minimal을 지원하지 않아 low가 가장 낮은 수준이다.
+        Config(
+            name="sol-low",
+            base_url="https://api.openai.com/v1",
+            model="gpt-6.1-sol",
+            extra_body={"reasoning_effort": "low"},
+            key_env="OPENAI_API_KEY",
+            mode="plan-only",
+            input_price=2.00,
+            output_price=10.00,
+            output_rule=COMPLETION,
+        ),
         Config(
             name="grok-none",
             base_url="https://api.x.ai/v1",
@@ -103,8 +128,11 @@ CONFIGS = {
 BASELINE = "kimi-max"
 # 하한보다 이만큼 넘게 떨어지면 탈락이고, 하한에서 이만큼 안이면 경계라 한 번 더 돌린다.
 MARGIN = 2
-# 가장 낮은 p95의 이 배수 안이면 지연이 비슷한 것으로 본다.
-LATENCY_TIE = 1.10
+# 가장 빠른 p95와의 차이가 기준선 요청 전체 p95의 이 비율 안이면 성능이 비슷한 것으로 본다.
+# 단계 지연 대비 비율로 보면 짧은 단계에서 사용자가 느끼지 못할 차이로도 갈린다.
+SIMILAR_LATENCY = 0.05
+# 가장 싼 비용의 이 배수 안이면 비용이 같은 것으로 보고 정확도로 고른다.
+SIMILAR_COST = 1.10
 # 재시도가 섞인 회차만 있는 설정을 다시 돌리는 최대 횟수.
 MAX_CONFIRMATIONS = 2
 
@@ -147,6 +175,9 @@ def validate(run: Run, case_ids: list[str]) -> None:
     # 기준선은 운영과 같은 kimi-k3로 추천 단계까지 돈다.
     if config.mode == "full" and stages.get("recommend") != stage_meta(config):
         raise InvalidResults(f"{where}: 추천 단계 설정이 운영 설정과 다르다")
+    # fake embedder면 검색 결과가 달라져 추천 단계 prompt와 지연이 운영과 달라진다.
+    if config.mode == "full" and meta.get("embedder") != "openai_compatible":
+        raise InvalidResults(f"{where}: embedder가 {meta.get('embedder')!r}다")
     # 정확도 하한은 기준선 1회차로 정한다. 다시 돌리면 하한이 움직인다.
     if run.config == BASELINE and run.round != 1:
         raise InvalidResults(f"{where}: 기준선은 다시 돌리지 않는다")
@@ -173,6 +204,8 @@ class Row:
     plan: float
     p50: float
     p95: float
+    # 요청 전체 소요 시간의 p95. 추천 단계까지 도는 기준선(전체 평가)만 있다.
+    request_p95: float | None
     # 회차마다 조건 추출 단계 호출의 시도 횟수가 1보다 큰 문항 수.
     retried_cases: list[int]
     latency_trusted: bool
@@ -303,6 +336,11 @@ def _row(config: str, runs: list[Run]) -> Row:
         plan=mean(sum(c["plan_matched"] for c in cases) for cases in per_round),
         p50=nearest_rank(seconds, 0.50),
         p95=nearest_rank(seconds, 0.95),
+        request_p95=(
+            nearest_rank([c["seconds_total"] for cases in per_round for c in cases], 0.95)
+            if CONFIGS[config].mode == "full"
+            else None
+        ),
         retried_cases=retried,
         latency_trusted=bool(clean),
         input_tokens=_mean_or_none([usage.input_tokens for usage in usages]),
@@ -361,20 +399,23 @@ def choose(rows: dict[str, Row]) -> Outcome:
         key=lambda r: r.config,
     )
     reasons: list[str] = []
+    # 기준선은 전체 평가라 request_p95가 늘 있다.
+    similar = baseline.request_p95 * SIMILAR_LATENCY
     while pool:
         fastest = min(row.p95 for row in pool)
-        group = [row for row in pool if row.p95 <= fastest * LATENCY_TIE]
-        best = max(row.repository + row.plan for row in group)
-        top = [row for row in group if row.repository + row.plan == best]
-        if len(top) > 1:
-            if any(row.cost is None for row in top):
-                names = ", ".join(row.config for row in top)
-                return Outcome("inconclusive", None, [f"{names}: 비용을 몰라 동점을 가를 수 없다"])
-            cheapest = min(row.cost for row in top)
-            top = [row for row in top if row.cost == cheapest]
+        group = [row for row in pool if row.p95 <= fastest + similar]
+        top = group
+        if len(group) > 1:
+            if any(row.cost is None for row in group):
+                names = ", ".join(row.config for row in group)
+                return Outcome("inconclusive", None, [f"{names}: 비용을 몰라 비교할 수 없다"])
+            cheapest = min(row.cost for row in group)
+            near = [row for row in group if row.cost <= cheapest * SIMILAR_COST]
+            best = max(row.repository + row.plan for row in near)
+            top = [row for row in near if row.repository + row.plan == best]
             if len(top) > 1:
                 names = ", ".join(row.config for row in top)
-                return Outcome("inconclusive", None, [f"{names}: 지연, 정확도, 비용이 모두 같다"])
+                return Outcome("inconclusive", None, [f"{names}: 성능, 비용, 정확도가 모두 같다"])
         winner = top[0]
         if winner.latency_trusted:
             return Outcome("chosen", winner.config, reasons)
@@ -429,6 +470,13 @@ def render(summary: Summary) -> str:
             f"| {row.usage_coverage:.0%} | {_number(row.cost, 4)} |"
         )
     outcome = summary.outcome
+    baseline = summary.rows.get(BASELINE)
+    if baseline is not None and baseline.request_p95 is not None:
+        lines += [
+            "",
+            f"기준선 요청 전체 p95: {baseline.request_p95:.1f}초. 가장 빠른 p95에서 "
+            f"{baseline.request_p95 * SIMILAR_LATENCY:.1f}초 안이면 성능이 비슷한 것으로 본다",
+        ]
     lines += [
         "",
         f"실험 전체 비용: {_number(summary.total_cost, 4)} USD",

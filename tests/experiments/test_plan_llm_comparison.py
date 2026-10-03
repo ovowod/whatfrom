@@ -44,10 +44,14 @@ def document(config, *, hits=10, seconds=1.0, calls=None, provider="openai_compa
     stage = stage_meta(settings)
     mode = meta.pop("mode", settings.mode)
     seconds_list = seconds if isinstance(seconds, list) else [seconds] * len(CASES)
+    # 요청 전체 소요 시간. 기준선의 p95가 "성능이 비슷하다"의 폭을 정한다.
+    request_seconds = meta.pop("request_seconds", 60.0)
     return {
         "meta": {
             "mode": mode,
             "llm_provider": provider,
+            # 추천 단계까지 도는 기준선은 실제 embedder로 돌아야 한다.
+            "embedder": meta.pop("embedder", "openai_compatible" if mode == "full" else "fake"),
             "goldenset_sha256": meta.pop("sha", "golden"),
             "llm_stages": {
                 "plan": meta.pop("plan_stage", stage),
@@ -60,6 +64,7 @@ def document(config, *, hits=10, seconds=1.0, calls=None, provider="openai_compa
                 "repository_extracted": index < hits,
                 "plan_matched": index < hits,
                 "seconds_plan": seconds_list[index],
+                "seconds_total": request_seconds,
                 "llm_calls": calls[index] if calls is not None else [call()],
             }
             for index, case_id in enumerate(meta.pop("case_ids", CASES))
@@ -91,6 +96,11 @@ def test_a_result_from_the_fake_provider_stops_the_summary():
 def test_a_result_that_does_not_match_its_measurement_stops_the_summary(bad_run, reason):
     with pytest.raises(InvalidResults, match=reason):
         summarize([run("kimi-max"), bad_run], CASES, SAME_REPOSITORIES)
+
+
+def test_a_baseline_run_with_the_fake_embedder_stops_the_summary():
+    with pytest.raises(InvalidResults, match="embedder"):
+        summarize([run("kimi-max", embedder="fake")], CASES, SAME_REPOSITORIES)
 
 
 def test_a_skipped_case_stops_the_summary():
@@ -245,33 +255,33 @@ def test_a_measurement_below_the_floor_on_average_is_not_chosen():
     assert (outcome.kind, outcome.config) == ("chosen", "kimi-max")
 
 
-def test_the_fastest_group_is_measured_from_the_lowest_p95_whatever_the_order():
-    # 100과 109, 109와 118은 서로 10% 안이지만 100과 118은 아니다. 묶음은 100 기준으로 만든다.
+def test_the_cheapest_measurement_wins_within_five_percent_of_the_baseline_request():
+    # 기준선 요청 p95가 100초라 가장 빠른 p95(10초)에서 5초 안이 성능이 비슷한 묶음이다.
     runs = [
-        run("kimi-max", seconds=200.0),
-        *twice("luna-none", hits=9, seconds=100.0),
-        *twice("grok-none", hits=10, seconds=109.0),
-        # 묶음에 잘못 들어가면 grok-none과 정확도가 같고 비용을 몰라 결론 없음이 된다.
-        *twice("gemini-minimal", hits=10, seconds=118.0),
+        run("kimi-max", seconds=200.0, request_seconds=100.0),
+        *twice("grok-none", seconds=10.0, calls=[[call(reasoning=0)] for _ in CASES]),
+        # 더 느리고 덜 정확하지만 묶음 안이고 가장 싸다.
+        *twice("luna-none", hits=9, seconds=14.0),
+        # 묶음에 잘못 들어가면 비용을 몰라 결론 없음이 된다.
+        *twice("gemini-minimal", seconds=16.0),
     ]
 
     for ordered in (runs, list(reversed(runs))):
         outcome = summarize(ordered, CASES, SAME_REPOSITORIES).outcome
-        assert (outcome.kind, outcome.config) == ("chosen", "grok-none")
+        assert (outcome.kind, outcome.config) == ("chosen", "luna-none")
 
 
-def test_equal_accuracy_in_the_fastest_group_is_broken_by_cost():
-    expensive = [[call(output_tokens=500)] for _ in CASES]
+def test_costs_within_ten_percent_are_broken_by_accuracy():
     runs = [
         run("kimi-max", seconds=50.0),
-        *twice("luna-none", seconds=1.0, calls=expensive),
-        *twice("grok-none", seconds=1.05, calls=[[call(reasoning=0)] for _ in CASES]),
+        *twice("luna-none", hits=9, seconds=1.0),
+        # 비용이 3% 비싸지만 10% 안이라 비용이 같은 것으로 보고, 더 정확한 쪽을 고른다.
+        *twice("luna-low", seconds=1.0, calls=[[call(output_tokens=110)] for _ in CASES]),
     ]
 
     outcome = summarize(runs, CASES, SAME_REPOSITORIES).outcome
 
-    # luna-none 10 × (1000 × 0.10 + 500 × 0.50) / 1M = 0.0035 < grok-none 0.0125 + 0.0025
-    assert (outcome.kind, outcome.config) == ("chosen", "luna-none")
+    assert (outcome.kind, outcome.config) == ("chosen", "luna-low")
 
 
 def test_an_unknown_cost_in_a_tie_leaves_no_conclusion():
