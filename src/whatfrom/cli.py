@@ -5,7 +5,7 @@ import json
 import random
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import asdict, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -282,6 +282,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
     open_session = session_factory(make_engine(args.database_url))
     embedder = get_embedder(args.embedder)
     measured, skipped = _eval_cases(goldenset, args.tags, open_session)
+    mode = _eval_mode(args)
     # 결과 파일이 맞지 않으면 모델을 부르기 전에 멈춘다.
     fixed_plans = (
         _load_fixed_plans(Path(args.plans), Path(args.goldenset), measured) if args.plans else None
@@ -289,9 +290,9 @@ def cmd_eval(args: argparse.Namespace) -> None:
     # provider가 호출마다 기록을 쌓는다. 문항별로 나누는 일은 timed_recommendation이 한다.
     call_log: list[LLMCall] = []
     provider = (
-        None
-        if args.retrieval_only
-        else get_provider(args.llm_provider, config=settings, on_call=call_log.append)
+        get_provider(args.llm_provider, config=settings, on_call=call_log.append)
+        if mode.calls_llm
+        else None
     )
     started_at = datetime.now(UTC)
 
@@ -303,7 +304,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
     scores = []
     for index, case in enumerate(measured, start=1):
         print(f"[{index}/{len(measured)}] {case.id}", flush=True)
-        if args.plan_only:
+        if mode.name == "plan-only":
             assert provider is not None
             scores.append(_score_plan_case(case, open_session, provider, call_log))
         else:
@@ -314,19 +315,45 @@ def cmd_eval(args: argparse.Namespace) -> None:
             )
             scores.append(_score_case(case, open_session, embedder, case_provider, call_log))
 
-    meta = _eval_meta(args, goldenset, started_at)
+    meta = _eval_meta(args, mode, goldenset, started_at)
     out = results_dir / f"{started_at.strftime('%Y-%m-%dT%H-%M-%S')}.json"
-    _report_eval(meta["mode"], goldenset, measured, skipped, scores, meta, out)
+    _report_eval(mode, goldenset, measured, skipped, scores, meta, out)
 
 
-def _eval_mode(args: argparse.Namespace) -> str:
+@dataclass(frozen=True)
+class EvalMode:
+    """평가 모드마다 어느 단계를 부르는지. 모드에 따른 분기는 모두 이 값에서 나온다."""
+
+    name: str
+    calls_plan: bool
+    calls_recommend: bool
+    # 검색을 해서 후보가 있는가. 무작위 선택 대조군을 계산할 수 있다.
+    has_candidates: bool
+
+    @property
+    def calls_llm(self) -> bool:
+        return self.calls_plan or self.calls_recommend
+
+
+EVAL_MODES = {
+    mode.name: mode
+    for mode in (
+        EvalMode("full", calls_plan=True, calls_recommend=True, has_candidates=True),
+        EvalMode("retrieval-only", calls_plan=False, calls_recommend=False, has_candidates=True),
+        EvalMode("plan-only", calls_plan=True, calls_recommend=False, has_candidates=False),
+        EvalMode("fixed-plans", calls_plan=False, calls_recommend=True, has_candidates=True),
+    )
+}
+
+
+def _eval_mode(args: argparse.Namespace) -> EvalMode:
     if args.retrieval_only:
-        return "retrieval-only"
+        return EVAL_MODES["retrieval-only"]
     if args.plan_only:
-        return "plan-only"
+        return EVAL_MODES["plan-only"]
     if args.plans:
-        return "fixed-plans"
-    return "full"
+        return EVAL_MODES["fixed-plans"]
+    return EVAL_MODES["full"]
 
 
 class FixedPlanProvider:
@@ -429,17 +456,15 @@ def _score_case(
     return replace(score_full(case, response, sections, exists, digests), trace=trace)
 
 
-def _eval_meta(args: argparse.Namespace, goldenset: "GoldenSet", started_at: datetime) -> dict:
+def _eval_meta(
+    args: argparse.Namespace, mode: EvalMode, goldenset: "GoldenSet", started_at: datetime
+) -> dict:
     """결과 JSON의 실행 meta. 서로 다른 실행의 점수를 비교할 수 있는지 판단하는 근거다."""
-    mode = _eval_mode(args)
     # 부르지 않은 단계는 None이다.
-    stages = {
-        "plan": mode in ("full", "plan-only"),
-        "recommend": mode in ("full", "fixed-plans"),
-    }
+    stages = {"plan": mode.calls_plan, "recommend": mode.calls_recommend}
     return {
         "started_at": started_at.isoformat(timespec="seconds"),
-        "mode": mode,
+        "mode": mode.name,
         "embedder": args.embedder,
         # get_embedder/get_provider와 같은 기준(이름이 "fake"인지)으로 판단한다.
         # fake로 돌린 실행에 실제 모델 이름을 붙이면 서로 다른 모델의 점수를
@@ -447,11 +472,11 @@ def _eval_meta(args: argparse.Namespace, goldenset: "GoldenSet", started_at: dat
         "embedding_model": None if args.embedder == "fake" else settings.embedding_model,
         # 단계마다 실제로 쓴 base URL, 모델, 덧붙일 JSON. API 키는 남기지 않는다.
         "llm_stages": (
-            None
-            if args.retrieval_only or args.llm_provider == "fake"
-            else {stage: _stage_meta(stage) if used else None for stage, used in stages.items()}
+            {stage: _stage_meta(stage) if used else None for stage, used in stages.items()}
+            if mode.calls_llm and args.llm_provider != "fake"
+            else None
         ),
-        "llm_provider": None if args.retrieval_only else args.llm_provider,
+        "llm_provider": args.llm_provider if mode.calls_llm else None,
         "tags": args.tags or None,
         # 검색 조건을 고정한 결과 파일. 두 실행이 같은 입력을 받았는지 확인하는 근거다.
         "plans_from": Path(args.plans).name if args.plans else None,
@@ -513,7 +538,7 @@ def _score_plan_case(
 
 
 def _report_eval(
-    mode: str,
+    mode: EvalMode,
     goldenset: "GoldenSet",
     measured: list,
     skipped: list,
@@ -525,6 +550,7 @@ def _report_eval(
     from whatfrom.eval.report import (
         aggregate_full,
         aggregate_plan,
+        aggregate_recommendation,
         aggregate_retrieval,
         constant_baseline,
         random_baseline,
@@ -532,27 +558,22 @@ def _report_eval(
         result_document,
     )
 
-    aggregate = {
-        "retrieval-only": aggregate_retrieval,
-        "plan-only": aggregate_plan,
-        "full": aggregate_full,
-        "fixed-plans": aggregate_full,
-    }[mode]
-    metrics = aggregate(scores)
-    if mode == "fixed-plans":
-        # 조건 추출 단계를 부르지 않았으므로 추출 지표는 이번 실행의 것이 아니다.
-        extraction = {m.label for m in aggregate_plan([])}
-        metrics = [m for m in metrics if m.label not in extraction]
-    recommended = mode in ("full", "fixed-plans")
+    # 부른 단계의 지표만 낸다. 검색 조건을 고정한 실행의 추출 지표는 이번 실행의 것이 아니다.
+    if mode.calls_recommend:
+        metrics = aggregate_full(scores) if mode.calls_plan else aggregate_recommendation(scores)
+    elif mode.has_candidates:
+        metrics = aggregate_retrieval(scores)
+    else:
+        metrics = aggregate_plan(scores)
     # 추천 정확도와 비교할 고정답 기준선을 계산한다.
     # 측정 문항의 accept 목록만 사용하며 추가 DB 조회나 모델 호출은 없다.
-    baseline = constant_baseline(measured) if recommended else None
-    # 후보 기록만으로 계산하므로 후보가 있는 두 모드가 구한다. --plan-only는 후보가 없다.
-    random = None if mode == "plan-only" else random_baseline(scores)
+    baseline = constant_baseline(measured) if mode.calls_recommend else None
+    # 후보 기록만으로 계산하므로 후보가 있는 모드만 구한다.
+    random = random_baseline(scores) if mode.has_candidates else None
 
     print()
-    # 실패 목록은 추천 결과를 보여 준다. 추천이 없는 두 모드에는 놓일 자리가 없다.
-    failures = scores if recommended else []
+    # 실패 목록은 추천 결과를 보여 준다. 추천이 없는 모드에는 놓일 자리가 없다.
+    failures = scores if mode.calls_recommend else []
     print(
         render_summary(
             metrics, failures, measured, skipped, len(goldenset.cases), meta, baseline, random

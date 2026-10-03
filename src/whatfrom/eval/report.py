@@ -90,6 +90,11 @@ class Skipped:
 
 
 def aggregate_full(scores: list[CaseScore]) -> list[Metric]:
+    return aggregate_recommendation(scores) + aggregate_plan(scores)
+
+
+def aggregate_recommendation(scores: list[CaseScore]) -> list[Metric]:
+    """추천 단계까지 돈 실행의 지표. 조건 추출 지표는 aggregate_plan이 맡는다."""
     return [
         Metric("추천 정확도", sum(s.accurate for s in scores), len(scores)),
         Metric("후보 포함률", sum(s.candidate_hit for s in scores), len(scores)),
@@ -114,17 +119,15 @@ def aggregate_full(scores: list[CaseScore]) -> list[Metric]:
             sum(s.hit_at5 for s in scores if s.hit_declared),
             sum(s.hit_declared for s in scores),
         ),
-        # 검색 조건 추출(LLM #1)의 품질. 추출에 실패한 문항은 실패로 센다.
-        Metric("repository 추출 일치율", sum(s.repository_extracted for s in scores), len(scores)),
-        # 분모가 전체다. 조건이 없는 문항에서 없는 조건을 만들어내는 것도 실패다.
-        Metric("조건 추출 일치율", sum(s.plan_matched for s in scores), len(scores)),
     ]
 
 
-def aggregate_plan(scores: list[PlanScore]) -> list[Metric]:
-    """--plan-only의 지표. 이름과 분모는 전체 모드의 두 추출 지표와 같다."""
+def aggregate_plan(scores: list[CaseScore] | list[PlanScore]) -> list[Metric]:
+    """검색 조건 추출(LLM #1)의 지표. 전체 모드와 --plan-only가 함께 쓴다."""
     return [
+        # 추출에 실패한 문항은 실패로 센다.
         Metric("repository 추출 일치율", sum(s.repository_extracted for s in scores), len(scores)),
+        # 분모가 전체다. 조건이 없는 문항에서 없는 조건을 만들어내는 것도 실패다.
         Metric("조건 추출 일치율", sum(s.plan_matched for s in scores), len(scores)),
     ]
 
