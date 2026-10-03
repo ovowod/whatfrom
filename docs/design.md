@@ -183,14 +183,14 @@ LLM에 맡기면 결과가 매번 다르고, 비싸고, 틀린다.
 
 ```python
 class SearchPlan(BaseModel):
-    repository: str | None            # 'python'
-    version_prefix: str | None        # '3.12'
-    architectures: list[str]          # ['arm64']
+    repository: str | None  # 'python'
+    version_prefix: str | None  # '3.12'
+    architectures: list[str]  # ['arm64']
     exclude_distributions: list[str]  # ['alpine']
     max_size_mb: float | None
     updated_within_days: int | None
-    priorities: list[Priority]        # ['stability', 'size']
-    semantic_question: str            # 영어. 벡터 검색용
+    priorities: list[Priority]  # ['stability', 'size']
+    semantic_question: str  # 영어. 벡터 검색용
     limit: int = 10
 ```
 
