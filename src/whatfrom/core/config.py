@@ -52,6 +52,20 @@ class Settings(BaseSettings):
     recommend_llm_api_key: str | None = None
     recommend_llm_extra_body: dict | None = None
 
+    @field_validator(
+        "plan_llm_base_url",
+        "plan_llm_model",
+        "plan_llm_extra_body",
+        "recommend_llm_base_url",
+        "recommend_llm_model",
+        "recommend_llm_extra_body",
+        mode="before",
+    )
+    @classmethod
+    def _empty_is_unset(cls, value: object) -> object:
+        """빈 값은 설정하지 않은 것으로 본다. 빈 값이 뜻을 갖는 것은 API 키뿐이다."""
+        return None if value == "" else value
+
     @field_validator("plan_llm_extra_body", "recommend_llm_extra_body")
     @classmethod
     def _keep_reserved_keys(cls, value: dict | None) -> dict | None:
