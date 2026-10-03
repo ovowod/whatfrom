@@ -129,3 +129,35 @@ def test_post_json_retries_a_connect_error():
 
     assert post_json(_client(handler), URL, {}, sleep=lambda _: None) == {"ok": True}
     assert calls["n"] == 2
+
+
+def test_post_json_reports_every_attempt_of_a_retried_call():
+    responses = iter([httpx2.Response(503), httpx2.Response(200, json={"ok": True})])
+    attempts: list[int] = []
+
+    post_json(
+        _client(lambda _: next(responses)),
+        URL,
+        {},
+        sleep=lambda _: None,
+        on_attempt=attempts.append,
+    )
+
+    assert attempts == [1, 2]
+
+
+def test_post_json_reports_attempts_even_when_it_gives_up():
+    """실패한 호출의 시도 횟수가 사라지면 재시도가 섞인 지연을 가려낼 수 없다."""
+    attempts: list[int] = []
+
+    with pytest.raises(RemoteCallError):
+        post_json(
+            _client(lambda _: httpx2.Response(429)),
+            URL,
+            {},
+            max_retries=2,
+            sleep=lambda _: None,
+            on_attempt=attempts.append,
+        )
+
+    assert attempts == [1, 2, 3]

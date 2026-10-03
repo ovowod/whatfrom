@@ -16,6 +16,7 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
+import httpx2
 import pytest
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
@@ -30,7 +31,7 @@ from whatfrom.core.embed import FakeEmbedder
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import Document, DocumentChunk, ImageTag, Repository
 from whatfrom.index.indexer import index_readme
-from whatfrom.recommend.llm import FakeLLMProvider
+from whatfrom.recommend.llm import FakeLLMProvider, LLMProvider, get_provider
 
 NOW = datetime(2026, 9, 12, tzinfo=UTC)
 
@@ -369,3 +370,40 @@ def test_timed_recommendation_times_a_failed_embedding(session: Session) -> None
     assert response.degraded is True
     assert trace.seconds_embedding is not None
     assert (trace.seconds_plan, trace.seconds_advise) == (None, None)
+
+
+def _recording_provider(log: list) -> LLMProvider:
+    """두 단계 모두 성공하는 OpenAI 호환 provider. 호출 기록을 log에 남긴다."""
+    plan = json.dumps({"repository": "python", "semantic_question": "slim python"})
+    recommendation = RECOMMENDATION.model_dump_json()
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        stage = json.loads(request.content)["response_format"]["json_schema"]["name"]
+        content = plan if stage == "search_plan" else recommendation
+        usage = {"prompt_tokens": 10, "completion_tokens": 5}
+        return httpx2.Response(
+            200, json={"choices": [{"message": {"content": content}}], "usage": usage}
+        )
+
+    client = httpx2.Client(transport=httpx2.MockTransport(handler))
+    return get_provider(
+        "openai_compatible", config=Settings(_env_file=None), client=client, on_call=log.append
+    )
+
+
+def test_timed_recommendation_keeps_the_llm_calls_of_its_question_only(session: Session) -> None:
+    """provider는 실행 전체가 함께 쓴다. 문항마다 그 문항의 호출만 남아야 한다."""
+    _seed_python(session)
+    log: list = []
+    provider = _recording_provider(log)
+
+    _, first = cli.timed_recommendation(
+        _fixed_session(session), FakeEmbedder(), provider, "첫 질문", call_log=log
+    )
+    _, second = cli.timed_recommendation(
+        _fixed_session(session), FakeEmbedder(), provider, "둘째 질문", call_log=log
+    )
+
+    for trace in (first, second):
+        assert [call["stage"] for call in trace.llm_calls] == ["plan", "recommend"]
+        assert trace.llm_calls[0]["input_tokens"] == 10

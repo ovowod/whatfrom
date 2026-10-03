@@ -5,7 +5,7 @@ import json
 import random
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -35,7 +35,7 @@ from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.models import Base, Document, DocumentChunk, ImageTag, Repository
 from whatfrom.eval.timing import RunTrace, Timed
 from whatfrom.index.indexer import index_readme
-from whatfrom.recommend.llm import LLMProvider, get_provider, stage_llm
+from whatfrom.recommend.llm import LLMCall, LLMProvider, get_provider, stage_llm
 from whatfrom.recommend.verify import image_exists
 from whatfrom.search.retrieval import (
     search_candidates_by_vector,
@@ -239,11 +239,16 @@ def timed_recommendation(
     embedder: Embedder,
     provider: LLMProvider,
     question: str,
+    call_log: list[LLMCall] | None = None,
 ) -> tuple[RecommendResponse, RunTrace]:
     """추천 경로를 한 번 돌리며 전체·단계별 시간과 LLM #2의 입력을 남긴다.
 
     임베더와 LLM 공급자를 문항마다 새 프록시로 감싼다. API와 추천 코드는 모른다.
+    call_log는 provider가 호출 기록을 쌓는 목록이다. 실행 전체가 함께 쓰므로 이 문항에서
+    늘어난 부분만 가져간다.
     """
+    log = call_log if call_log is not None else []
+    already = len(log)
     timed_embedder = Timed(embedder, ["embed"])
     timed_provider = Timed(provider, ["plan", "recommend"])
     start = time.perf_counter()
@@ -257,6 +262,7 @@ def timed_recommendation(
         seconds_advise=timed_provider.seconds.get("recommend"),
         # recommend(system, prompt)의 두 번째 인자가 LLM #2에 보낸 프롬프트다.
         advise_prompt=advise[0][1] if advise else None,
+        llm_calls=[asdict(call) for call in log[already:]],
     )
 
 
@@ -269,7 +275,13 @@ def cmd_eval(args: argparse.Namespace) -> None:
     open_session = session_factory(make_engine(args.database_url))
     embedder = get_embedder(args.embedder)
     measured, skipped = _eval_cases(goldenset, args.tags, open_session)
-    provider = None if args.retrieval_only else get_provider(args.llm_provider, config=settings)
+    # provider가 호출마다 기록을 쌓는다. 문항별로 나누는 일은 timed_recommendation이 한다.
+    call_log: list[LLMCall] = []
+    provider = (
+        None
+        if args.retrieval_only
+        else get_provider(args.llm_provider, config=settings, on_call=call_log.append)
+    )
     started_at = datetime.now(UTC)
 
     results_dir = Path(args.results_dir)
@@ -280,7 +292,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
     scores = []
     for index, case in enumerate(measured, start=1):
         print(f"[{index}/{len(measured)}] {case.id}", flush=True)
-        scores.append(_score_case(case, open_session, embedder, provider))
+        scores.append(_score_case(case, open_session, embedder, provider, call_log))
 
     meta = _eval_meta(args, goldenset, started_at)
     out = results_dir / f"{started_at.strftime('%Y-%m-%dT%H-%M-%S')}.json"
@@ -317,6 +329,7 @@ def _score_case(
     open_session: SessionFactory,
     embedder: Embedder,
     provider: LLMProvider | None,
+    call_log: list[LLMCall],
 ):
     """문항 하나를 채점한다. provider가 None이면 검색 지표만 잰다."""
     from whatfrom.eval.scoring import score_full, score_retrieval
@@ -338,7 +351,9 @@ def _score_case(
     # Hit@5는 두 모드 모두 후보 선택 전의 상위 5개 청크로 계산한다.
     # 추천 응답의 evidence에는 후보 선택에서 제외된 문서가 없을 수 있다.
     # 추천 경로도 별도로 실행하므로 전체 모드는 질문을 두 번 임베딩한다.
-    response, trace = timed_recommendation(open_session, embedder, provider, case.question)
+    response, trace = timed_recommendation(
+        open_session, embedder, provider, case.question, call_log
+    )
 
     exists: bool | None = None
     if response.recommendation is not None:

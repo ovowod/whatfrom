@@ -8,6 +8,7 @@ from whatfrom.core.contracts import Recommendation, SearchPlan
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.recommend.llm import (
     FakeLLMProvider,
+    LLMCall,
     OpenAICompatibleProvider,
     get_provider,
     strict_json_schema,
@@ -249,3 +250,61 @@ def test_without_stage_settings_both_stages_send_the_same_request_as_before():
         assert call["auth"] == "Bearer common-key"
         assert set(call["body"]) == {"model", "messages", "response_format"}
         assert call["body"]["model"] == "common-model"
+
+
+USAGE = {
+    "prompt_tokens": 1200,
+    "completion_tokens": 300,
+    "completion_tokens_details": {"reasoning_tokens": 250},
+}
+
+
+def _recorded(handler, method: str = "recommend") -> list[LLMCall]:
+    calls: list[LLMCall] = []
+    provider = _provider(handler, on_call=calls.append)
+    try:
+        getattr(provider, method)("sys", "prompt")
+    except RemoteCallError:
+        pass
+    return calls
+
+
+def test_a_successful_call_records_its_stage_attempts_and_token_usage():
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        message = {"message": {"content": PLAN_CONTENT}}
+        return httpx2.Response(200, json={"choices": [message], "usage": USAGE})
+
+    [call] = _recorded(handler, "plan")
+
+    assert (call.stage, call.attempts, call.ok, call.error) == ("plan", 1, True, None)
+    assert (call.input_tokens, call.output_tokens, call.reasoning_tokens) == (1200, 300, 250)
+
+
+def test_a_call_that_gives_up_still_leaves_one_record_with_every_attempt():
+    [call] = _recorded(lambda _: httpx2.Response(429))
+
+    assert (call.stage, call.attempts, call.ok) == ("recommend", 3, False)
+    assert "429" in call.error
+    assert call.input_tokens is None
+
+
+def test_a_response_that_fails_the_schema_still_records_its_token_usage():
+    """응답은 왔으니 비용이 들었다. 검증 실패로 기록에서 빠지면 비용이 적게 잡힌다."""
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        message = {"message": {"content": '{"wrong": true}'}}
+        return httpx2.Response(200, json={"choices": [message], "usage": USAGE})
+
+    [call] = _recorded(handler)
+
+    assert (call.ok, call.input_tokens, call.output_tokens) == (False, 1200, 300)
+
+
+def test_a_response_without_usage_records_unknown_token_counts():
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200, json={"choices": [{"message": {"content": VALID_CONTENT}}]})
+
+    [call] = _recorded(handler)
+
+    assert call.ok is True
+    assert (call.input_tokens, call.output_tokens, call.reasoning_tokens) == (None, None, None)
