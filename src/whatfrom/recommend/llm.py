@@ -1,11 +1,12 @@
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Protocol, TypeVar
 
 import httpx2
 from pydantic import BaseModel, ValidationError
 
-from whatfrom.core.config import settings
+from whatfrom.core.config import Settings, settings
 from whatfrom.core.contracts import Recommendation, SearchPlan
 from whatfrom.core.httpclient import RemoteCallError, post_json
 
@@ -77,6 +78,32 @@ class FakeLLMProvider:
         return self._plan if self._plan is not None else SearchPlan()
 
 
+@dataclass(frozen=True)
+class LLMCall:
+    """LLM 호출 하나의 기록. 실패한 호출도 하나 남긴다.
+
+    stage는 "plan"(조건 추출 단계) 또는 "recommend"(추천 단계)다. token 수는 응답의
+    usage에서 읽고, 응답이 없거나 usage가 없으면 None이다.
+    """
+
+    stage: str
+    attempts: int
+    ok: bool
+    error: str | None
+    input_tokens: int | None
+    output_tokens: int | None
+    reasoning_tokens: int | None
+
+
+def _token_counts(usage: object) -> tuple[int | None, int | None, int | None]:
+    """OpenAI 형식의 usage에서 입력·출력·reasoning token 수를 읽는다. 없는 값은 None."""
+    if not isinstance(usage, dict):
+        return None, None, None
+    details = usage.get("completion_tokens_details")
+    reasoning = details.get("reasoning_tokens") if isinstance(details, dict) else None
+    return usage.get("prompt_tokens"), usage.get("completion_tokens"), reasoning
+
+
 class OpenAICompatibleProvider:
     """OpenAI 호환 `/v1/chat/completions` 클라이언트.
 
@@ -99,6 +126,8 @@ class OpenAICompatibleProvider:
         client: httpx2.Client | None = None,
         max_retries: int = 2,
         sleep: Callable[[float], None] = time.sleep,
+        extra_body: dict | None = None,
+        on_call: Callable[[LLMCall], None] | None = None,
     ) -> None:
         self._base_url = (base_url or settings.llm_base_url).rstrip("/")
         self._model = model or settings.llm_model
@@ -113,19 +142,60 @@ class OpenAICompatibleProvider:
         )
         self._max_retries = max_retries
         self._sleep = sleep
+        self._extra_body = extra_body or {}
+        # 평가가 호출 기록을 모을 때만 넘긴다. API는 provider 하나를 여러 요청이 함께
+        # 쓰므로 마지막 호출 정보를 provider에 두지 않고 callback으로 내보낸다.
+        self._on_call = on_call
 
     def recommend(self, system: str, prompt: str) -> Recommendation:
-        return self._complete(system, prompt, Recommendation, "recommendation")
+        return self._complete(system, prompt, Recommendation, "recommendation", "recommend")
 
     def plan(self, system: str, prompt: str) -> SearchPlan:
-        return self._complete(system, prompt, SearchPlan, "search_plan")
+        return self._complete(system, prompt, SearchPlan, "search_plan", "plan")
 
-    def _complete(self, system: str, prompt: str, model: type[T], name: str) -> T:
-        """JSON 스키마를 강제해 부르고, 응답을 model로 다시 검증한다."""
-        body = post_json(
+    def _complete(self, system: str, prompt: str, model: type[T], name: str, stage: str) -> T:
+        """JSON 스키마를 강제해 부르고, 응답을 model로 다시 검증한다.
+
+        성공하든 실패하든 호출 기록을 하나 남긴다.
+        """
+        attempts = 0
+        usage: object = None
+
+        def count(attempt: int) -> None:
+            nonlocal attempts
+            attempts = attempt
+
+        try:
+            body = self._post(system, prompt, model, name, count)
+            # 검증 전에 읽는다. 검증에서 실패해도 응답은 왔으니 비용이 들었다.
+            usage = body.get("usage") if isinstance(body, dict) else None
+            result = self._parse(body, model)
+        except RemoteCallError as exc:
+            self._record(stage, attempts, usage, str(exc))
+            raise
+        self._record(stage, attempts, usage, None)
+        return result
+
+    def _record(self, stage: str, attempts: int, usage: object, error: str | None) -> None:
+        if self._on_call is None:
+            return
+        self._on_call(LLMCall(stage, attempts, error is None, error, *_token_counts(usage)))
+
+    def _post(
+        self,
+        system: str,
+        prompt: str,
+        model: type[BaseModel],
+        name: str,
+        on_attempt: Callable[[int], None],
+    ) -> dict:
+        return post_json(
             self._client,
             f"{self._base_url}/chat/completions",
             {
+                # reasoning 설정처럼 공급자마다 이름이 다른 parameter. 설정 검증이
+                # model·messages·response_format을 막으므로 아래 값을 덮어쓰지 않는다.
+                **self._extra_body,
                 "model": self._model,
                 "messages": [
                     {"role": "system", "content": system},
@@ -143,8 +213,11 @@ class OpenAICompatibleProvider:
             api_key=self._api_key,
             max_retries=self._max_retries,
             sleep=self._sleep,
+            on_attempt=on_attempt,
         )
 
+    @staticmethod
+    def _parse(body: dict, model: type[T]) -> T:
         try:
             content = body["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:
@@ -158,9 +231,81 @@ class OpenAICompatibleProvider:
             raise RemoteCallError(f"response did not match {model.__name__} schema: {exc}") from exc
 
 
-def get_provider(name: str) -> LLMProvider:
+class StagedProvider:
+    """조건 추출 단계와 추천 단계를 각자의 provider로 보낸다."""
+
+    def __init__(self, plan: LLMProvider, recommend: LLMProvider) -> None:
+        self._plan = plan
+        self._recommend = recommend
+
+    def recommend(self, system: str, prompt: str) -> Recommendation:
+        return self._recommend.recommend(system, prompt)
+
+    def plan(self, system: str, prompt: str) -> SearchPlan:
+        return self._plan.plan(system, prompt)
+
+
+@dataclass(frozen=True)
+class StageLLM:
+    """한 단계가 실제로 쓰는 LLM 설정. 단계별 값이 없으면 공통 설정에서 채운 결과다."""
+
+    base_url: str
+    model: str
+    api_key: str
+    extra_body: dict | None
+
+
+def stage_llm(config: Settings, stage: str) -> StageLLM:
+    """stage는 "plan"(조건 추출 단계) 또는 "recommend"(추천 단계)다.
+
+    None(설정하지 않음)만 공통 설정으로 채운다. 빈 API 키는 "인증 없음"이라 그대로 둔다.
+    """
+
+    def or_common(name: str):
+        value = getattr(config, f"{stage}_llm_{name}")
+        return getattr(config, f"llm_{name}") if value is None else value
+
+    return StageLLM(
+        base_url=or_common("base_url"),
+        model=or_common("model"),
+        api_key=or_common("api_key"),
+        extra_body=getattr(config, f"{stage}_llm_extra_body"),
+    )
+
+
+def _stage_provider(
+    config: Settings,
+    stage: str,
+    client: httpx2.Client | None,
+    on_call: Callable[[LLMCall], None] | None,
+) -> OpenAICompatibleProvider:
+    resolved = stage_llm(config, stage)
+    return OpenAICompatibleProvider(
+        base_url=resolved.base_url,
+        model=resolved.model,
+        api_key=resolved.api_key,
+        client=client,
+        extra_body=resolved.extra_body,
+        on_call=on_call,
+    )
+
+
+def get_provider(
+    name: str,
+    config: Settings | None = None,
+    client: httpx2.Client | None = None,
+    on_call: Callable[[LLMCall], None] | None = None,
+) -> LLMProvider:
+    """config는 테스트가 설정을, client는 가짜 transport를 넣을 수 있게 둔다.
+
+    on_call은 평가가 호출 기록을 모을 때만 넘긴다. fake provider는 기록을 남기지 않는다.
+    """
+    config = config or settings
     if name == "fake":
         return FakeLLMProvider()
     if name == "openai_compatible":
-        return OpenAICompatibleProvider()
+        return StagedProvider(
+            plan=_stage_provider(config, "plan", client, on_call),
+            recommend=_stage_provider(config, "recommend", client, on_call),
+        )
     raise ValueError(f"unknown provider: {name!r} (expected 'fake' or 'openai_compatible')")

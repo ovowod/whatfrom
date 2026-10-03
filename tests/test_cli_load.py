@@ -25,7 +25,7 @@ def test_a_different_seed_gives_a_different_order():
 
 
 def test_the_committed_question_file_matches_the_goldenset():
-    """골든셋을 고치고 파일을 다시 만들지 않으면 k6가 옛 질문을 보낸다."""
+    """golden set을 고치고 파일을 다시 만들지 않으면 k6가 옛 질문을 보낸다."""
     expected = cli.question_file(load_goldenset(GOLDENSET))
 
     assert json.loads(COMMITTED.read_text(encoding="utf-8")) == expected

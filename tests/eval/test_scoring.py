@@ -346,7 +346,7 @@ def test_candidate_hit_needs_only_one_of_several_accepted_images() -> None:
 
     전부 있어야 한다고 보면(any 대신 all) accept를 넓게 적은 문항일수록 후보
     포함률이 떨어진다 — 라벨을 넓게 적은 것이 검색 실패로 둔갑한다. 실제
-    골든셋의 accept는 최대 아홉 개다.
+    golden set의 accept는 최대 아홉 개다.
     """
     case = make_case(
         accept=["python:3.14-slim", "python:3.13-slim", "python:3.13-bookworm"],
@@ -616,7 +616,7 @@ def test_an_invented_condition_fails_extraction():
 
 
 def test_an_invented_size_limit_fails_extraction():
-    """크기는 골든셋에 적지 않았어도 비어 있어야 한다는 뜻으로 비교한다."""
+    """크기는 golden set에 적지 않았어도 비어 있어야 한다는 뜻으로 비교한다."""
     case = make_case(expected_plan={})
     plan = SearchPlan(repository="python", max_size_mb=100)
 

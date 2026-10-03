@@ -8,7 +8,7 @@ eval은 recommend를 import하지 않는다(계층 규칙). 그래서 임베더�
 
 import time
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -24,6 +24,9 @@ class RunTrace:
     seconds_plan: float | None
     seconds_advise: float | None
     advise_prompt: str | None
+    # 이 문항의 LLM 호출 기록. 실패한 호출도 하나씩 있다. recommend를 import하지 않으려고
+    # dict로 받는다. 기록을 모으지 않은 실행은 빈 목록이다.
+    llm_calls: list[dict] = field(default_factory=list)
 
 
 class Timed:

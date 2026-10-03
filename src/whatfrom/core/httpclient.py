@@ -37,13 +37,20 @@ def post_json(
     api_key: str = "",
     max_retries: int = 2,
     sleep: Callable[[float], None] = time.sleep,
+    on_attempt: Callable[[int], None] | None = None,
 ) -> dict:
+    """on_attempt는 요청을 보낼 때마다 몇 번째 시도인지(1부터) 받는다.
+
+    반환값이 아니라 callback으로 알리는 이유는 실패한 호출도 시도 횟수를 남겨야 해서다.
+    """
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
     last_error = "no attempt was made"
     for attempt in range(max_retries + 1):
+        if on_attempt is not None:
+            on_attempt(attempt + 1)
         try:
             response = client.post(url, json=payload, headers=headers)
         except RETRYABLE_TRANSPORT_ERRORS as exc:

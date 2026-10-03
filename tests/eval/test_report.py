@@ -237,18 +237,41 @@ def test_render_summary_explains_skipped_repos_as_not_indexed() -> None:
     assert "미수집" not in output
 
 
-def test_render_summary_falls_back_to_the_provider_name_when_llm_model_is_absent() -> None:
-    """fake 프로바이더는 llm_model을 None으로 남긴다. llm=None으로 찍히면 LLM이
+def test_render_summary_falls_back_to_the_provider_name_when_llm_stages_are_absent() -> None:
+    """fake provider는 llm_stages를 None으로 남긴다. llm=None으로 찍히면 LLM이
     아예 안 돈 것처럼 보인다 — 프로바이더 이름이라도 보여줘야 fake 실행임을 알 수 있다."""
-    output = render_summary([], [], [], [], 0, {"llm_model": None, "llm_provider": "fake"})
+    output = render_summary([], [], [], [], 0, {"llm_stages": None, "llm_provider": "fake"})
 
     assert "llm=fake" in output
     assert "llm=None" not in output
 
 
+def _stages(plan: str | None, recommend: str | None) -> dict:
+    def stage(model: str | None) -> dict | None:
+        return None if model is None else {"base_url": "u", "model": model, "extra_body": None}
+
+    return {"plan": stage(plan), "recommend": stage(recommend)}
+
+
+def test_render_summary_shows_one_model_when_both_stages_share_it() -> None:
+    meta = {"llm_provider": "openai_compatible", "llm_stages": _stages("kimi-k3", "kimi-k3")}
+
+    output = render_summary([], [], [], [], 0, meta)
+
+    assert "llm=kimi-k3," in output
+
+
+def test_render_summary_shows_each_stage_model_when_they_differ() -> None:
+    meta = {"llm_provider": "openai_compatible", "llm_stages": _stages("luna", "kimi-k3")}
+
+    output = render_summary([], [], [], [], 0, meta)
+
+    assert "llm=plan:luna recommend:kimi-k3," in output
+
+
 def test_render_summary_shows_a_dash_for_llm_in_retrieval_only_mode() -> None:
     """retrieval-only는 llm_provider도 None이다. 그래도 llm=None을 찍으면 안 된다."""
-    output = render_summary([], [], [], [], 0, {"llm_model": None, "llm_provider": None})
+    output = render_summary([], [], [], [], 0, {"llm_stages": None, "llm_provider": None})
 
     assert "llm=None" not in output
     assert "llm=-" in output
@@ -297,7 +320,7 @@ def test_constant_baseline_scores_the_cases_whose_accept_contains_the_image() ->
 
 
 def test_constant_baseline_breaks_ties_by_image_name_not_by_case_order() -> None:
-    """동점일 때 입력 순서를 따르면 골든셋 문항 순서만 바꿔도 대조군이 달라진다."""
+    """동점일 때 입력 순서를 따르면 golden set 문항 순서만 바꿔도 대조군이 달라진다."""
     cases = [
         make_case(id="a", accept=["python:3.14-slim"]),
         make_case(id="b", accept=["python:3.13-slim"]),

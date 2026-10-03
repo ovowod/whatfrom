@@ -1,6 +1,6 @@
 """임베딩 모델 비교 실험(2026-09-24). DB에는 쓰지 않는다.
 
-DB의 청크와 골든셋 질문을 모델마다 메모리에서 임베딩하고, 지금 검색 규칙(섹션마다 가장 가까운
+DB의 청크와 golden set 질문을 모델마다 메모리에서 임베딩하고, 지금 검색 규칙(섹션마다 가장 가까운
 청크 1개, 거리가 같으면 청크 id 순)으로 지표를 잰다. 지표 정의와 한계는 같은 폴더의 README에 있다.
 
 사용(프로젝트 루트에서):
@@ -74,7 +74,9 @@ def sha(value) -> str:
 
 
 def load_corpus():
-    """(골든셋 문항, 청크 행). 행은 (청크 id, 섹션 id, 리포, 섹션 제목, 청크 본문, 섹션 본문)."""
+    """(golden set 문항, 청크 행).
+
+    행은 (청크 id, 섹션 id, 리포, 섹션 제목, 청크 본문, 섹션 본문)."""
     cases = load_goldenset(GOLDENSET).cases
     with session_scope(make_engine(settings.database_url)) as session:
         rows = session.execute(

@@ -1,4 +1,4 @@
-.PHONY: up down test lint fmt eval eval-retrieval load load-smoke
+.PHONY: up down test lint fmt eval eval-retrieval eval-plan eval-recommend load load-smoke
 
 up:
 	docker compose up -d --wait
@@ -21,6 +21,14 @@ eval:
 
 eval-retrieval:
 	uv run python -m whatfrom.cli eval --retrieval-only
+
+eval-plan:
+	uv run python -m whatfrom.cli eval --plan-only
+
+# 이전 전체 평가 결과의 검색 조건을 고정하고 추천 단계만 잰다. 예: make eval-recommend PLANS=eval/results/<파일>.json
+eval-recommend:
+	@test -n "$(PLANS)" || (echo "PLANS=<전체 평가 결과 JSON>을 지정한다" && exit 1)
+	uv run python -m whatfrom.cli eval --plans "$(PLANS)"
 
 # 부하 기준선(F10). 앱(:8000)과 모의 LLM 서버(:8081)를 먼저 띄운다. README "부하 측정" 참고.
 LOAD_LABEL ?= run

@@ -84,7 +84,7 @@ cases:
 
 
 def test_missing_sources_is_rejected(tmp_path: Path) -> None:
-    """스펙 §13의 순환논리 완화책. 근거 없는 라벨은 골든셋에 들어가지 못한다."""
+    """스펙 §13의 순환논리 완화책. 근거 없는 라벨은 golden set에 들어가지 못한다."""
     with pytest.raises(GoldenSetError):
         load_goldenset(write(tmp_path, NO_SOURCES))
 
@@ -143,7 +143,7 @@ def test_version_prefix_alone_declares_conditions() -> None:
     """declared는 조건 일치율의 분모를 가른다.
 
     네 필드 중 하나라도 빠뜨리면 그 필드만 가진 문항이 통째로 분모에서 사라져
-    조건 일치율이 실제보다 좁은 표본에서 계산된다. 실제 골든셋에서 조건을 가진
+    조건 일치율이 실제보다 좁은 표본에서 계산된다. 실제 golden set에서 조건을 가진
     18문항 중 7문항이 version_prefix나 max_size_mb 하나에만 걸려 있다.
     """
     assert Conditions(version_prefix="3.13").declared is True

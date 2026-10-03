@@ -5,7 +5,7 @@ from statistics import median
 from unicodedata import east_asian_width
 
 from whatfrom.eval.goldenset import GoldenCase
-from whatfrom.eval.scoring import CaseScore, RetrievalScore
+from whatfrom.eval.scoring import CaseScore, PlanScore, RetrievalScore
 from whatfrom.eval.timing import RunTrace
 
 
@@ -52,7 +52,7 @@ def constant_baseline(cases: list[GoldenCase]) -> ConstantBaseline:
         return ConstantBaseline(image=None, hits=0, total=len(cases))
 
     # 동점은 이미지 이름 오름차순으로 깬다. Counter.most_common은 동점일 때
-    # 입력 순서를 따르므로 골든셋 문항 순서만 바뀌어도 답이 달라진다.
+    # 입력 순서를 따르므로 golden set 문항 순서만 바뀌어도 답이 달라진다.
     image = min(counts, key=lambda candidate: (-counts[candidate], candidate))
     return ConstantBaseline(image=image, hits=counts[image], total=len(cases))
 
@@ -90,6 +90,11 @@ class Skipped:
 
 
 def aggregate_full(scores: list[CaseScore]) -> list[Metric]:
+    return aggregate_recommendation(scores) + aggregate_plan(scores)
+
+
+def aggregate_recommendation(scores: list[CaseScore]) -> list[Metric]:
+    """추천 단계까지 돈 실행의 지표. 조건 추출 지표는 aggregate_plan이 맡는다."""
     return [
         Metric("추천 정확도", sum(s.accurate for s in scores), len(scores)),
         Metric("후보 포함률", sum(s.candidate_hit for s in scores), len(scores)),
@@ -114,7 +119,13 @@ def aggregate_full(scores: list[CaseScore]) -> list[Metric]:
             sum(s.hit_at5 for s in scores if s.hit_declared),
             sum(s.hit_declared for s in scores),
         ),
-        # 검색 조건 추출(LLM #1)의 품질. 추출에 실패한 문항은 실패로 센다.
+    ]
+
+
+def aggregate_plan(scores: list[CaseScore] | list[PlanScore]) -> list[Metric]:
+    """검색 조건 추출(LLM #1)의 지표. 전체 모드와 --plan-only가 함께 쓴다."""
+    return [
+        # 추출에 실패한 문항은 실패로 센다.
         Metric("repository 추출 일치율", sum(s.repository_extracted for s in scores), len(scores)),
         # 분모가 전체다. 조건이 없는 문항에서 없는 조건을 만들어내는 것도 실패다.
         Metric("조건 추출 일치율", sum(s.plan_matched for s in scores), len(scores)),
@@ -187,6 +198,18 @@ def _failure_line(score: CaseScore, case: GoldenCase | None, width: int) -> str:
     return f"  {case_id} 기대 {expected}{more} → 실제 {score.recommended_image}{flag}"
 
 
+def _llm_label(stages: dict | None) -> str | None:
+    """두 단계가 같은 모델이면 그 이름 하나, 다르면 단계별로. 부르지 않은 단계는 뺀다."""
+    models = {
+        stage: config["model"] for stage, config in (stages or {}).items() if config is not None
+    }
+    if not models:
+        return None
+    if len(models) == 2 and len(set(models.values())) == 1:
+        return next(iter(models.values()))
+    return " ".join(f"{stage}:{model}" for stage, model in models.items())
+
+
 def render_summary(
     metrics: list[Metric],
     scores: list[CaseScore],
@@ -200,17 +223,17 @@ def render_summary(
     by_id = {case.id: case for case in cases}
     missing_repos = sorted({repo for s in skipped for repo in s.missing})
 
-    # llm_model은 fake 프로바이더일 때 일부러 None이다. 그대로 찍으면 LLM이 아예
+    # llm_stages는 fake provider일 때 일부러 None이다. 그대로 찍으면 LLM이 아예
     # 안 돈 것처럼 보이니, 모델명이 없으면 프로바이더 이름으로 대신한다.
     # retrieval-only에서는 llm_provider도 None이라 결국 '-'로 떨어진다.
-    llm_label = meta.get("llm_model") or meta.get("llm_provider") or "-"
+    llm_label = _llm_label(meta.get("llm_stages")) or meta.get("llm_provider") or "-"
     lines = [
         f"whatfrom eval — {meta.get('started_at', '')}  "
         f"(llm={llm_label}, embedder={meta.get('embedder', '-')})",
     ]
     # 측정 문항 수는 cases에서 센다. scores로 세면 --retrieval-only가 빈 scores를
     # 넘기는 탓에 '0문항 측정'으로 찍힌다.
-    headline = f"골든셋 {total_cases}문항 중 {len(cases)}문항 측정"
+    headline = f"golden set {total_cases}문항 중 {len(cases)}문항 측정"
     if skipped:
         headline += f" · {len(skipped)}문항 미측정 ({', '.join(missing_repos)} 미색인)"
     # --tags로 걸러진 문항은 measured에도 skipped에도 없어 그냥 사라진 것처럼 보인다.
@@ -255,10 +278,10 @@ def render_summary(
     return "\n".join(lines)
 
 
-def _case_record(score: CaseScore | RetrievalScore) -> dict:
+def _case_record(score: CaseScore | RetrievalScore | PlanScore) -> dict:
     """문항 하나의 JSON. 시간 기록은 trace로 묶지 않고 펼쳐 기존 결과 파일과 같은 key를 쓴다."""
     record = asdict(score)
-    if isinstance(score, CaseScore):
+    if isinstance(score, CaseScore | PlanScore):
         trace = record.pop("trace")
         record |= trace if trace is not None else dict.fromkeys(f.name for f in fields(RunTrace))
     return record
@@ -266,7 +289,7 @@ def _case_record(score: CaseScore | RetrievalScore) -> dict:
 
 def result_document(
     metrics: list[Metric],
-    scores: list[CaseScore] | list[RetrievalScore],
+    scores: list[CaseScore] | list[RetrievalScore] | list[PlanScore],
     skipped: list[Skipped],
     meta: dict,
     baseline: ConstantBaseline | None = None,
