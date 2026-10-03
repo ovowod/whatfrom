@@ -18,7 +18,7 @@
 
 ## 현재 위치
 
-F10, F11의 앞부분(F11-a), F14(단계별 LLM 설정), M1-a(조건 추출 단계의 LLM 비교)까지 끝났다. 다음은 **F15(Anthropic native provider)** 이고, 그 뒤 M1-b(추천 단계의 LLM 비교)를 한다.
+F10, F11의 앞부분(F11-a), F14(단계별 LLM 설정), M1-a(조건 추출 단계의 LLM 비교), F15(Anthropic native provider)까지 끝났다. 다음은 **M1-b(추천 단계의 LLM 비교)** 다.
 지금 LLM(kimi-k3)은 추천 단계 한 번에 중앙값 51.9초가 걸려 전체 시간 대부분을 차지하고, 측정마다 시간 초과가 나온다.
 F11-b와 F12는 고른 모델의 속도와 실패 양상을 보고 설계하므로 M1 뒤에 온다.
 
@@ -74,8 +74,8 @@ bge-m3, qwen3-embedding 0.6B, snowflake-arctic-embed2, OpenAI text-embedding-3-s
 | F11-a | 비동기 `/recommend` + 추천 작업 수 상한 | 아래 참고 | 완료 (2026-10-01) |
 | F14 | 단계별 LLM 설정 + 단계별 평가 모드 | 아래 참고 | 완료 (2026-10-03) |
 | M1-a | 조건 추출 단계의 LLM 비교 | 아래 참고 | 완료 (2026-10-03) |
-| F15 | 단계별 API 종류 + Anthropic native provider | 아래 참고 | **다음** |
-| M1-b | 추천 단계의 LLM 비교 | 아래 참고 | |
+| F15 | 단계별 API 종류 + Anthropic native provider | 아래 참고 | 완료 (2026-10-03) |
+| M1-b | 추천 단계의 LLM 비교 | 아래 참고 | **다음** |
 | F11-b | 캐시(임베딩·결과) + 서킷브레이커 | p95 하락, LLM 호출 수 감소 | |
 | F12 | Redis 큐 + 워커 + bounded queue + 429/503 + DLQ | 아래 참고 | |
 | F13 | 임베딩·reranker 동적 배칭 | 처리량 향상 배수 측정 | |
@@ -126,7 +126,7 @@ Kimi 실측 분포에서 헛일 0%, 스레드 대기 p95 0.05초, 회복 구간 
 단계별 설정은 빈 값도 설정하지 않은 것으로 본다. API 키만 예외로, 빈 값이면 인증 header를 보내지 않는다.
 LLM 호출 기록에는 실패한 호출도 하나씩 남는다.
 
-### F15: Anthropic native provider
+### F15: Anthropic native provider (완료)
 
 M1-b에 Claude Sonnet을 넣기 위해, 단계마다 LLM API 종류를 고르고 Anthropic native Messages API로 부를 수 있게 한다.
 Anthropic의 OpenAI 호환 layer는 `response_format`과 `reasoning_effort`를 무시해 비교 조건을 만들 수 없다([조사 노트](research/2026-10-03-m1b-recommend-stage.md)).
@@ -135,6 +135,12 @@ Anthropic의 OpenAI 호환 layer는 `response_format`과 `reasoning_effort`를 �
 - Anthropic provider도 같은 인터페이스와 같은 호출 기록을 낸다. thinking과 effort는 `EXTRA_BODY`로 정한다.
 
 **완료 판정:** API 종류를 비워 두면 지금과 같은 요청이 나가고, Anthropic 요청·응답·실패 처리가 가짜 transport 테스트로 CI를 통과한다.
+
+**결과:** `WHATFROM_RECOMMEND_LLM_API=anthropic`이면 추천 단계가 `/v1/messages`로 간다. 결정은 [ADR 0002](adr/0002-anthropic-via-native-messages-api.md)에 있다.
+
+- `EXTRA_BODY`의 `thinking`과 `output_config.effort`는 schema와 병합한다. 코드가 정하는 키와 객체가 아닌 `output_config`는 시작할 때 막는다.
+- 출력이 잘리거나(`max_tokens` 16,000) 모델이 거부하면 그 이유로 실패하고 호출 기록을 남긴다. 529(과부하)도 재시도한다.
+- 실제 Anthropic API는 아직 부르지 않았다. M1-b 사전 확인에서 처음 부른다.
 
 ### M1: LLM 모델 비교
 
