@@ -7,7 +7,8 @@
     uv run python $EXP/experiment.py summary
 
 측정 설정과 집계 규칙은 같은 폴더의 plan_llm.py에, 절차는 .scratch/plan-llm-comparison/spec.md에
-있다. 공급자 API key는 MOONSHOT_API_KEY, OPENAI_API_KEY, XAI_API_KEY, GEMINI_API_KEY에서 읽는다.
+있다. 공급자 API key는 MOONSHOT_API_KEY, OPENAI_API_KEY, XAI_API_KEY, GEMINI_API_KEY를
+셸 환경 변수나 project root의 .env에서 읽는다.
 """
 
 import json
@@ -211,6 +212,7 @@ def main() -> None:
     import os
     from datetime import UTC, datetime
 
+    from dotenv import dotenv_values
     from plan_llm import render, summarize
 
     from whatfrom.api import repository_names
@@ -230,6 +232,10 @@ def main() -> None:
     sub.add_parser("summary")
     args = parser.parse_args()
 
+    # 앱처럼 .env도 읽는다. 셸 환경 변수가 있으면 그 값이 이긴다.
+    dotenv = {k: v for k, v in dotenv_values(ROOT / ".env").items() if v is not None}
+    environ = dotenv | dict(os.environ)
+
     goldenset = load_goldenset(ROOT / "eval" / "goldenset.yaml")
     case_ids = [case.id for case in goldenset.cases]
 
@@ -239,7 +245,7 @@ def main() -> None:
         names = list(CONFIGS) if args.config == "all" else [args.config]
         for name in names:
             config = CONFIGS[name]
-            api_key = api_key_for(config, os.environ)
+            api_key = api_key_for(config, environ)
             record = precheck(config, goldenset.cases[0].question, repositories, api_key)
             record["at"] = datetime.now(UTC).isoformat(timespec="seconds")
             with PRECHECK_LOG.open("a", encoding="utf-8") as log:
@@ -259,7 +265,7 @@ def main() -> None:
         if not _snapshot_path("before").exists():
             raise SystemExit("측정 전 repository 목록이 없다. snapshot before를 먼저 돌린다")
         target = measure(
-            args.config, args.round, environ=os.environ, case_ids=case_ids, out_dir=RESULTS
+            args.config, args.round, environ=environ, case_ids=case_ids, out_dir=RESULTS
         )
         print(f"{target} 저장")
     else:
