@@ -115,6 +115,27 @@ curl -s localhost:8000/recommend -H 'content-type: application/json' \
 LLM 공급자를 바꿀 때는 `.env`의 `WHATFROM_LLM_BASE_URL`, `WHATFROM_LLM_MODEL`, API 키를 변경한다.
 사용할 엔드포인트는 OpenAI 호환 `/v1/chat/completions`와 JSON Schema 응답 형식을 지원해야 한다.
 
+조건 추출 단계(LLM #1)와 추천 단계(LLM #2)에 다른 LLM을 쓸 수도 있다.
+`WHATFROM_PLAN_LLM_*`은 조건 추출 단계, `WHATFROM_RECOMMEND_LLM_*`은 추천 단계의 설정이다.
+
+| 설정 | 설정하지 않았을 때 |
+| --- | --- |
+| `..._BASE_URL`, `..._MODEL` | 공통 설정(`WHATFROM_LLM_BASE_URL`, `WHATFROM_LLM_MODEL`)을 쓴다 |
+| `..._API_KEY` | 공통 키를 쓴다. 빈 값으로 설정하면 인증 헤더를 보내지 않는다 |
+| `..._EXTRA_BODY` | 아무것도 덧붙이지 않는다 |
+
+`..._EXTRA_BODY`는 요청 본문에 덧붙일 JSON 객체다. reasoning 설정처럼 공급자마다 이름이 다른 파라미터를 넣는다.
+
+```dotenv
+WHATFROM_RECOMMEND_LLM_BASE_URL=https://api.openai.com/v1
+WHATFROM_RECOMMEND_LLM_MODEL=gpt-6-luna
+WHATFROM_RECOMMEND_LLM_API_KEY=sk-...
+WHATFROM_RECOMMEND_LLM_EXTRA_BODY={"reasoning_effort": "none"}
+```
+
+`model`, `messages`, `response_format`은 코드가 정하므로 덧붙일 수 없고, 넣으면 시작할 때 실패한다.
+`stream`처럼 응답 형식을 바꾸는 키는 막지 않지만, 넣으면 첫 호출이 오류로 실패한다.
+
 ## 품질 측정
 
 `eval/goldenset.yaml`에는 repository 10종을 대상으로 한 40문항이 있다.

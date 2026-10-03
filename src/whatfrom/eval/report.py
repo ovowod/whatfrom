@@ -187,6 +187,18 @@ def _failure_line(score: CaseScore, case: GoldenCase | None, width: int) -> str:
     return f"  {case_id} 기대 {expected}{more} → 실제 {score.recommended_image}{flag}"
 
 
+def _llm_label(stages: dict | None) -> str | None:
+    """두 단계가 같은 모델이면 그 이름 하나, 다르면 단계별로. 부르지 않은 단계는 뺀다."""
+    models = {
+        stage: config["model"] for stage, config in (stages or {}).items() if config is not None
+    }
+    if not models:
+        return None
+    if len(models) == 2 and len(set(models.values())) == 1:
+        return next(iter(models.values()))
+    return " ".join(f"{stage}:{model}" for stage, model in models.items())
+
+
 def render_summary(
     metrics: list[Metric],
     scores: list[CaseScore],
@@ -200,10 +212,10 @@ def render_summary(
     by_id = {case.id: case for case in cases}
     missing_repos = sorted({repo for s in skipped for repo in s.missing})
 
-    # llm_model은 fake 프로바이더일 때 일부러 None이다. 그대로 찍으면 LLM이 아예
+    # llm_stages는 fake 프로바이더일 때 일부러 None이다. 그대로 찍으면 LLM이 아예
     # 안 돈 것처럼 보이니, 모델명이 없으면 프로바이더 이름으로 대신한다.
     # retrieval-only에서는 llm_provider도 None이라 결국 '-'로 떨어진다.
-    llm_label = meta.get("llm_model") or meta.get("llm_provider") or "-"
+    llm_label = _llm_label(meta.get("llm_stages")) or meta.get("llm_provider") or "-"
     lines = [
         f"whatfrom eval — {meta.get('started_at', '')}  "
         f"(llm={llm_label}, embedder={meta.get('embedder', '-')})",

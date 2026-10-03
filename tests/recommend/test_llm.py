@@ -3,9 +3,15 @@ import json
 import httpx2
 import pytest
 
+from whatfrom.core.config import Settings
 from whatfrom.core.contracts import Recommendation, SearchPlan
 from whatfrom.core.httpclient import RemoteCallError
-from whatfrom.recommend.llm import FakeLLMProvider, OpenAICompatibleProvider, strict_json_schema
+from whatfrom.recommend.llm import (
+    FakeLLMProvider,
+    OpenAICompatibleProvider,
+    get_provider,
+    strict_json_schema,
+)
 
 VALID_CONTENT = (
     '{"image": "python:3.13-slim", "reason": "glibc", '
@@ -145,3 +151,101 @@ def test_fake_provider_can_fail_only_the_plan():
     with pytest.raises(RemoteCallError, match="boom"):
         provider.plan("sys", "prompt")
     assert provider.plan_calls == [("sys", "prompt")]
+
+
+def _capture(seen: list):
+    """요청을 단계(응답 schema 이름)별로 seen에 남기고, 그 단계에 맞는 응답을 준다."""
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        body = json.loads(request.content)
+        stage = body["response_format"]["json_schema"]["name"]
+        seen.append(
+            {
+                "stage": stage,
+                "url": str(request.url),
+                "auth": request.headers.get("Authorization"),
+                "body": body,
+            }
+        )
+        content = PLAN_CONTENT if stage == "search_plan" else VALID_CONTENT
+        return httpx2.Response(200, json={"choices": [{"message": {"content": content}}]})
+
+    return handler
+
+
+def _staged(config: Settings, seen: list):
+    client = httpx2.Client(transport=httpx2.MockTransport(_capture(seen)))
+    return get_provider("openai_compatible", config=config, client=client)
+
+
+def _call_both(provider) -> None:
+    provider.plan("sys", "q")
+    provider.recommend("sys", "p")
+
+
+def test_each_stage_uses_its_own_model_and_falls_back_to_the_common_one():
+    config = Settings(_env_file=None, llm_model="common-model", plan_llm_model="plan-model")
+    seen: list = []
+
+    _call_both(_staged(config, seen))
+
+    models = {call["stage"]: call["body"]["model"] for call in seen}
+    assert models == {"search_plan": "plan-model", "recommendation": "common-model"}
+
+
+def test_each_stage_uses_its_own_endpoint_and_key():
+    config = Settings(
+        _env_file=None,
+        llm_base_url="http://common.invalid/v1",
+        WHATFROM_LLM_API_KEY="common-key",
+        plan_llm_base_url="http://plan.invalid/v1",
+        plan_llm_api_key="plan-key",
+    )
+    seen: list = []
+
+    _call_both(_staged(config, seen))
+
+    calls = {call["stage"]: (call["url"], call["auth"]) for call in seen}
+    assert calls == {
+        "search_plan": ("http://plan.invalid/v1/chat/completions", "Bearer plan-key"),
+        "recommendation": ("http://common.invalid/v1/chat/completions", "Bearer common-key"),
+    }
+
+
+def test_an_empty_stage_key_sends_no_auth_instead_of_the_common_key():
+    """인증이 필요 없는 endpoint로 다른 공급자의 키가 나가지 않게 한다."""
+    config = Settings(_env_file=None, WHATFROM_LLM_API_KEY="common-key", recommend_llm_api_key="")
+    seen: list = []
+
+    _call_both(_staged(config, seen))
+
+    auths = {call["stage"]: call["auth"] for call in seen}
+    assert auths == {"search_plan": "Bearer common-key", "recommendation": None}
+
+
+def test_a_stage_extra_body_is_merged_into_that_stage_request_only():
+    config = Settings(_env_file=None, recommend_llm_extra_body={"reasoning_effort": "low"})
+    seen: list = []
+
+    _call_both(_staged(config, seen))
+
+    efforts = {call["stage"]: call["body"].get("reasoning_effort") for call in seen}
+    assert efforts == {"search_plan": None, "recommendation": "low"}
+
+
+def test_without_stage_settings_both_stages_send_the_same_request_as_before():
+    config = Settings(
+        _env_file=None,
+        llm_base_url="http://common.invalid/v1",
+        llm_model="common-model",
+        WHATFROM_LLM_API_KEY="common-key",
+    )
+    seen: list = []
+
+    _call_both(_staged(config, seen))
+
+    for call in seen:
+        assert call["url"] == "http://common.invalid/v1/chat/completions"
+        assert call["auth"] == "Bearer common-key"
+        assert set(call["body"]) == {"model", "messages", "response_format"}
+        assert call["body"]["model"] == "common-model"

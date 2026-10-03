@@ -35,7 +35,7 @@ from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.models import Base, Document, DocumentChunk, ImageTag, Repository
 from whatfrom.eval.timing import RunTrace, Timed
 from whatfrom.index.indexer import index_readme
-from whatfrom.recommend.llm import LLMProvider, get_provider
+from whatfrom.recommend.llm import LLMProvider, get_provider, stage_llm
 from whatfrom.recommend.verify import image_exists
 from whatfrom.search.retrieval import (
     search_candidates_by_vector,
@@ -269,7 +269,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
     open_session = session_factory(make_engine(args.database_url))
     embedder = get_embedder(args.embedder)
     measured, skipped = _eval_cases(goldenset, args.tags, open_session)
-    provider = None if args.retrieval_only else get_provider(args.llm_provider)
+    provider = None if args.retrieval_only else get_provider(args.llm_provider, config=settings)
     started_at = datetime.now(UTC)
 
     results_dir = Path(args.results_dir)
@@ -359,8 +359,11 @@ def _eval_meta(args: argparse.Namespace, goldenset: "GoldenSet", started_at: dat
         # fake로 돌린 실행에 실제 모델 이름을 붙이면 서로 다른 모델의 점수를
         # 같은 것처럼 비교하게 된다.
         "embedding_model": None if args.embedder == "fake" else settings.embedding_model,
-        "llm_model": (
-            None if args.retrieval_only or args.llm_provider == "fake" else settings.llm_model
+        # 단계마다 실제로 쓴 base URL, 모델, 덧붙일 JSON. API 키는 남기지 않는다.
+        "llm_stages": (
+            None
+            if args.retrieval_only or args.llm_provider == "fake"
+            else {stage: _stage_meta(stage) for stage in ("plan", "recommend")}
         ),
         "llm_provider": None if args.retrieval_only else args.llm_provider,
         "tags": args.tags or None,
@@ -373,6 +376,15 @@ def _eval_meta(args: argparse.Namespace, goldenset: "GoldenSet", started_at: dat
         "goldenset_verified_on": (
             goldenset.verified_on.isoformat() if goldenset.verified_on is not None else None
         ),
+    }
+
+
+def _stage_meta(stage: str) -> dict:
+    resolved = stage_llm(settings, stage)
+    return {
+        "base_url": resolved.base_url,
+        "model": resolved.model,
+        "extra_body": resolved.extra_body,
     }
 
 

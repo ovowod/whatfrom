@@ -24,6 +24,7 @@ from whatfrom import cli
 from whatfrom.cli import accepted_digests, cmd_eval, indexed_repositories
 from whatfrom.collect.hub import TagRow, VariantRow
 from whatfrom.collect.store import upsert_tags
+from whatfrom.core.config import Settings
 from whatfrom.core.contracts import Recommendation
 from whatfrom.core.embed import FakeEmbedder
 from whatfrom.core.httpclient import RemoteCallError
@@ -59,14 +60,16 @@ def shared_engine(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli, "make_engine", lambda _url: engine)
 
 
-def run_document(goldenset: Path, results_dir: Path, retrieval_only: bool = True) -> dict:
+def run_document(
+    goldenset: Path, results_dir: Path, retrieval_only: bool = True, llm_provider: str = "fake"
+) -> dict:
     args = argparse.Namespace(
         goldenset=str(goldenset),
         results_dir=str(results_dir),
         tags="",
         retrieval_only=retrieval_only,
         embedder="fake",
-        llm_provider="fake",
+        llm_provider=llm_provider,
         database_url="",
     )
     cmd_eval(args)
@@ -115,6 +118,42 @@ def test_run_metadata_records_when_the_goldenset_was_verified(tmp_path: Path) ->
     meta = run(goldenset, tmp_path / "results")
 
     assert meta["goldenset_verified_on"] == "2026-09-12"
+
+
+def test_run_metadata_records_each_stage_llm_without_api_keys(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """두 단계가 다른 모델을 쓰면 결과 파일만 보고 어느 조합인지 알 수 있어야 한다."""
+    config = Settings(
+        _env_file=None,
+        llm_base_url="http://common.invalid/v1",
+        llm_model="common-model",
+        WHATFROM_LLM_API_KEY="secret-common",
+        plan_llm_model="plan-model",
+        plan_llm_api_key="secret-plan",
+        recommend_llm_extra_body={"reasoning_effort": "low"},
+    )
+    monkeypatch.setattr(cli, "settings", config)
+    goldenset = tmp_path / "goldenset.yaml"
+    goldenset.write_text(GOLDENSET, encoding="utf-8")
+
+    document = run_document(
+        goldenset, tmp_path / "results", retrieval_only=False, llm_provider="openai_compatible"
+    )
+
+    assert document["meta"]["llm_stages"] == {
+        "plan": {
+            "base_url": "http://common.invalid/v1",
+            "model": "plan-model",
+            "extra_body": None,
+        },
+        "recommend": {
+            "base_url": "http://common.invalid/v1",
+            "model": "common-model",
+            "extra_body": {"reasoning_effort": "low"},
+        },
+    }
+    assert "secret" not in json.dumps(document)
 
 
 @pytest.mark.parametrize("retrieval_only", [True, False])

@@ -1,11 +1,12 @@
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Protocol, TypeVar
 
 import httpx2
 from pydantic import BaseModel, ValidationError
 
-from whatfrom.core.config import settings
+from whatfrom.core.config import Settings, settings
 from whatfrom.core.contracts import Recommendation, SearchPlan
 from whatfrom.core.httpclient import RemoteCallError, post_json
 
@@ -99,6 +100,7 @@ class OpenAICompatibleProvider:
         client: httpx2.Client | None = None,
         max_retries: int = 2,
         sleep: Callable[[float], None] = time.sleep,
+        extra_body: dict | None = None,
     ) -> None:
         self._base_url = (base_url or settings.llm_base_url).rstrip("/")
         self._model = model or settings.llm_model
@@ -113,6 +115,7 @@ class OpenAICompatibleProvider:
         )
         self._max_retries = max_retries
         self._sleep = sleep
+        self._extra_body = extra_body or {}
 
     def recommend(self, system: str, prompt: str) -> Recommendation:
         return self._complete(system, prompt, Recommendation, "recommendation")
@@ -126,6 +129,9 @@ class OpenAICompatibleProvider:
             self._client,
             f"{self._base_url}/chat/completions",
             {
+                # reasoning 설정처럼 공급자마다 이름이 다른 파라미터. 설정 검증이
+                # model·messages·response_format을 막으므로 아래 값을 덮어쓰지 않는다.
+                **self._extra_body,
                 "model": self._model,
                 "messages": [
                     {"role": "system", "content": system},
@@ -158,9 +164,71 @@ class OpenAICompatibleProvider:
             raise RemoteCallError(f"response did not match {model.__name__} schema: {exc}") from exc
 
 
-def get_provider(name: str) -> LLMProvider:
+class StagedProvider:
+    """조건 추출 단계와 추천 단계를 각자의 provider로 보낸다."""
+
+    def __init__(self, plan: LLMProvider, recommend: LLMProvider) -> None:
+        self._plan = plan
+        self._recommend = recommend
+
+    def recommend(self, system: str, prompt: str) -> Recommendation:
+        return self._recommend.recommend(system, prompt)
+
+    def plan(self, system: str, prompt: str) -> SearchPlan:
+        return self._plan.plan(system, prompt)
+
+
+@dataclass(frozen=True)
+class StageLLM:
+    """한 단계가 실제로 쓰는 LLM 설정. 단계별 값이 없으면 공통 설정에서 채운 결과다."""
+
+    base_url: str
+    model: str
+    api_key: str
+    extra_body: dict | None
+
+
+def stage_llm(config: Settings, stage: str) -> StageLLM:
+    """stage는 "plan"(조건 추출 단계) 또는 "recommend"(추천 단계)다.
+
+    None(설정하지 않음)만 공통 설정으로 채운다. 빈 API 키는 "인증 없음"이라 그대로 둔다.
+    """
+
+    def or_common(name: str):
+        value = getattr(config, f"{stage}_llm_{name}")
+        return getattr(config, f"llm_{name}") if value is None else value
+
+    return StageLLM(
+        base_url=or_common("base_url"),
+        model=or_common("model"),
+        api_key=or_common("api_key"),
+        extra_body=getattr(config, f"{stage}_llm_extra_body"),
+    )
+
+
+def _stage_provider(
+    config: Settings, stage: str, client: httpx2.Client | None
+) -> OpenAICompatibleProvider:
+    resolved = stage_llm(config, stage)
+    return OpenAICompatibleProvider(
+        base_url=resolved.base_url,
+        model=resolved.model,
+        api_key=resolved.api_key,
+        client=client,
+        extra_body=resolved.extra_body,
+    )
+
+
+def get_provider(
+    name: str, config: Settings | None = None, client: httpx2.Client | None = None
+) -> LLMProvider:
+    """config는 테스트가 설정을, client는 가짜 transport를 넣을 수 있게 둔다."""
+    config = config or settings
     if name == "fake":
         return FakeLLMProvider()
     if name == "openai_compatible":
-        return OpenAICompatibleProvider()
+        return StagedProvider(
+            plan=_stage_provider(config, "plan", client),
+            recommend=_stage_provider(config, "recommend", client),
+        )
     raise ValueError(f"unknown provider: {name!r} (expected 'fake' or 'openai_compatible')")
