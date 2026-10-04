@@ -265,17 +265,26 @@ def test_a_setting_still_retrying_after_two_confirmations_is_left_out_of_latency
 
 
 def test_an_unknown_cost_among_similar_latencies_is_inconclusive():
-    """Gemini는 usage 형식을 몰라 비용을 알 수 없다. 추정치로 고르지 않는다."""
+    """usage를 받지 못한 호출이 있으면 비용을 알 수 없다. 추정치로 고르지 않는다."""
     summary = summary_of(
         [
             measured("kimi-max", 1, 39, 45.0),
-            measured("gemini-minimal", 1, 39, 8.0),
+            measured("grok-none", 1, 39, 8.0, input_tokens=None, output_tokens=None),
             measured("luna-none", 1, 39, 9.0),
         ]
     )
 
-    assert summary.rows["gemini-minimal"].cost is None
+    assert summary.rows["grok-none"].cost is None
     assert summary.outcome.kind == "inconclusive"
+
+
+def test_gemini_bills_its_completion_tokens():
+    """사전 확인에서 total_tokens가 prompt_tokens + completion_tokens와 같았다.
+    thinking token이 따로 과금된다면 total이 그만큼 커야 한다."""
+    summary = summary_of([measured("kimi-max", 1, 39, 45.0), measured("gemini-low", 1, 39, 2.0)])
+
+    # 40 × (2000 × $0.30 + 1000 × $2.50) / 1M = $0.124
+    assert summary.rows["gemini-low"].cost == pytest.approx(0.124)
 
 
 def test_without_the_baseline_the_outcome_is_incomplete():

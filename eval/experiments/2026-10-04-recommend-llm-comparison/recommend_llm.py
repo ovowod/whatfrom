@@ -54,9 +54,11 @@ def _config(name: str, api: str, base_url: str, model: str, extra_body: dict | N
         "gpt-6-luna": ("OPENAI_API_KEY", 0.10, 0.50, COMPLETION, 0.0),
         "gpt-6.1-sol": ("OPENAI_API_KEY", 2.00, 10.00, COMPLETION, 0.0),
         "grok-4.3": ("XAI_API_KEY", 1.25, 2.50, COMPLETION_PLUS_REASONING, 0.0),
-        # 문서에 OpenAI 호환 usage 형식이 없다. M1-a 사전 확인에서도 판별하지 못했다.
+        # 문서에 OpenAI 호환 usage 형식이 없다. M1-b 사전 확인(2026-10-04)의 원본 usage에서
+        # total_tokens가 prompt_tokens + completion_tokens와 같아, 과금 출력이 모두
+        # completion_tokens에 있다고 본다. thinking이 따로 과금된다면 total이 그만큼 커야 한다.
         # M1-a에서 429가 났다. 대기 6초는 AI Studio의 RPM 한도를 볼 수 없을 때 시작하는 값이다.
-        "gemini-3.5-flash-lite": ("GEMINI_API_KEY", 0.30, 2.50, None, 6.0),
+        "gemini-3.5-flash-lite": ("GEMINI_API_KEY", 0.30, 2.50, COMPLETION, 6.0),
         "claude-sonnet-5-5": ("ANTHROPIC_API_KEY", 2.00, 10.00, COMPLETION, 0.0),
     }
     key_env, input_price, output_price, output_rule, interval_seconds = by_model[model]
