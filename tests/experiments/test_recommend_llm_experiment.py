@@ -245,6 +245,8 @@ def test_a_successful_precheck_keeps_the_finish_reason_and_raw_usage():
     assert record["kind"] == "ok"
     assert record["finish_reason"] == "stop"
     assert record["usage"]["completion_tokens_details"] == {"reasoning_tokens": 300}
+    assert record["reasoning_tokens"] == 300
+    assert record["schema_ok"] is True
     assert record["error"] is None
 
 
@@ -298,3 +300,21 @@ def test_the_api_key_never_reaches_the_record():
     record = check("luna-low", transport(401, text="bad key"), key="sk-very-secret")
 
     assert "sk-very-secret" not in json.dumps(record)
+
+
+def test_an_answer_outside_the_schema_is_recorded_as_a_schema_failure():
+    record = check("grok-none", transport(200, openai_body(content='{"image": "python"}')))
+
+    assert record["kind"] == "permanent"
+    assert record["schema_ok"] is False
+
+
+def test_an_anthropic_precheck_reads_the_thinking_tokens():
+    body = anthropic_body()
+    body["usage"]["output_tokens_details"] = {"thinking_tokens": 700}
+
+    assert check("sonnet-low", transport(200, body))["reasoning_tokens"] == 700
+
+
+def test_without_an_answer_there_is_no_schema_result():
+    assert check("luna-low", transport(429, text="slow down"))["schema_ok"] is None

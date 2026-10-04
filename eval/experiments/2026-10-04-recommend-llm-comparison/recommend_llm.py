@@ -5,7 +5,7 @@
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from statistics import mean
 
 # 고정 입력의 출처. M1-a에서 실제 embedder로 다시 잰 kimi-k3 전체 평가다.
@@ -48,17 +48,18 @@ def _gemini_thinking(level: str) -> dict:
 
 
 def _config(name: str, api: str, base_url: str, model: str, extra_body: dict | None) -> Config:
-    """모델마다 같은 key, 가격, token 규칙을 쓴다."""
+    """모델마다 같은 key, 가격, token 규칙, 문항 사이 대기를 쓴다."""
     by_model = {
-        "kimi-k3": ("MOONSHOT_API_KEY", 3.00, 15.00, COMPLETION),
-        "gpt-6-luna": ("OPENAI_API_KEY", 0.10, 0.50, COMPLETION),
-        "gpt-6.1-sol": ("OPENAI_API_KEY", 2.00, 10.00, COMPLETION),
-        "grok-4.3": ("XAI_API_KEY", 1.25, 2.50, COMPLETION_PLUS_REASONING),
+        "kimi-k3": ("MOONSHOT_API_KEY", 3.00, 15.00, COMPLETION, 0.0),
+        "gpt-6-luna": ("OPENAI_API_KEY", 0.10, 0.50, COMPLETION, 0.0),
+        "gpt-6.1-sol": ("OPENAI_API_KEY", 2.00, 10.00, COMPLETION, 0.0),
+        "grok-4.3": ("XAI_API_KEY", 1.25, 2.50, COMPLETION_PLUS_REASONING, 0.0),
         # 문서에 OpenAI 호환 usage 형식이 없다. M1-a 사전 확인에서도 판별하지 못했다.
-        "gemini-3.5-flash-lite": ("GEMINI_API_KEY", 0.30, 2.50, None),
-        "claude-sonnet-5-5": ("ANTHROPIC_API_KEY", 2.00, 10.00, COMPLETION),
+        # M1-a에서 429가 났다. 대기 6초는 AI Studio의 RPM 한도를 볼 수 없을 때 시작하는 값이다.
+        "gemini-3.5-flash-lite": ("GEMINI_API_KEY", 0.30, 2.50, None, 6.0),
+        "claude-sonnet-5-5": ("ANTHROPIC_API_KEY", 2.00, 10.00, COMPLETION, 0.0),
     }
-    key_env, input_price, output_price, output_rule = by_model[model]
+    key_env, input_price, output_price, output_rule, interval_seconds = by_model[model]
     return Config(
         name=name,
         api=api,
@@ -69,8 +70,7 @@ def _config(name: str, api: str, base_url: str, model: str, extra_body: dict | N
         input_price=input_price,
         output_price=output_price,
         output_rule=output_rule,
-        # M1-a에서 429가 났다. AI Studio의 RPM 한도를 볼 수 없을 때 시작하는 값이다.
-        interval_seconds=6.0 if model.startswith("gemini") else 0.0,
+        interval_seconds=interval_seconds,
     )
 
 
@@ -409,7 +409,24 @@ def _near_floor(row: Row) -> bool:
 
 
 def choose(rows: dict[str, Row], request_p95: float) -> Outcome:
-    """spec §집계와 고르는 기준. rows의 순서와 무관하게 같은 답을 낸다."""
+    """spec §집계와 고르는 기준. rows의 순서와 무관하게 같은 답을 낸다.
+
+    두 회차 이상 잰 평균이 하한과 1문항 안이면 판정은 그대로 내되 이유에 적는다.
+    흔들림 폭 안이라 회차를 더 늘릴지는 사람이 정한다.
+    """
+    outcome = _choose(rows, request_p95)
+    if outcome.kind in ("incomplete", "needs_runs"):
+        return outcome
+    borderline = [
+        f"{row.config}: 평균 {row.accuracy:g}문항이 하한과 1문항 안이다. "
+        "회차를 더 늘릴지는 사람이 정한다"
+        for row in sorted(rows.values(), key=lambda r: r.config)
+        if row.rounds >= 2 and abs(row.accuracy - FLOOR) <= 1
+    ]
+    return replace(outcome, reasons=[*borderline, *outcome.reasons])
+
+
+def _choose(rows: dict[str, Row], request_p95: float) -> Outcome:
     if BASELINE not in rows:
         return Outcome("incomplete", None, ["kimi-max가 없어 같은 시기의 기준선과 비교할 수 없다"])
 
@@ -442,8 +459,8 @@ def choose(rows: dict[str, Row], request_p95: float) -> Outcome:
         winner = top[0]
         if winner.latency_trusted:
             return Outcome("chosen", winner.config, reasons)
-        planned = 2 if _near_floor(winner) else 1
-        if winner.rounds - planned < MAX_CONFIRMATIONS:
+        rounds_before_confirmation = 2 if _near_floor(winner) else 1
+        if winner.rounds - rounds_before_confirmation < MAX_CONFIRMATIONS:
             return Outcome(
                 "needs_runs", None, [f"{winner.config}: 재시도 없는 확인 회차가 필요하다"]
             )

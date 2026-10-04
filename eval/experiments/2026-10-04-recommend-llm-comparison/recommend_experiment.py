@@ -88,10 +88,17 @@ def precheck(
         record["error"] = str(exc)
     response = recording.last
     body = _json(response)
+    finish_reason, refused = _ending(config, body)
+    kind = _kind(record["error"], response, finish_reason, refused)
+    usage = body.get("usage") if body is not None else None
     record["status"] = response.status_code if response is not None else None
-    record["finish_reason"] = _finish_reason(config, body)
-    record["kind"] = _kind(config, record["error"], response, body)
-    record["usage"] = body.get("usage") if body is not None else None
+    record["finish_reason"] = finish_reason
+    record["kind"] = kind
+    # 답이 왔는데 잘리거나 거부되지 않았을 때만 schema 검증 결과가 있다.
+    record["schema_ok"] = True if kind == "ok" else False if kind == "permanent" and body else None
+    record["usage"] = usage
+    # 공급자마다 reasoning token을 두는 자리가 다르다. 평가와 같은 provider 규칙으로 읽는다.
+    record["reasoning_tokens"] = PROVIDERS[config.api]._token_counts(usage)[2]
     record["body"] = response.text[:2000] if record["error"] and response is not None else None
     return record
 
@@ -106,39 +113,32 @@ def _json(response: httpx2.Response | None) -> dict | None:
     return body if isinstance(body, dict) else None
 
 
-def _finish_reason(config: Config, body: dict | None) -> str | None:
+def _ending(config: Config, body: dict | None) -> tuple[str | None, bool]:
+    """답이 끝난 이유와 거부 여부. Anthropic은 stop_reason, OpenAI 호환은 choices에 있다."""
     if body is None:
-        return None
+        return None, False
     if config.api == "anthropic":
-        return body.get("stop_reason")
-    try:
-        return body["choices"][0].get("finish_reason")
-    except (KeyError, IndexError, TypeError, AttributeError):
-        return None
-
-
-def _refused(config: Config, body: dict) -> bool:
-    if config.api == "anthropic":
-        return body.get("stop_reason") == "refusal"
+        stop_reason = body.get("stop_reason")
+        return stop_reason, stop_reason == "refusal"
     try:
         choice = body["choices"][0]
-        return bool(choice["message"].get("refusal")) or choice.get("finish_reason") == (
-            "content_filter"
-        )
+        finish_reason = choice.get("finish_reason")
+        refused = bool(choice["message"].get("refusal")) or finish_reason == "content_filter"
     except (KeyError, IndexError, TypeError, AttributeError):
-        return False
+        return None, False
+    return finish_reason, refused
 
 
 def _kind(
-    config: Config, error: str | None, response: httpx2.Response | None, body: dict | None
+    error: str | None, response: httpx2.Response | None, finish_reason: str | None, refused: bool
 ) -> str:
     """200 응답이 잘리거나 거부된 것은 그 이유로, 나머지 200 실패는 permanent로 둔다.
 
     다시 불러도 같은 모델이 같은 prompt를 받으므로 시간을 두고 다시 할 일이 아니다.
     """
-    if body is not None and _finish_reason(config, body) in ("length", "max_tokens"):
+    if finish_reason in ("length", "max_tokens"):
         return "truncated"
-    if body is not None and _refused(config, body):
+    if refused:
         return "refused"
     if error is None:
         return "ok"
@@ -234,11 +234,11 @@ def measure(
 
     env = dict(environ) | _recommend_env(config, api_key)
     env["WHATFROM_LLM_TIMEOUT_SECONDS"] = str(int(TIMEOUT_SECONDS))
-    seconds = config.interval_seconds if interval is None else interval
+    case_interval = config.interval_seconds if interval is None else interval
 
     with tempfile.TemporaryDirectory() as tmp:
         results_dir = Path(tmp)
-        run_eval(eval_command(reference, results_dir, seconds), env, results_dir)
+        run_eval(eval_command(reference, results_dir, case_interval), env, results_dir)
         (produced,) = results_dir.glob("*.json")
         document = json.loads(produced.read_text(encoding="utf-8"))
         try:

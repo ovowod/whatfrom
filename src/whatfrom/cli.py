@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import math
 import random
 import time
 from collections.abc import Callable, Sequence
@@ -648,8 +649,9 @@ def _positive_int(value: str) -> int:
 
 def _non_negative_float(value: str) -> float:
     parsed = float(value)
-    if parsed < 0:
-        raise argparse.ArgumentTypeError("0 이상이어야 한다")
+    # nan은 0과 비교해도 거짓이라 따로 막는다.
+    if not math.isfinite(parsed) or parsed < 0:
+        raise argparse.ArgumentTypeError("0 이상의 유한한 수여야 한다")
     return parsed
 
 

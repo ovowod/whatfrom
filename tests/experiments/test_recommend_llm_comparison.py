@@ -314,3 +314,20 @@ def test_the_reference_judgment_uses_its_own_latency_base():
 def test_a_round_without_matching_snapshots_is_invalid(snapshots):
     with pytest.raises(InvalidResults, match="snapshot"):
         summary_of([measured("kimi-max", 1, 39, 45.0)], snapshots=snapshots)
+
+
+def test_an_average_within_one_case_of_the_floor_is_left_to_a_person():
+    """평균 35는 하한을 넘지만 흔들림 폭 안이라, 회차를 더 늘릴지는 사람이 정한다."""
+    summary = summary_of(
+        [
+            measured("kimi-max", 1, 39, 45.0),
+            measured("kimi-max", 2, 39, 45.0),
+            measured("grok-none", 1, 36, 5.0),
+            measured("grok-none", 2, 34, 5.0),
+        ]
+    )
+
+    assert summary.outcome.config == "grok-none"
+    assert any(
+        "grok-none" in reason and "사람이 정한다" in reason for reason in summary.outcome.reasons
+    )

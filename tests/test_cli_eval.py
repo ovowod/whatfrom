@@ -650,7 +650,8 @@ def test_the_case_interval_waits_only_between_cases_and_is_not_timed(
     assert document["meta"]["case_interval_seconds"] == 0.3
 
 
-def test_the_case_interval_defaults_to_zero_and_rejects_negatives() -> None:
+def test_the_case_interval_defaults_to_zero_and_rejects_negative_or_infinite_values() -> None:
     assert cli.build_parser().parse_args(["eval"]).case_interval_seconds == 0.0
-    with pytest.raises(SystemExit):
-        cli.build_parser().parse_args(["eval", "--case-interval-seconds", "-1"])
+    for value in ("-1", "nan", "inf"):
+        with pytest.raises(SystemExit):
+            cli.build_parser().parse_args(["eval", "--case-interval-seconds", value])
