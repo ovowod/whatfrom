@@ -303,6 +303,10 @@ def cmd_eval(args: argparse.Namespace) -> None:
 
     scores = []
     for index, case in enumerate(measured, start=1):
+        # 공급자의 분 단위 한도를 피하려고 문항 사이에만 쉰다.
+        # 문항 시간을 재기 전이라 지연에 섞이지 않는다.
+        if index > 1 and args.case_interval_seconds:
+            time.sleep(args.case_interval_seconds)
         print(f"[{index}/{len(measured)}] {case.id}", flush=True)
         if mode.name == "plan-only":
             assert provider is not None
@@ -480,6 +484,7 @@ def _eval_meta(
         "tags": args.tags or None,
         # 검색 조건을 고정한 결과 파일. 두 실행이 같은 입력을 받았는지 확인하는 근거다.
         "plans_from": Path(args.plans).name if args.plans else None,
+        "case_interval_seconds": args.case_interval_seconds,
         "goldenset_version": goldenset.version,
         # 버전 번호를 유지한 채 라벨을 수정할 수 있으므로 파일 해시도 기록한다.
         # 해시가 다르면 두 실행이 사용한 golden set 내용이 달랐다는 뜻이다.
@@ -641,6 +646,13 @@ def _positive_int(value: str) -> int:
     return parsed
 
 
+def _non_negative_float(value: str) -> float:
+    parsed = float(value)
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("0 이상이어야 한다")
+    return parsed
+
+
 def _add_repository_target(parser: argparse.ArgumentParser, all_help: str) -> None:
     """repository 하나 또는 --all 중 하나를 반드시 받는다."""
     target = parser.add_mutually_exclusive_group(required=True)
@@ -692,6 +704,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--plans",
         metavar="RESULT_JSON",
         help="이전 전체 평가 결과의 검색 조건을 고정하고 추천 단계만 바꿔 잰다",
+    )
+    p_eval.add_argument(
+        "--case-interval-seconds",
+        type=_non_negative_float,
+        default=0.0,
+        help="문항 사이에 쉴 초. 공급자 rate limit을 피할 때 쓴다. 지연 측정에는 넣지 않는다",
     )
     p_eval.add_argument("--embedder", default=settings.embedder)
     p_eval.add_argument("--llm-provider", default=settings.llm_provider)

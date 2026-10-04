@@ -68,6 +68,7 @@ def run_document(
     llm_provider: str = "fake",
     plan_only: bool = False,
     plans: str | None = None,
+    case_interval_seconds: float = 0.0,
 ) -> dict:
     args = argparse.Namespace(
         goldenset=str(goldenset),
@@ -79,6 +80,7 @@ def run_document(
         embedder="fake",
         llm_provider=llm_provider,
         database_url="",
+        case_interval_seconds=case_interval_seconds,
     )
     cmd_eval(args)
     result = next(iter(results_dir.glob("*.json")))
@@ -609,3 +611,46 @@ def test_fixed_plans_cannot_be_combined_with_another_mode() -> None:
     assert cli.build_parser().parse_args(["eval", "--plans", "a.json"]).plans == "a.json"
     with pytest.raises(SystemExit):
         cli.build_parser().parse_args(["eval", "--plans", "a.json", "--plan-only"])
+
+
+def test_the_case_interval_waits_only_between_cases_and_is_not_timed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """공급자의 분 단위 한도를 피하려고 쉰다. 쉰 시간이 지연에 섞이면 모델 비교가 틀어진다."""
+    goldenset = tmp_path / "goldenset.yaml"
+    python_case = PLAN_GOLDENSET[PLAN_GOLDENSET.index("  - id: python-arm64") :]
+    python_case = python_case[: python_case.index("  - id: not-indexed")]
+    goldenset.write_text(
+        PLAN_GOLDENSET + python_case.replace("python-arm64", "python-arm64-again"),
+        encoding="utf-8",
+    )
+    _use_test_session(monkeypatch, session, FakeLLMProvider(plan=ARM64_PLAN))
+    monkeypatch.setattr(cli, "get_embedder", lambda _name: BrokenEmbedder())
+    real_sleep = cli.time.sleep
+    waits: list[float] = []
+
+    def sleep(seconds: float) -> None:
+        waits.append(seconds)
+        real_sleep(seconds)
+
+    monkeypatch.setattr(cli.time, "sleep", sleep)
+
+    document = run_document(
+        goldenset,
+        tmp_path / "results",
+        retrieval_only=False,
+        llm_provider="openai_compatible",
+        plan_only=True,
+        case_interval_seconds=0.3,
+    )
+
+    assert waits == [0.3]
+    assert [case["case_id"] for case in document["cases"]] == ["python-arm64", "python-arm64-again"]
+    assert all(case["seconds_total"] < 0.3 for case in document["cases"])
+    assert document["meta"]["case_interval_seconds"] == 0.3
+
+
+def test_the_case_interval_defaults_to_zero_and_rejects_negatives() -> None:
+    assert cli.build_parser().parse_args(["eval"]).case_interval_seconds == 0.0
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(["eval", "--case-interval-seconds", "-1"])
