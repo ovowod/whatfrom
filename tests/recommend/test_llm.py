@@ -15,10 +15,7 @@ from whatfrom.recommend.llm import (
     strict_json_schema,
 )
 
-VALID_CONTENT = (
-    '{"image": "python:3.13-slim", "reason": "glibc", '
-    '"dockerfile": "FROM python:3.13-slim", "alternatives": []}'
-)
+VALID_CONTENT = '{"image": "python:3.13-slim", "reason": "glibc", "alternatives": []}'
 
 
 def _provider(handler, **kwargs) -> OpenAICompatibleProvider:
@@ -79,7 +76,7 @@ def test_provider_requests_a_json_schema_forbidding_extra_fields():
     schema = seen["body"]["response_format"]["json_schema"]["schema"]
 
     assert schema["additionalProperties"] is False
-    assert set(schema["properties"]) == {"image", "reason", "dockerfile", "alternatives"}
+    assert set(schema["properties"]) == {"image", "reason", "alternatives"}
 
 
 def test_provider_raises_llm_error_when_the_server_ignores_the_schema():

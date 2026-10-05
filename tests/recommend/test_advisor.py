@@ -67,9 +67,7 @@ def test_build_prompt_includes_platforms_and_evidence():
 
 
 def test_advise_returns_the_providers_recommendation():
-    expected = Recommendation(
-        image="python:3.13-slim", reason="numpy needs glibc", dockerfile="FROM python:3.13-slim\n"
-    )
+    expected = Recommendation(image="python:3.13-slim", reason="numpy needs glibc")
     provider = FakeLLMProvider(recommendation=expected)
 
     assert advise(provider, "q", [_candidate("3.13-slim", 1)]) == expected
@@ -78,7 +76,7 @@ def test_advise_returns_the_providers_recommendation():
 def test_advise_raises_llm_error_when_there_are_no_candidates():
     with pytest.raises(RemoteCallError):
         advise(
-            FakeLLMProvider(recommendation=Recommendation(image="x", reason="", dockerfile="")),
+            FakeLLMProvider(recommendation=Recommendation(image="x", reason="")),
             "q",
             [],
         )

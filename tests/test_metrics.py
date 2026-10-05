@@ -28,7 +28,7 @@ def test_stage_timer_records_the_time_even_when_the_stage_fails():
     assert value("whatfrom_stage_seconds_count", {"stage": "advise"}) == before + 1
 
 
-REC = Recommendation(image="python:3.13-slim", reason="ok", dockerfile="")
+REC = Recommendation(image="python:3.13-slim", reason="ok")
 
 
 @pytest.mark.parametrize(

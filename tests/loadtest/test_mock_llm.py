@@ -97,7 +97,6 @@ def test_recommendation_returns_the_recorded_image_when_it_is_a_candidate():
 
     recommendation = Recommendation.model_validate_json(content(response))
     assert recommendation.image == "python:3.14-slim"
-    assert recommendation.dockerfile == "FROM python:3.14-slim\n"
     assert sleep.calls == [50.0]
 
 

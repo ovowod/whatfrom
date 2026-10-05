@@ -197,9 +197,7 @@ def test_the_snapshot_records_indexed_repositories_and_accepted_tag_digests(sess
     }
 
 
-SCHEMA_ANSWER = json.dumps(
-    {"image": "python:3.13-slim", "reason": "r", "dockerfile": "FROM x", "alternatives": []}
-)
+SCHEMA_ANSWER = json.dumps({"image": "python:3.13-slim", "reason": "r", "alternatives": []})
 
 
 def openai_body(finish_reason: str = "stop", content: str = SCHEMA_ANSWER, refusal=None) -> dict:

@@ -127,11 +127,7 @@ def make_response(
     candidates: list[Candidate],
     notes: list[str] | None = None,
 ) -> RecommendResponse:
-    recommendation = (
-        None
-        if image is None
-        else Recommendation(image=image, reason="이유", dockerfile=f"FROM {image}")
-    )
+    recommendation = None if image is None else Recommendation(image=image, reason="이유")
     return RecommendResponse(
         question="질문",
         recommendation=recommendation,
@@ -655,8 +651,8 @@ def test_a_failed_extraction_fails_both_and_keeps_the_notes():
     assert score.notes == notes
 
 
-def test_score_full_keeps_the_recommendation_provenance_and_final_dockerfile() -> None:
-    """완료 판정(digest 부착, FROM 고정)을 결과 JSON만으로 확인할 수 있어야 한다."""
+def test_score_full_keeps_the_recommendation_provenance() -> None:
+    """digest 부착을 결과 JSON만으로 확인할 수 있어야 한다."""
     response = make_response("python:3.13-slim", [make_candidate("3.13-slim")])
     response = response.model_copy(
         update={
@@ -665,9 +661,6 @@ def test_score_full_keeps_the_recommendation_provenance_and_final_dockerfile() -
                 digest="sha256:aaa",
                 source_url="https://hub.docker.com/_/python",
                 collected_at=NOW,
-            ),
-            "recommendation": response.recommendation.model_copy(
-                update={"dockerfile": "FROM python:3.13-slim@sha256:aaa"}
             ),
         }
     )
@@ -680,10 +673,9 @@ def test_score_full_keeps_the_recommendation_provenance_and_final_dockerfile() -
         "source_url": "https://hub.docker.com/_/python",
         "collected_at": NOW.isoformat().replace("+00:00", "Z"),
     }
-    assert score.dockerfile == "FROM python:3.13-slim@sha256:aaa"
 
 
 def test_score_full_leaves_provenance_empty_without_a_recommendation() -> None:
     score = score_full(make_case(), make_response(None, [make_candidate("3.13-slim")]), [], None)
 
-    assert (score.recommended, score.dockerfile) == (None, None)
+    assert score.recommended is None

@@ -296,9 +296,7 @@ def _seed_python(session: Session) -> None:
     session.flush()
 
 
-RECOMMENDATION = Recommendation(
-    image="python:3.13-slim", reason="ok", dockerfile="FROM python:3.13-slim\n"
-)
+RECOMMENDATION = Recommendation(image="python:3.13-slim", reason="ok")
 
 
 def test_timed_recommendation_times_every_stage_and_keeps_the_advise_prompt(
@@ -314,7 +312,6 @@ def test_timed_recommendation_times_every_stage_and_keeps_the_advise_prompt(
     )
 
     assert response.recommended is not None
-    assert response.recommendation.dockerfile == "FROM python:3.13-slim@sha256:aaa\n"
     assert None not in (
         trace.seconds_total,
         trace.seconds_embedding,

@@ -176,10 +176,9 @@ class CaseScore:
     plan_matched: bool = False
     # 조건 완화, 추출 실패 같은 응답 알림 전부.
     notes: list[str] = field(default_factory=list)
-    # 추천의 digest·출처·수집 시점과 최종 Dockerfile. digest 부착과 FROM 고정을 결과
-    # JSON만으로 확인하려고 남긴다. 추천이 없으면 None이다.
+    # 추천의 digest·출처·수집 시점. digest 부착을 결과 JSON만으로 확인하려고 남긴다.
+    # 추천이 없으면 None이다.
     recommended: dict | None = None
-    dockerfile: str | None = None
     # runner가 채운다. 시간을 재지 않은 실행이면 None이다. 두 실행의 실제 입력을 비교할 때
     # LLM #2에 보낸 prompt를 쓴다.
     trace: RunTrace | None = None
@@ -306,5 +305,4 @@ def score_full(
         recommended=(
             response.recommended.model_dump(mode="json") if response.recommended else None
         ),
-        dockerfile=recommendation.dockerfile if recommendation is not None else None,
     )

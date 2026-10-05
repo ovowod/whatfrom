@@ -74,7 +74,6 @@ class Recommendation(BaseModel):
 
     image: str
     reason: str
-    dockerfile: str
     alternatives: list[str] = Field(default_factory=list)
 
 

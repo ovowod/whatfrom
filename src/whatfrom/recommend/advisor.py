@@ -10,8 +10,7 @@ complete, or modify a tag. Never combine parts of two candidates.
 - Every entry in `alternatives` must also be copied verbatim from the candidate list.
 - Base `reason` only on the evidence provided. If the evidence does not settle the \
 question, say so plainly instead of guessing.
-- `dockerfile` is a minimal, runnable draft whose FROM line uses the image you picked.
-- Answer in Korean, except for image names, tags and the Dockerfile itself."""
+- Answer in Korean, except for image names and tags."""
 
 
 def _format_platforms(platforms: list[Platform]) -> str:

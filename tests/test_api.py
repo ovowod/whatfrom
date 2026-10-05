@@ -80,7 +80,6 @@ def test_recommend_returns_a_real_tag_with_evidence_and_provenance(session):
         recommendation=Recommendation(
             image="python:3.13-slim",
             reason="numpy는 glibc 기반이 빌드가 안정적입니다.",
-            dockerfile="FROM python:3.13-slim\n",
             alternatives=[],
         )
     )
@@ -97,14 +96,24 @@ def test_recommend_returns_a_real_tag_with_evidence_and_provenance(session):
     assert body["candidates"][0]["evidence"]
 
 
-def test_recommend_attaches_the_digest_and_pins_the_dockerfile(session):
-    """digest는 코드가 붙인다. LLM은 digest를 보지도 쓰지도 않는다."""
+def test_recommend_returns_no_dockerfile_draft(session):
+    """Dockerfile은 프로젝트를 보는 쪽이 쓴다(ADR 0003). 응답에 초안을 싣지 않는다."""
     _seed(session)
     provider = FakeLLMProvider(
-        recommendation=Recommendation(
-            image="python:3.13-slim", reason="ok", dockerfile="FROM python:3.13-slim\n"
-        )
+        recommendation=Recommendation(image="python:3.13-slim", reason="ok", alternatives=[])
     )
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    assert body["recommendation"]["image"] == "python:3.13-slim"
+    assert "dockerfile" not in body["recommendation"]
+    assert body["notes"] == []
+
+
+def test_recommend_attaches_the_digest(session):
+    """digest는 코드가 붙인다. LLM은 digest를 보지도 쓰지도 않는다."""
+    _seed(session)
+    provider = FakeLLMProvider(recommendation=Recommendation(image="python:3.13-slim", reason="ok"))
 
     body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
 
@@ -114,35 +123,25 @@ def test_recommend_attaches_the_digest_and_pins_the_dockerfile(session):
         "source_url": "https://hub.docker.com/_/python",
         "collected_at": NOW.isoformat().replace("+00:00", "Z"),
     }
-    assert body["recommendation"]["dockerfile"] == "FROM python:3.13-slim@sha256:aaa\n"
     assert body["notes"] == []
 
 
-def test_recommend_leaves_the_from_unpinned_when_the_tag_has_no_digest(session):
+def test_recommend_leaves_the_digest_empty_when_the_tag_has_none(session):
     _seed(session)
     session.execute(update(ImageTag).values(manifest_digest=None))
-    provider = FakeLLMProvider(
-        recommendation=Recommendation(
-            image="python:3.13-slim", reason="ok", dockerfile="FROM python:3.13-slim\n"
-        )
-    )
+    provider = FakeLLMProvider(recommendation=Recommendation(image="python:3.13-slim", reason="ok"))
 
     body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
 
     assert body["recommended"]["digest"] is None
-    assert body["recommendation"]["dockerfile"] == "FROM python:3.13-slim\n"
-    assert body["notes"] == [
-        "digest가 없어 Dockerfile의 FROM을 고정하지 못했습니다: python:3.13-slim"
-    ]
+    assert body["notes"] == []
 
 
 def test_recommend_discards_a_hallucinated_answer_and_still_returns_candidates(session):
     """저하 사다리 3단계: verify가 거부하면 LLM 답변을 버리고 후보 표만 낸다."""
     _seed(session)
     provider = FakeLLMProvider(
-        recommendation=Recommendation(
-            image="python:3.13-slim-bookworm-arm64", reason="plausible", dockerfile=""
-        )
+        recommendation=Recommendation(image="python:3.13-slim-bookworm-arm64", reason="plausible")
     )
 
     body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
@@ -161,7 +160,6 @@ def test_recommend_strips_unverifiable_alternatives_but_keeps_the_recommendation
         recommendation=Recommendation(
             image="python:3.13-slim",
             reason="numpy는 glibc 기반이 안정적입니다.",
-            dockerfile="FROM python:3.13-slim\n",
             alternatives=["python:3.13-alpine(호환성 문제 가능성)"],
         )
     )
@@ -172,46 +170,6 @@ def test_recommend_strips_unverifiable_alternatives_but_keeps_the_recommendation
     assert body["recommendation"]["alternatives"] == []
     assert body["degraded"] is False
     assert any("실재하지 않는 대안" in note for note in body["notes"])
-
-
-def test_recommend_strips_a_dockerfile_that_pulls_an_unverified_image(session):
-    """Dockerfile은 사용자가 복사해 쓰는 산출물이라 image 필드보다 위험하다."""
-    _seed(session)
-    provider = FakeLLMProvider(
-        recommendation=Recommendation(
-            image="python:3.13-slim",
-            reason="numpy는 glibc 기반이 안정적입니다.",
-            dockerfile='FROM python:3.13-slim-bookworm-arm64-INVENTED\nCMD ["python"]',
-        )
-    )
-
-    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
-
-    assert body["recommendation"]["image"] == "python:3.13-slim"
-    assert body["recommendation"]["dockerfile"] == ""
-    # 추천 자체는 유효하므로 출처와 digest는 남는다. 지운 Dockerfile은 고정할 것이 없다.
-    assert body["recommended"]["image"] == "python:3.13-slim"
-    # 추천 객체에는 남으면 안 된다. 사용자가 복사해 쓰는 건 이쪽이다.
-    assert "INVENTED" not in json.dumps(body["recommendation"], ensure_ascii=False)
-    # 알림에는 남아야 한다. 무엇을 왜 지웠는지 말하지 않으면 진단이 안 된다.
-    assert any("INVENTED" in note for note in body["notes"])
-
-
-def test_recommend_keeps_a_dockerfile_that_matches_the_recommendation(session):
-    _seed(session)
-    provider = FakeLLMProvider(
-        recommendation=Recommendation(
-            image="python:3.13-slim",
-            reason="ok",
-            dockerfile="FROM python:3.13-slim\nWORKDIR /app\n",
-        )
-    )
-
-    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
-
-    assert body["recommendation"]["dockerfile"].startswith("FROM python:3.13-slim")
-    assert body["degraded"] is False
-    assert body["notes"] == []
 
 
 def test_recommend_degrades_when_the_embedder_fails(session):
@@ -249,7 +207,7 @@ def test_recommend_degrades_when_the_llm_call_fails(session):
 
 def test_recommend_never_returns_502_when_nothing_is_indexed(session):
     """빈손으로 돌려보내는 경로가 없어야 한다 (스펙 §8)."""
-    provider = FakeLLMProvider(recommendation=Recommendation(image="x:y", reason="", dockerfile=""))
+    provider = FakeLLMProvider(recommendation=Recommendation(image="x:y", reason=""))
 
     response = _client(session, provider).post("/recommend", json={"question": QUESTION})
 
@@ -298,9 +256,7 @@ def _seed_with_alpine(session) -> None:
     session.flush()
 
 
-SLIM = Recommendation(
-    image="python:3.13-slim", reason="glibc", dockerfile="FROM python:3.13-slim\n"
-)
+SLIM = Recommendation(image="python:3.13-slim", reason="glibc")
 
 
 def test_recommend_filters_candidates_by_the_extracted_plan(session):
@@ -421,11 +377,7 @@ def test_metrics_endpoint_exposes_every_whatfrom_metric(session):
 
 def test_a_recommendation_records_every_stage_the_thread_wait_and_the_outcome(session):
     _seed(session)
-    provider = FakeLLMProvider(
-        recommendation=Recommendation(
-            image="python:3.13-slim", reason="ok", dockerfile="FROM python:3.13-slim\n"
-        )
-    )
+    provider = FakeLLMProvider(recommendation=Recommendation(image="python:3.13-slim", reason="ok"))
     stages = _stage_counts()
     waits = _metric("whatfrom_threadpool_wait_seconds_count")
     ok = _metric("whatfrom_recommend_outcomes_total", {"outcome": "ok"})
