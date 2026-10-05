@@ -84,6 +84,30 @@ def random_baseline(scores: list[CaseScore] | list[RetrievalScore]) -> RandomBas
 
 
 @dataclass(frozen=True)
+class TopCandidateBaseline:
+    """판정 없이 검색 1위 후보를 추천으로 본 대조군의 정확도.
+
+    추천 정확도가 이보다 높아야 LLM이 검색 순위보다 나은 판단을 했다고 말할 수 있다.
+    """
+
+    hits: int
+    total: int
+
+    @property
+    def ratio(self) -> float | None:
+        """Metric.ratio와 같은 규칙. 분모가 0이면 0%가 아니라 미측정이다."""
+        return self.hits / self.total if self.total else None
+
+
+def top_candidate_baseline(
+    scores: list[CaseScore] | list[RetrievalScore],
+) -> TopCandidateBaseline:
+    return TopCandidateBaseline(
+        hits=sum(s.top_candidate_accepted for s in scores), total=len(scores)
+    )
+
+
+@dataclass(frozen=True)
 class Skipped:
     case_id: str
     missing: list[str]
@@ -184,6 +208,15 @@ def _format_random_baseline(baseline: RandomBaseline) -> str:
     )
 
 
+def _format_top_baseline(baseline: TopCandidateBaseline) -> str:
+    if baseline.ratio is None:
+        return "※ 검색 1위 대조군: 측정 문항이 없어 계산할 수 없다 (지표 아님)"
+    return (
+        f"※ 검색 1위 대조군 — 판정 없이 검색 1위 후보를 고르면 "
+        f"{baseline.hits}/{baseline.total} {baseline.ratio:.1%} (지표 아님)"
+    )
+
+
 def _failure_line(score: CaseScore, case: GoldenCase | None, width: int) -> str:
     """실패 문항을 출력한다. width는 목록에서 가장 긴 문항 ID의 표시 너비다."""
     case_id = _pad(score.case_id, width)
@@ -219,6 +252,7 @@ def render_summary(
     meta: dict,
     baseline: ConstantBaseline | None = None,
     random: RandomBaseline | None = None,
+    top: TopCandidateBaseline | None = None,
 ) -> str:
     by_id = {case.id: case for case in cases}
     missing_repos = sorted({repo for s in skipped for repo in s.missing})
@@ -246,6 +280,8 @@ def render_summary(
     # 후보만 있으면 계산되므로 고정답 대조군과 달리 검색 전용 모드에도 나온다.
     if random is not None:
         lines += ["", _format_random_baseline(random)]
+    if top is not None:
+        lines += ["", _format_top_baseline(top)]
     # 추천 정확도를 읽기 위한 기준선이므로 그것이 없는 실행(--retrieval-only)에는
     # 놓일 자리가 없다. 호출자가 넘겨도 여기서 걸러 둘이 어긋나지 않게 한다.
     if baseline is not None and any(m.label == "추천 정확도" for m in metrics):
@@ -294,6 +330,7 @@ def result_document(
     meta: dict,
     baseline: ConstantBaseline | None = None,
     random: RandomBaseline | None = None,
+    top: TopCandidateBaseline | None = None,
 ) -> dict:
     """저장용 JSON. 실행 메타가 없으면 나중에 점수를 비교할 수 없다."""
     document: dict = {
@@ -307,4 +344,6 @@ def result_document(
         document["constant_baseline"] = asdict(baseline) | {"ratio": baseline.ratio}
     if random is not None:
         document["random_baseline"] = asdict(random)
+    if top is not None:
+        document["top_candidate_baseline"] = asdict(top) | {"ratio": top.ratio}
     return document

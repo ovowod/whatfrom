@@ -14,6 +14,7 @@ from whatfrom.eval.report import (
     random_baseline,
     render_summary,
     result_document,
+    top_candidate_baseline,
 )
 from whatfrom.eval.scoring import CaseScore, RetrievalScore
 from whatfrom.eval.timing import RunTrace
@@ -36,6 +37,7 @@ def make_score(**overrides: object) -> CaseScore:
         "sources_ok": True,
         "hit_declared": True,
         "hit_at5": True,
+        "top_candidate_accepted": True,
         "degraded_note": None,
     }
     base.update(overrides)
@@ -158,7 +160,12 @@ def test_retrieval_and_full_aggregate_the_shared_metrics_identically() -> None:
         {"case_id": "b", "candidate_hit": False, "hit_declared": True, "hit_at5": False},
         {"case_id": "c", "candidate_hit": True, "hit_declared": False, "hit_at5": False},
     ]
-    record = {"candidate_count": 0, "accepted_count": 0, "candidate_images": []}
+    record = {
+        "candidate_count": 0,
+        "accepted_count": 0,
+        "candidate_images": [],
+        "top_candidate_accepted": False,
+    }
     case_scores = [make_score(**v) for v in values]
     retrieval_scores = [RetrievalScore(**v, **record) for v in values]  # type: ignore[arg-type]
 
@@ -481,6 +488,7 @@ def make_retrieval(accepted: int, count: int) -> RetrievalScore:
         candidate_images=[f"python:{i}" for i in range(count)],
         hit_declared=False,
         hit_at5=False,
+        top_candidate_accepted=accepted > 0,
     )
 
 
@@ -501,6 +509,27 @@ def test_random_baseline_counts_a_case_without_candidates_as_zero() -> None:
 
     assert baseline.expected == 0.5
     assert baseline.total == 2
+
+
+def test_top_candidate_baseline_counts_cases_whose_first_candidate_is_accepted() -> None:
+    baseline = top_candidate_baseline([make_retrieval(1, 2), make_retrieval(0, 3)])
+
+    assert (baseline.hits, baseline.total, baseline.ratio) == (1, 2, 0.5)
+
+
+def test_top_candidate_baseline_is_unmeasured_without_cases() -> None:
+    assert top_candidate_baseline([]).ratio is None
+
+
+def test_summary_and_document_show_the_top_candidate_baseline() -> None:
+    baseline = top_candidate_baseline([make_score(), make_score(top_candidate_accepted=False)])
+
+    summary = render_summary([], [], [], [], 2, {}, top=baseline)
+    document = result_document([], [], [], {}, top=baseline)
+
+    assert "검색 1위 대조군" in summary
+    assert "1/2" in summary
+    assert document["top_candidate_baseline"] == {"hits": 1, "total": 2, "ratio": 0.5}
 
 
 def test_random_baseline_is_unmeasured_when_there_are_no_cases() -> None:
@@ -678,6 +707,7 @@ def test_result_document_of_a_retrieval_run_has_no_time_fields() -> None:
         candidate_images=["python:3.13-slim"],
         hit_declared=True,
         hit_at5=True,
+        top_candidate_accepted=True,
     )
 
     document = result_document([], [score], [], {})

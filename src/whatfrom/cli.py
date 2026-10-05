@@ -285,9 +285,12 @@ def cmd_eval(args: argparse.Namespace) -> None:
     measured, skipped = _eval_cases(goldenset, args.tags, open_session)
     mode = _eval_mode(args)
     # 결과 파일이 맞지 않으면 모델을 부르기 전에 멈춘다.
-    fixed_plans = (
-        _load_fixed_plans(Path(args.plans), Path(args.goldenset), measured) if args.plans else None
-    )
+    if args.label_plans:
+        fixed_plans = _label_plans(measured)
+    elif args.plans:
+        fixed_plans = _load_fixed_plans(Path(args.plans), Path(args.goldenset), measured)
+    else:
+        fixed_plans = None
     # provider가 호출마다 기록을 쌓는다. 문항별로 나누는 일은 timed_recommendation이 한다.
     call_log: list[LLMCall] = []
     provider = (
@@ -313,11 +316,13 @@ def cmd_eval(args: argparse.Namespace) -> None:
             assert provider is not None
             scores.append(_score_plan_case(case, open_session, provider, call_log))
         else:
-            case_provider = (
-                provider
-                if fixed_plans is None or provider is None
-                else FixedPlanProvider(fixed_plans[case.id], provider)
-            )
+            if fixed_plans is None:
+                case_provider = provider
+            elif mode.calls_recommend:
+                assert provider is not None
+                case_provider = FixedPlanProvider(fixed_plans[case.id], provider)
+            else:
+                case_provider = FixedPlanProvider(fixed_plans[case.id], SkipRecommend())
             scores.append(_score_case(case, open_session, embedder, case_provider, call_log))
 
     meta = _eval_meta(args, mode, goldenset, started_at)
@@ -347,11 +352,20 @@ EVAL_MODES = {
         EvalMode("retrieval-only", calls_plan=False, calls_recommend=False, has_candidates=True),
         EvalMode("plan-only", calls_plan=True, calls_recommend=False, has_candidates=False),
         EvalMode("fixed-plans", calls_plan=False, calls_recommend=True, has_candidates=True),
+        EvalMode("label-plans", calls_plan=False, calls_recommend=True, has_candidates=True),
+        # 추천 단계를 부르지 않지만 retrieval-only와 달리 검색 조건으로 후보를 거른다.
+        EvalMode(
+            "label-plans-retrieval", calls_plan=False, calls_recommend=False, has_candidates=True
+        ),
     )
 }
 
 
 def _eval_mode(args: argparse.Namespace) -> EvalMode:
+    if args.no_recommend and not args.label_plans:
+        raise SystemExit("--no-recommend는 --label-plans와 함께 쓴다")
+    if args.label_plans:
+        return EVAL_MODES["label-plans-retrieval" if args.no_recommend else "label-plans"]
     if args.retrieval_only:
         return EVAL_MODES["retrieval-only"]
     if args.plan_only:
@@ -379,6 +393,30 @@ class FixedPlanProvider:
 
     def recommend(self, system: str, prompt: str) -> Recommendation:
         return self._inner.recommend(system, prompt)
+
+
+class SkipRecommend:
+    """추천 단계를 실패로 돌려, 운영 경로의 저하 응답으로 후보와 근거만 얻는다(--no-recommend)."""
+
+    def plan(self, system: str, prompt: str) -> SearchPlan:
+        raise RemoteCallError("검색 조건은 FixedPlanProvider가 준다")
+
+    def recommend(self, system: str, prompt: str) -> Recommendation:
+        raise RemoteCallError("추천 단계를 부르지 않는 실행이다")
+
+
+def _label_plans(measured: list) -> dict[str, dict]:
+    """문항 라벨(expected_plan과 repository)로 검색 조건을 만든다(--label-plans).
+
+    repository가 둘 이상인 문항은 하나를 고를 규칙이 없어 모델을 부르기 전에 멈춘다.
+    """
+    several = [case.id for case in measured if len(case.requires_repositories) != 1]
+    if several:
+        raise SystemExit(f"--label-plans는 repository가 하나인 문항만 쓴다: {', '.join(several)}")
+    return {
+        case.id: {"repository": case.requires_repositories[0], **case.expected_plan.model_dump()}
+        for case in measured
+    }
 
 
 def _load_fixed_plans(path: Path, goldenset: Path, measured: list) -> dict[str, dict | None]:
@@ -563,6 +601,7 @@ def _report_eval(
         random_baseline,
         render_summary,
         result_document,
+        top_candidate_baseline,
     )
 
     # 부른 단계의 지표만 낸다. 검색 조건을 고정한 실행의 추출 지표는 이번 실행의 것이 아니다.
@@ -577,19 +616,28 @@ def _report_eval(
     baseline = constant_baseline(measured) if mode.calls_recommend else None
     # 후보 기록만으로 계산하므로 후보가 있는 모드만 구한다.
     random = random_baseline(scores) if mode.has_candidates else None
+    top = top_candidate_baseline(scores) if mode.has_candidates else None
 
     print()
     # 실패 목록은 추천 결과를 보여 준다. 추천이 없는 모드에는 놓일 자리가 없다.
     failures = scores if mode.calls_recommend else []
     print(
         render_summary(
-            metrics, failures, measured, skipped, len(goldenset.cases), meta, baseline, random
+            metrics,
+            failures,
+            measured,
+            skipped,
+            len(goldenset.cases),
+            meta,
+            baseline,
+            random,
+            top,
         )
     )
 
     out.write_text(
         json.dumps(
-            result_document(metrics, scores, skipped, meta, baseline, random),
+            result_document(metrics, scores, skipped, meta, baseline, random, top),
             ensure_ascii=False,
             indent=2,
         ),
@@ -706,6 +754,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--plans",
         metavar="RESULT_JSON",
         help="이전 전체 평가 결과의 검색 조건을 고정하고 추천 단계만 바꿔 잰다",
+    )
+    modes.add_argument(
+        "--label-plans",
+        action="store_true",
+        help="golden set 라벨을 검색 조건으로 쓰고 조건 추출 단계를 건너뛴다",
+    )
+    p_eval.add_argument(
+        "--no-recommend",
+        action="store_true",
+        help="--label-plans에서 추천 단계를 부르지 않고 후보와 검색 지표만 잰다",
     )
     p_eval.add_argument(
         "--case-interval-seconds",

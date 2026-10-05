@@ -69,6 +69,8 @@ def run_document(
     plan_only: bool = False,
     plans: str | None = None,
     case_interval_seconds: float = 0.0,
+    label_plans: bool = False,
+    no_recommend: bool = False,
 ) -> dict:
     args = argparse.Namespace(
         goldenset=str(goldenset),
@@ -77,6 +79,8 @@ def run_document(
         retrieval_only=retrieval_only,
         plan_only=plan_only,
         plans=plans,
+        label_plans=label_plans,
+        no_recommend=no_recommend,
         embedder="fake",
         llm_provider=llm_provider,
         database_url="",
@@ -647,6 +651,110 @@ def test_fixed_plans_cannot_be_combined_with_another_mode() -> None:
     assert cli.build_parser().parse_args(["eval", "--plans", "a.json"]).plans == "a.json"
     with pytest.raises(SystemExit):
         cli.build_parser().parse_args(["eval", "--plans", "a.json", "--plan-only"])
+
+
+LABEL_GOLDENSET = PLAN_GOLDENSET.replace(
+    "expected_plan:\n      architectures: [arm64]", "expected_plan:\n      architectures: [amd64]"
+)
+
+
+def _run_label_plans(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session: Session,
+    provider,
+    no_recommend: bool = False,
+    goldenset: str = LABEL_GOLDENSET,
+) -> dict:
+    _use_test_session(monkeypatch, session, provider)
+    path = tmp_path / "goldenset.yaml"
+    path.write_text(goldenset, encoding="utf-8")
+    return run_document(
+        path,
+        tmp_path / "results",
+        retrieval_only=False,
+        llm_provider="openai_compatible",
+        label_plans=True,
+        no_recommend=no_recommend,
+    )
+
+
+def test_label_plans_search_with_the_case_labels_instead_of_the_plan_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """M3와 V3는 조건 추출 품질을 섞지 않고 두 번째 LLM 호출만 잰다."""
+    provider = _plan_must_not_be_called()
+
+    document = _run_label_plans(tmp_path, monkeypatch, session, provider)
+
+    assert provider.plan_calls == []
+    assert len(provider.calls) == 1
+    [case] = document["cases"]
+    assert case["plan"]["repository"] == "python"
+    assert case["plan"]["architectures"] == ["amd64"]
+    assert case["candidate_images"] == ["python:3.13-slim"]
+    assert document["meta"]["mode"] == "label-plans"
+    assert document["meta"]["llm_stages"]["plan"] is None
+    labels = {m["label"] for m in document["metrics"]}
+    assert "추천 정확도" in labels
+    assert not labels & {"repository 추출 일치율", "조건 추출 일치율"}
+
+
+def test_label_plans_without_the_recommend_stage_call_no_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """검색 1위 대조군은 LLM 비용 없이, 운영 경로와 같은 후보로 잰다."""
+    provider = FakeLLMProvider(
+        error=RemoteCallError("recommend must not be called"),
+        plan_error=RemoteCallError("plan must not be called"),
+    )
+
+    document = _run_label_plans(tmp_path, monkeypatch, session, provider, no_recommend=True)
+
+    assert provider.calls == []
+    assert provider.plan_calls == []
+    [case] = document["cases"]
+    assert case["plan"]["architectures"] == ["amd64"]
+    assert case["candidate_images"] == ["python:3.13-slim"]
+    assert document["meta"]["mode"] == "label-plans-retrieval"
+    assert document["meta"]["llm_stages"] is None
+    labels = {m["label"] for m in document["metrics"]}
+    assert labels == {"후보 포함률", "문서 Hit@5"}
+    assert document["top_candidate_baseline"] == {"hits": 1, "total": 1, "ratio": 1.0}
+
+
+def test_label_plans_stop_on_a_case_with_several_repositories(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    provider = _plan_must_not_be_called()
+    goldenset = LABEL_GOLDENSET.replace(
+        "requires_repositories: [python]", "requires_repositories: [python, python]"
+    )
+
+    with pytest.raises(SystemExit, match="python-arm64"):
+        _run_label_plans(tmp_path, monkeypatch, session, provider, goldenset=goldenset)
+
+    assert provider.calls == []
+
+
+def test_no_recommend_needs_label_plans() -> None:
+    parsed = cli.build_parser().parse_args(["eval", "--label-plans", "--no-recommend"])
+    assert parsed.label_plans and parsed.no_recommend
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(["eval", "--label-plans", "--plans", "a.json"])
+    with pytest.raises(SystemExit, match="--label-plans"):
+        cli._eval_mode(cli.build_parser().parse_args(["eval", "--no-recommend"]))
+
+
+def test_every_run_with_candidates_reports_the_top_candidate_baseline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    plans = _full_run(tmp_path, monkeypatch, session)
+
+    document = json.loads(plans.read_text(encoding="utf-8"))
+
+    assert document["top_candidate_baseline"]["total"] == 1
+    assert "top_candidate_accepted" in document["cases"][0]
 
 
 def test_the_case_interval_waits_only_between_cases_and_is_not_timed(

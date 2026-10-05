@@ -53,6 +53,28 @@ def test_candidate_miss_when_no_accepted_image_is_offered() -> None:
     assert score.candidate_hit is False
 
 
+def test_top_candidate_counts_when_the_first_candidate_is_accepted_by_digest() -> None:
+    """검색 1위 대조군은 추천 정확도와 같은 허용 규칙으로 채점한다."""
+    first = make_candidate("3.13-slim-trixie")
+    second = make_candidate("3.13-slim")
+
+    score = score_retrieval(make_case(), [first, second], [], frozenset({"sha256:aaa"}))
+
+    assert score.top_candidate_accepted is True
+
+
+def test_top_candidate_misses_when_only_a_lower_candidate_is_accepted() -> None:
+    score = score_retrieval(
+        make_case(), [make_candidate("3.13-alpine"), make_candidate("3.13-slim")], []
+    )
+
+    assert score.top_candidate_accepted is False
+
+
+def test_top_candidate_misses_without_candidates() -> None:
+    assert score_retrieval(make_case(), [], []).top_candidate_accepted is False
+
+
 def test_hit_is_not_declared_without_expected_sections() -> None:
     """expected_sections가 없는 문항은 Hit@5 분모에서 빠진다."""
     score = score_retrieval(make_case(), [], [("python", "Image Variants")])

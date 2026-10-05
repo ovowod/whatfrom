@@ -20,6 +20,8 @@ class RetrievalScore:
     candidate_images: list[str]
     hit_declared: bool
     hit_at5: bool
+    # 검색 1위 대조군. 판정 없이 첫 후보를 추천으로 봤을 때 맞는가.
+    top_candidate_accepted: bool
 
 
 def _is_accepted(case: GoldenCase, candidate: Candidate, accepted_digests: frozenset[str]) -> bool:
@@ -87,6 +89,9 @@ def score_retrieval(
         candidate_images=images,
         hit_declared=declared,
         hit_at5=declared and _hit_at5(case, sections),
+        # 후보 순서는 운영 경로가 정한 그대로다. 후보가 없으면 오답이다.
+        top_candidate_accepted=bool(candidates)
+        and _is_accepted(case, candidates[0], accepted_digests),
     )
 
 
@@ -168,6 +173,7 @@ class CaseScore:
     sources_ok: bool
     hit_declared: bool
     hit_at5: bool
+    top_candidate_accepted: bool
     degraded_note: str | None
     # 검색 조건 추출(LLM #1). 추출에 실패했으면 plan과 plan_fields가 None이다.
     plan: dict | None = None
@@ -298,6 +304,7 @@ def score_full(
         sources_ok=_sources_ok(response),
         hit_declared=retrieval.hit_declared,
         hit_at5=retrieval.hit_at5,
+        top_candidate_accepted=retrieval.top_candidate_accepted,
         # 추천을 못 한 사유는 API가 맨 뒤에 붙인다. 앞에는 검색 단계의 알림이 올 수 있다.
         degraded_note=response.notes[-1] if recommendation is None and response.notes else None,
         plan=extraction.plan,
