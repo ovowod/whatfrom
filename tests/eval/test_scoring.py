@@ -22,6 +22,7 @@ def make_case(**overrides: object) -> GoldenCase:
         "requires_repositories": ["python"],
         "accept": ["python:3.13-slim"],
         "expected_plan": {},
+        "requirements": [],
         "rationale": Rationale(note="근거", sources=["https://example.invalid/doc"]),
     }
     base.update(overrides)

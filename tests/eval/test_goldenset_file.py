@@ -27,6 +27,12 @@ def test_the_real_goldenset_says_when_it_was_last_verified() -> None:
     assert load_goldenset(GOLDENSET).verified_on == date(2026, 9, 12)
 
 
+def test_every_case_needs_exactly_one_repository() -> None:
+    """라벨 고정 입력은 repository 하나를 검색 조건으로 쓴다. 둘이면 고를 규칙이 없다."""
+    for case in load_goldenset(GOLDENSET).cases:
+        assert len(case.requires_repositories) == 1, case.id
+
+
 def test_every_label_carries_a_source() -> None:
     """스펙 §13. 근거 없는 라벨은 작성자 취향이다."""
     for case in load_goldenset(GOLDENSET).cases:

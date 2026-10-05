@@ -44,6 +44,7 @@ cases:
     requires_repositories: [there-is-no-such-repository]
     accept: [there-is-no-such-repository:1]
     expected_plan: {}
+    requirements: []
     rationale:
       note: 근거
       sources: [https://example.invalid/doc]
@@ -430,6 +431,7 @@ cases:
     question: ARM64에서 도는 python 이미지
     requires_repositories: [python]
     accept: [python:3.13-slim]
+    requirements: []
     expected_plan:
       architectures: [arm64]
     rationale:
@@ -440,6 +442,7 @@ cases:
     requires_repositories: [there-is-no-such-repository]
     accept: [there-is-no-such-repository:1]
     expected_plan: {}
+    requirements: []
     rationale:
       note: 근거
       sources: [https://example.invalid/doc]

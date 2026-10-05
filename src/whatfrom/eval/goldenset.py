@@ -99,8 +99,18 @@ class GoldenCase(BaseModel):
     conditions: Conditions = Field(default_factory=Conditions)
     # 기본값을 두지 않는다. 빠뜨린 문항이 조용히 "조건 없음"으로 채점되면 안 된다.
     expected_plan: ExpectedPlan
+    # 기대 판단 요구. 후보 하나만 보고 판정할 수 있는 짧은 영어 문장이다. 기본값을 두지 않는다.
+    # 빈 목록은 "요구 없음"이고, 키가 없으면 아직 쓰지 않은 것이다.
+    requirements: list[str]
     expected_sections: list[str] = Field(default_factory=list)
     rationale: Rationale
+
+    @field_validator("requirements")
+    @classmethod
+    def no_blank_requirement(cls, requirements: list[str]) -> list[str]:
+        if any(not requirement.strip() for requirement in requirements):
+            raise ValueError("빈 판단 요구가 있다")
+        return requirements
 
 
 class GoldenSet(BaseModel):
