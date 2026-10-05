@@ -10,7 +10,13 @@ from sqlalchemy.orm import Session
 
 from whatfrom.admission import REJECTED_DETAIL, RecommendationLimiter, run_admitted
 from whatfrom.core.config import settings
-from whatfrom.core.contracts import Candidate, RecommendedImage, RecommendResponse, SearchPlan
+from whatfrom.core.contracts import (
+    Candidate,
+    NumberedEvidence,
+    RecommendedImage,
+    RecommendResponse,
+    SearchPlan,
+)
 from whatfrom.core.db import SessionFactory, make_engine, session_factory
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.httpclient import RemoteCallError
@@ -27,10 +33,10 @@ from whatfrom.metrics import (
     stage_timer,
 )
 from whatfrom.recommend.advisor import advise
+from whatfrom.recommend.evidence import number_evidence
 from whatfrom.recommend.llm import LLMProvider, get_provider
-from whatfrom.recommend.pin import pin_dockerfile
 from whatfrom.recommend.planner import extract_plan
-from whatfrom.recommend.verify import verify_recommendation
+from whatfrom.recommend.verify import check_citations, verify_recommendation
 from whatfrom.search.retrieval import search_candidates_by_vector, search_candidates_with_plan
 
 
@@ -74,13 +80,16 @@ def recommend_for_question(
     degraded = False
 
     def without_recommendation(
-        candidates: list[Candidate], plan: SearchPlan | None = None
+        candidates: list[Candidate],
+        plan: SearchPlan | None = None,
+        evidence: list[NumberedEvidence] | None = None,
     ) -> RecommendResponse:
-        """추천 없이 멈춘 단계의 응답. 확보한 후보와 지금까지의 notes를 싣는다."""
+        """추천 없이 멈춘 단계의 응답. 확보한 후보와 근거, 지금까지의 notes를 싣는다."""
         return RecommendResponse(
             question=question,
             recommendation=None,
             candidates=candidates,
+            evidence=evidence or [],
             degraded=True,
             notes=notes,
             plan=plan,
@@ -122,13 +131,16 @@ def recommend_for_question(
         notes.append("검색된 후보가 없습니다. 수집·인덱싱이 되어 있는지 확인하세요.")
         return without_recommendation([], plan)
 
+    # 번호는 여기서 한 번만 매기고, 같은 근거를 응답과 두 번째 LLM 호출에 함께 넘긴다.
+    evidence, candidates = number_evidence(candidates)
+
     try:
         with stage_timer("advise"):
-            recommendation = advise(provider, question, candidates)
+            recommendation = advise(provider, question, candidates, evidence)
     except RemoteCallError as exc:
         STAGE_ERRORS.labels("advise").inc()
         notes.append(f"LLM 근거 생성에 실패해 후보 목록만 반환합니다: {exc}")
-        return without_recommendation(candidates, plan)
+        return without_recommendation(candidates, plan, evidence)
 
     with stage_timer("verify"), open_session() as session:
         verdict = verify_recommendation(session, recommendation, candidates)
@@ -142,17 +154,7 @@ def recommend_for_question(
         # 재시도를 도입하려면 먼저 답변이 검증에서 거부되는 비율을 확인해야 한다.
         # 재시도할 때는 이전 답변이 거부된 이유를 프롬프트에 포함해야 한다.
         notes.append(f"추천이 실재성 검증을 통과하지 못해 폐기했습니다: {verdict.reason}")
-        return without_recommendation(candidates, plan)
-
-    if verdict.unverifiable_dockerfile_refs:
-        # Dockerfile은 사용자가 그대로 복사해 쓰는 산출물이다. 검증되지 않은
-        # FROM을 남겨두면 불변식이 여기서 뚫린다. 추천 자체는 유효하므로
-        # Dockerfile만 비우고 무엇이 문제였는지 알린다.
-        recommendation = recommendation.model_copy(update={"dockerfile": ""})
-        notes.append(
-            "Dockerfile의 FROM이 추천 이미지를 가리키지 않아 제거했습니다: "
-            + ", ".join(verdict.unverifiable_dockerfile_refs)
-        )
+        return without_recommendation(candidates, plan, evidence)
 
     if verdict.dropped_alternatives:
         # 검증을 통과하지 못한 대안은 응답에서 지운다. 주 추천은 유효하므로 남긴다.
@@ -175,20 +177,19 @@ def recommend_for_question(
         source_url=chosen.source_url,
         collected_at=chosen.collected_at,
     )
-    if recommendation.dockerfile:
-        pinned, missing = pin_dockerfile(
-            recommendation.dockerfile, {c.image: c.digest for c in candidates}
-        )
-        recommendation = recommendation.model_copy(update={"dockerfile": pinned})
-        if missing:
-            notes.append(
-                "digest가 없어 Dockerfile의 FROM을 고정하지 못했습니다: " + ", ".join(missing)
-            )
+
+    # 인용은 실재성 검증 뒤에 본다. 떼어 낸 대안의 repository 문서는 인용할 수 없다.
+    checked, failed = check_citations(recommendation, evidence)
+    if failed:
+        notes.append(f"검증에 실패한 근거 인용이 {failed}개 있습니다.")
+    if checked.verified_citations == 0:
+        notes.append("검증된 근거 인용이 없습니다.")
 
     return RecommendResponse(
         question=question,
-        recommendation=recommendation,
+        recommendation=checked,
         candidates=candidates,
+        evidence=evidence,
         degraded=degraded,
         notes=notes,
         plan=plan,

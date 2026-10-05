@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from whatfrom.core.contracts import Candidate, Evidence, Recommendation, SearchPlan
 from whatfrom.loadtest.mock_llm import Recorded, create_mock_app, load_records
 from whatfrom.recommend.advisor import build_prompt
+from whatfrom.recommend.evidence import number_evidence
 from whatfrom.recommend.planner import build_plan_prompt
 
 QUESTION = "python:3.14 랑 python:3.14-slim 이 정확히 뭐가 다른 거야?\n"
@@ -58,6 +59,11 @@ class FakeSleep:
         self.calls.append(seconds)
 
 
+def _prompt(question: str, candidates: list[Candidate]) -> str:
+    evidence, numbered = number_evidence(candidates)
+    return build_prompt(question, numbered, evidence)
+
+
 def chat(client: TestClient, name: str, prompt: str):
     return client.post(
         "/v1/chat/completions",
@@ -93,11 +99,11 @@ def test_recommendation_returns_the_recorded_image_when_it_is_a_candidate():
     sleep = FakeSleep()
     client = TestClient(create_mock_app(RECORDS, sleep=sleep))
 
-    response = chat(client, "recommendation", build_prompt(QUESTION, CANDIDATES))
+    response = chat(client, "recommendation", _prompt(QUESTION, CANDIDATES))
 
     recommendation = Recommendation.model_validate_json(content(response))
     assert recommendation.image == "python:3.14-slim"
-    assert recommendation.dockerfile == "FROM python:3.14-slim\n"
+    assert recommendation.claims == []
     assert sleep.calls == [50.0]
 
 
@@ -105,7 +111,7 @@ def test_recommendation_falls_back_to_the_first_candidate():
     """기록된 이미지가 이번 후보에 없으면 첫 후보를 준다. 검증을 통과해야 측정이 오염되지 않는다."""
     client = TestClient(create_mock_app(RECORDS, sleep=FakeSleep()))
 
-    response = chat(client, "recommendation", build_prompt(QUESTION, [candidate("python:3.13")]))
+    response = chat(client, "recommendation", _prompt(QUESTION, [candidate("python:3.13")]))
 
     assert Recommendation.model_validate_json(content(response)).image == "python:3.13"
 

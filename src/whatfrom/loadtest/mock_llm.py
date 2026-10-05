@@ -157,9 +157,7 @@ def create_mock_app(
             delay = record.seconds_advise if record else median_advise
             recorded = record.image if record else None
             image = recorded if recorded in candidates else candidates[0]
-            content = Recommendation(
-                image=image, reason="모의 LLM 응답이다.", dockerfile=f"FROM {image}\n"
-            ).model_dump_json()
+            content = Recommendation(image=image).model_dump_json()
         else:
             raise HTTPException(400, f"unknown schema: {name}")
 

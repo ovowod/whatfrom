@@ -659,7 +659,6 @@ def test_result_document_records_the_stage_times_and_the_advise_input() -> None:
             seconds_plan=1.0,
             advise_prompt="Requirement: q",
         ),
-        dockerfile="FROM python:3.13-slim@sha256:aaa",
     )
 
     document = result_document([], [score], [], {})
@@ -668,7 +667,6 @@ def test_result_document_records_the_stage_times_and_the_advise_input() -> None:
     assert (case["seconds_total"], case["seconds_embedding"]) == (3.0, 0.5)
     assert (case["seconds_plan"], case["seconds_advise"]) == (1.0, None)
     assert case["advise_prompt"] == "Requirement: q"
-    assert case["dockerfile"] == "FROM python:3.13-slim@sha256:aaa"
 
 
 def test_result_document_of_a_retrieval_run_has_no_time_fields() -> None:
