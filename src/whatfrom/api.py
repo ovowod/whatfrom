@@ -131,12 +131,12 @@ def recommend_for_question(
         notes.append("검색된 후보가 없습니다. 수집·인덱싱이 되어 있는지 확인하세요.")
         return without_recommendation([], plan)
 
-    # 두 번째 LLM 호출도 같은 함수로 번호를 매긴다. 인용한 번호가 응답의 근거를 가리킨다.
+    # 번호는 여기서 한 번만 매기고, 같은 근거를 응답과 두 번째 LLM 호출에 함께 넘긴다.
     evidence, candidates = number_evidence(candidates)
 
     try:
         with stage_timer("advise"):
-            recommendation = advise(provider, question, candidates)
+            recommendation = advise(provider, question, candidates, evidence)
     except RemoteCallError as exc:
         STAGE_ERRORS.labels("advise").inc()
         notes.append(f"LLM 근거 생성에 실패해 후보 목록만 반환합니다: {exc}")

@@ -297,6 +297,9 @@ def test_recommend_discards_a_hallucinated_answer_and_still_returns_candidates(s
     assert body["recommended"] is None
     assert body["degraded"] is True
     assert body["candidates"]
+    # 추천을 버려도 사실과 근거는 남는다.
+    assert body["evidence"]
+    assert body["candidates"][0]["evidence_numbers"]
     assert any("not a verifiable candidate image" in note for note in body["notes"])
 
 

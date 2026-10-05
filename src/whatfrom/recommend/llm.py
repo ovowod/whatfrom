@@ -26,7 +26,7 @@ def strict_json_schema(model: type[BaseModel]) -> dict:
     것을 굳이 같게 맞출 이유가 없고, 응답은 어차피 Pydantic이 다시 검증한다.
     """
     schema = model.model_json_schema()
-    # 중첩 모델은 $defs에 들어간다. strict 모드는 그 객체에도 같은 조건을 요구한다.
+    # 중첩 모델은 $defs에 들어간다. strict mode는 그 객체에도 같은 조건을 요구한다.
     for obj in [schema, *schema.get("$defs", {}).values()]:
         if "properties" in obj:
             obj["required"] = list(obj["properties"])

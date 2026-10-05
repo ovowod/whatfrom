@@ -121,6 +121,8 @@ class CitationCheck(Citation):
 
 
 class CheckedClaim(BaseModel):
+    """응답의 주장. 근거 인용마다 서버가 검증 결과를 붙였다."""
+
     text: str
     citations: list[CitationCheck] = Field(default_factory=list)
 
@@ -172,7 +174,7 @@ class RecommendResponse(BaseModel):
     question: str
     recommendation: CheckedRecommendation | None
     candidates: list[Candidate]
-    # 후보들의 근거. (repository, 섹션 제목)마다 한 번씩, 두 번째 LLM 호출이 본 번호 그대로다.
+    # 후보들의 근거. (repository, section 제목)마다 한 번씩, 두 번째 LLM 호출이 본 번호 그대로다.
     evidence: list[NumberedEvidence] = Field(default_factory=list)
     # 스펙 §8의 정상 경로가 아닌 단계로 답했는가. 추천이 있어도 True일 수 있다
     # (검색 조건 추출 실패, 조건 완화). 이유는 notes에 있다.

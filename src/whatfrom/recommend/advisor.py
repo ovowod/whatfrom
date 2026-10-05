@@ -1,6 +1,5 @@
-from whatfrom.core.contracts import Candidate, Platform, Recommendation
+from whatfrom.core.contracts import Candidate, NumberedEvidence, Platform, Recommendation
 from whatfrom.core.httpclient import RemoteCallError
-from whatfrom.recommend.evidence import number_evidence
 from whatfrom.recommend.llm import LLMProvider
 
 SYSTEM_PROMPT = """You compare container base images and explain the trade-offs.
@@ -12,9 +11,10 @@ complete, or modify a tag. Never combine parts of two candidates.
 - Explain the choice as `claims`, one statement per claim. Base every claim only on the \
 evidence provided. If the evidence does not settle the question, say so in a claim \
 instead of guessing.
-- Support each claim with `citations`. A citation gives the evidence number shown in \
-brackets and a `quote` copied character for character from that evidence. Never \
-paraphrase, translate, or shorten a quote into something the evidence does not contain.
+- When a sentence in the evidence backs a claim, add it to that claim's `citations`. A \
+citation gives the evidence number shown in brackets and a `quote` copied character for \
+character from that evidence. Never paraphrase, translate, or shorten a quote into \
+something the evidence does not contain. Leave `citations` empty rather than invent one.
 - Write claims in Korean, except for image names and tags. Keep quotes in the \
 evidence's original language."""
 
@@ -36,7 +36,10 @@ def _format_platforms(platforms: list[Platform]) -> str:
     return f"{span} across {', '.join(names)}"
 
 
-def build_prompt(question: str, candidates: list[Candidate]) -> str:
+def build_prompt(
+    question: str, candidates: list[Candidate], evidence: list[NumberedEvidence]
+) -> str:
+    """evidence는 응답에 싣는 그 근거다. 같은 목록을 보여 줘야 인용 번호가 응답과 맞는다."""
     lines = [f"Requirement: {question}", "", "Candidates (choose exactly one):"]
     for candidate in candidates:
         pushed = candidate.last_pushed_at.date() if candidate.last_pushed_at else "unknown"
@@ -44,15 +47,18 @@ def build_prompt(question: str, candidates: list[Candidate]) -> str:
             f"- {candidate.image} | {_format_platforms(candidate.platforms)} | pushed: {pushed}"
         )
 
-    # 응답과 같은 번호로 보여 준다. LLM이 인용한 번호가 응답의 근거를 가리킨다.
-    evidence, _ = number_evidence(candidates)
     lines += ["", "Evidence from the official README:"]
     for item in evidence:
         lines += [f"[{item.number}] {item.repository} — {item.section_title}", item.content, ""]
     return "\n".join(lines)
 
 
-def advise(provider: LLMProvider, question: str, candidates: list[Candidate]) -> Recommendation:
+def advise(
+    provider: LLMProvider,
+    question: str,
+    candidates: list[Candidate],
+    evidence: list[NumberedEvidence],
+) -> Recommendation:
     if not candidates:
         raise RemoteCallError("no candidates to choose from")
-    return provider.recommend(SYSTEM_PROMPT, build_prompt(question, candidates))
+    return provider.recommend(SYSTEM_PROMPT, build_prompt(question, candidates, evidence))

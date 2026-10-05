@@ -49,8 +49,19 @@ def _candidate(tag: str, size: int, repository: str = "python") -> Candidate:
     )
 
 
+def _prompt(question: str, candidates: list[Candidate]) -> str:
+    """API처럼 근거에 번호를 매겨 넘긴다."""
+    evidence, numbered = number_evidence(candidates)
+    return build_prompt(question, numbered, evidence)
+
+
+def _advise(provider: FakeLLMProvider, candidates: list[Candidate]) -> Recommendation:
+    evidence, numbered = number_evidence(candidates)
+    return advise(provider, "q", numbered, evidence)
+
+
 def test_build_prompt_lists_every_candidate_image():
-    prompt = build_prompt(
+    prompt = _prompt(
         "numpy 쓰는데 arm64", [_candidate("3.13-slim", 1), _candidate("3.13-alpine", 2)]
     )
 
@@ -60,7 +71,7 @@ def test_build_prompt_lists_every_candidate_image():
 
 
 def test_build_prompt_includes_platforms_and_evidence():
-    prompt = build_prompt("q", [_candidate("3.13-slim", 46992930)])
+    prompt = _prompt("q", [_candidate("3.13-slim", 46992930)])
 
     assert "linux/amd64" in prompt and "linux/arm64" in prompt
     assert "musl libc instead of glibc" in prompt
@@ -71,28 +82,24 @@ def test_advise_returns_the_providers_recommendation():
     expected = Recommendation(image="python:3.13-slim")
     provider = FakeLLMProvider(recommendation=expected)
 
-    assert advise(provider, "q", [_candidate("3.13-slim", 1)]) == expected
+    assert _advise(provider, [_candidate("3.13-slim", 1)]) == expected
 
 
 def test_advise_raises_llm_error_when_there_are_no_candidates():
     with pytest.raises(RemoteCallError):
-        advise(
-            FakeLLMProvider(recommendation=Recommendation(image="x")),
-            "q",
-            [],
-        )
+        _advise(FakeLLMProvider(recommendation=Recommendation(image="x")), [])
 
 
 def test_advise_propagates_provider_failure_as_llm_error():
     provider = FakeLLMProvider(error=RemoteCallError("upstream 500"))
 
     with pytest.raises(RemoteCallError):
-        advise(provider, "q", [_candidate("3.13-slim", 1)])
+        _advise(provider, [_candidate("3.13-slim", 1)])
 
 
 def test_build_prompt_keeps_the_same_section_from_different_repositories():
     """repository가 다르면 제목이 같아도 다른 문서다. 제목만으로 지우면 한쪽이 사라진다."""
-    prompt = build_prompt("q", [_candidate("3.13-slim", 1), _candidate("24-slim", 2, "node")])
+    prompt = _prompt("q", [_candidate("3.13-slim", 1), _candidate("24-slim", 2, "node")])
 
     assert "python: musl libc instead of glibc" in prompt
     assert "node: musl libc instead of glibc" in prompt
@@ -102,16 +109,16 @@ def test_build_prompt_keeps_the_same_section_from_different_repositories():
 
 def test_build_prompt_lists_a_shared_section_once():
     """같은 repository의 같은 섹션은 후보마다 붙어 있어도 한 번만 넘긴다."""
-    prompt = build_prompt("q", [_candidate("3.13-slim", 1), _candidate("3.13-alpine", 2)])
+    prompt = _prompt("q", [_candidate("3.13-slim", 1), _candidate("3.13-alpine", 2)])
 
     assert prompt.count("python — Image Variants") == 1
 
 
 def test_build_prompt_numbers_evidence_the_way_the_response_does():
-    """LLM이 인용한 번호와 응답의 근거 번호가 같은 섹션을 가리켜야 한다."""
+    """LLM이 인용한 번호와 응답의 근거 번호가 같은 section을 가리켜야 한다."""
     candidates = [_candidate("3.13-slim", 1), _candidate("24", 2, repository="node")]
 
-    prompt = build_prompt("q", candidates)
+    prompt = _prompt("q", candidates)
 
     evidence, _ = number_evidence(candidates)
     for item in evidence:

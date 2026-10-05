@@ -1,7 +1,7 @@
 """후보들의 근거에 요청 안에서만 쓰는 번호를 붙인다(ADR 0003).
 
-응답과 두 번째 LLM 호출이 같은 함수로 번호를 매긴다. 그래야 LLM이 인용한 번호와 응답의
-번호가 같은 섹션을 가리킨다.
+API가 한 번 번호를 매기고, 같은 근거를 응답과 두 번째 LLM 호출에 함께 넘긴다. 그래야
+LLM이 인용한 번호와 응답의 번호가 같은 section을 가리킨다.
 """
 
 from whatfrom.core.contracts import Candidate, NumberedEvidence

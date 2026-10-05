@@ -26,7 +26,7 @@ FROM ???
 - 대안 이미지가 같은 검증을 통과하지 못하면 해당 대안만 제거한다.
 - 추천에는 수집 시점 digest를 붙인다. 이동 태그는 그 뒤 바뀌었을 수 있으므로 응답의 `recommended.collected_at`을 함께 본다.
 - 후보마다 `reference`(`image@digest`)를 준다. Dockerfile의 `FROM`에 그대로 쓴다. digest를 수집하지 못한 후보는 `null`이다.
-- 근거는 응답 최상위 `evidence`에 (repository, 섹션 제목)마다 한 번씩 번호를 붙여 담는다. 후보는 `evidence_numbers`로 가리키고, 두 번째 LLM도 같은 번호로 근거를 본다.
+- 근거는 응답 최상위 `evidence`에 (repository, section 제목)마다 한 번씩 번호를 붙여 담는다. 후보는 `evidence_numbers`로 가리키고, 두 번째 LLM도 같은 번호로 근거를 본다.
 - 추천 이유는 주장 목록(`claims`)이다. 주장마다 근거 인용(근거 번호와 글자 그대로의 문장)이 붙는다.
 - 인용은 그 요청에서 LLM에 넘긴 근거 본문으로 검증한다. 근거 번호가 없거나, 인용이 비었거나, 공백을 정규화해도 본문에 없거나(대소문자는 구분), 추천이나 대안이 아닌 repository의 근거면 실패다.
 - 검증에 실패한 인용은 `verified: false`와 실패 이유(`problem`)를 달고 남긴다. 추천은 버리지 않는다. 검증을 통과한 인용 수는 `verified_citations`이고, 0이면 알림을 남긴다.
@@ -54,6 +54,7 @@ FROM ???
     {"image": "python:3.13-slim", "reference": "python:3.13-slim@sha256:…", "evidence_numbers": [1, 2]}
   ],
   "evidence": [
+    {"number": 1, "repository": "python", "section_title": "How to use this image", "content": "…", "source_url": "…"},
     {"number": 2, "repository": "python", "section_title": "Image Variants", "content": "…", "source_url": "…"}
   ]
 }
@@ -229,7 +230,8 @@ digest는 측정 시점 DB 기준이며, digest로 인정한 문항은 결과와
 실행 결과는 `eval/results/`에 JSON으로 저장하며, 모델명과 임베딩 모델, golden set 해시를 함께 기록한다.
 문항별 후보 목록과 그중 허용 정답 수, 무작위 선택 대조군도 저장한다. 무작위 선택 대조군은 두 모드 모두 출력한다.
 전체 모드에서는 문항별 검색 조건, 필드별 추출 일치 여부, 응답 알림(조건 완화, 추출 실패)도 저장한다.
-추천의 digest·출처·수집 시점, LLM #2에 보낸 프롬프트, 단계별 소요 시간(임베딩, LLM #1, LLM #2, 전체)도 함께 저장한다.
+추천의 digest·출처·수집 시점, 두 번째 LLM 호출에 보낸 prompt, 단계별 소요 시간(임베딩, 조건 추출 단계, 두 번째 LLM 호출, 전체)도 함께 저장한다.
+추천 이미지, 대안, 주장 목록과 근거 인용별 검증 결과도 저장한다. 인용 지표와 사람의 뒷받침 확인은 이 파일만 읽는다.
 이 결과 폴더는 Git 추적 대상에서 제외되어 있다.
 
 모델 선택처럼 결정을 내린 비교는 `eval/experiments/<날짜>-<주제>/`에 조건, 결과, 한계, 결론과 재현 스크립트를 함께 남긴다.

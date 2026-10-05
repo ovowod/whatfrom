@@ -529,7 +529,7 @@ def _objects(schema: dict) -> list[dict]:
 
 
 def test_strict_schema_applies_to_nested_objects_too():
-    """OpenAI strict 모드는 중첩 객체($defs)에도 같은 조건을 요구한다."""
+    """OpenAI strict mode는 중첩 객체($defs)에도 같은 조건을 요구한다."""
     objects = _objects(strict_json_schema(Recommendation))
 
     assert len(objects) == 3  # 추천, 주장, 근거 인용
