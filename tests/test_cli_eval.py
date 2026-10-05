@@ -719,7 +719,7 @@ def test_label_plans_without_the_recommend_stage_call_no_model(
     assert document["meta"]["mode"] == "label-plans-retrieval"
     assert document["meta"]["llm_stages"] is None
     labels = {m["label"] for m in document["metrics"]}
-    assert labels == {"후보 포함률", "문서 Hit@5"}
+    assert labels == {"후보 포함률", "문서 Hit@5", "명시적 오답 후보 문항"}
     assert document["top_candidate_baseline"] == {"hits": 1, "total": 1, "ratio": 1.0}
 
 
@@ -755,6 +755,20 @@ def test_every_run_with_candidates_reports_the_top_candidate_baseline(
 
     assert document["top_candidate_baseline"]["total"] == 1
     assert "top_candidate_accepted" in document["cases"][0]
+
+
+def test_a_run_without_judgments_reports_the_judgment_metrics_as_unmeasured(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    plans = _full_run(tmp_path, monkeypatch, session)
+
+    document = json.loads(plans.read_text(encoding="utf-8"))
+
+    metrics = {m["label"]: m for m in document["metrics"]}
+    assert metrics["오답 적발률"]["ratio"] is None
+    assert metrics["오판정률"]["ratio"] is None
+    assert metrics["인용 검증 통과율"]["ratio"] is None
+    assert document["cases"][0]["unsatisfied_candidates"] is None
 
 
 def test_the_case_interval_waits_only_between_cases_and_is_not_timed(

@@ -135,6 +135,9 @@ def aggregate_recommendation(scores: list[CaseScore]) -> list[Metric]:
             sum(s.conditions_declared for s in scores),
         ),
         Metric("출처 제공률", sum(s.sources_ok for s in scores), len(scores)),
+        _citation_pass_rate(scores),
+        *_judgment_metrics(scores),
+        _rejected_cases(scores),
         Metric(
             # Recall이 아니라 Hit이다. 기대 섹션 중 하나만 상위 5청크에서 나와도
             # 히트로 세므로, 관련 문서 전체 중 회수한 비율(Recall)이 아니다.
@@ -144,6 +147,45 @@ def aggregate_recommendation(scores: list[CaseScore]) -> list[Metric]:
             sum(s.hit_declared for s in scores),
         ),
     ]
+
+
+def _citation_pass_rate(scores: list[CaseScore]) -> Metric:
+    """주장들에 붙은 인용 전체 중 글자 그대로 검증을 통과한 비율. 인용이 없으면 미측정이다."""
+    citations = [
+        citation["verified"]
+        for s in scores
+        if s.recommendation is not None
+        for claim in s.recommendation["claims"]
+        for citation in claim["citations"]
+    ]
+    return Metric("인용 검증 통과율", sum(citations), len(citations))
+
+
+def _judgment_metrics(scores: list[CaseScore]) -> list[Metric]:
+    """후보 단위로 센다. 판정이 없는 문항은 두 지표의 분모에서 빠지므로,
+    판정이 없는 실행에서는 둘 다 0%가 아니라 미측정이다."""
+    detected = total_rejected = misjudged = total_accepted = 0
+    for s in scores:
+        if s.unsatisfied_candidates is None:
+            continue
+        unsatisfied = set(s.unsatisfied_candidates)
+        detected += sum(image in unsatisfied for image in s.rejected_candidates)
+        total_rejected += len(s.rejected_candidates)
+        misjudged += sum(image in unsatisfied for image in s.accepted_candidates)
+        total_accepted += len(s.accepted_candidates)
+    return [
+        Metric("오답 적발률", detected, total_rejected),
+        Metric("오판정률", misjudged, total_accepted),
+    ]
+
+
+def _rejected_cases(scores: list[CaseScore] | list[RetrievalScore]) -> Metric:
+    """명시적 오답 후보 문항. 오답 적발률이 잴 기회가 있던 문항 수다."""
+    return Metric(
+        "명시적 오답 후보 문항",
+        sum(bool(s.rejected_candidates) for s in scores),
+        len(scores),
+    )
 
 
 def aggregate_plan(scores: list[CaseScore] | list[PlanScore]) -> list[Metric]:
@@ -164,6 +206,7 @@ def aggregate_retrieval(scores: list[RetrievalScore]) -> list[Metric]:
             sum(s.hit_at5 for s in scores),
             sum(s.hit_declared for s in scores),
         ),
+        _rejected_cases(scores),
     ]
 
 
@@ -177,8 +220,8 @@ def _pad(text: str, width: int) -> str:
     return text + " " * max(width - _display_width(text), 0)
 
 
-# 지표 라벨 중 가장 넓은 "조건 추출 일치율"이 16칸이다. 여유 두 칸을 더 둔다.
-_LABEL_WIDTH = 18
+# 지표 라벨 중 가장 넓은 "repository 추출 일치율"이 22칸이다. 여유 두 칸을 더 둔다.
+_LABEL_WIDTH = 24
 
 
 def _format_metric(metric: Metric) -> str:
