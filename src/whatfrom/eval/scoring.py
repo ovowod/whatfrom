@@ -200,6 +200,9 @@ class CaseScore:
     # 불만족 판정을 하나 이상 받은 후보. 판정이 없는 실행(단일 선택)이면 None이고,
     # 오답 적발률과 오판정률의 분모에서 빠진다.
     unsatisfied_candidates: list[str] | None = None
+    # 응답의 번호 붙은 근거. 인용의 근거 번호를 repository와 section으로 풀 때 쓴다.
+    # 본문은 크기 때문에 남기지 않는다.
+    evidence: list[dict] = field(default_factory=list)
     # runner가 채운다. 시간을 재지 않은 실행이면 None이다. 두 실행의 실제 입력을 비교할 때
     # LLM #2에 보낸 prompt를 쓴다.
     trace: RunTrace | None = None
@@ -330,4 +333,5 @@ def score_full(
             response.recommended.model_dump(mode="json") if response.recommended else None
         ),
         recommendation=recommendation.model_dump(mode="json") if recommendation else None,
+        evidence=[e.model_dump(exclude={"content"}) for e in response.evidence],
     )

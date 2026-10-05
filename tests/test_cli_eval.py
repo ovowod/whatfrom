@@ -771,6 +771,69 @@ def test_a_run_without_judgments_reports_the_judgment_metrics_as_unmeasured(
     assert document["cases"][0]["unsatisfied_candidates"] is None
 
 
+def _cli(*argv: str) -> None:
+    args = cli.build_parser().parse_args(list(argv))
+    args.func(args)
+
+
+def test_citation_samples_are_drawn_from_a_real_result_and_scored(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, capsys
+) -> None:
+    """표본 도구는 fixture가 아니라 eval이 실제로 쓴 결과 파일을 읽는다."""
+    recommendation = Recommendation(
+        image="python:3.13-slim",
+        claims=[
+            Claim(
+                text="slim 이미지다", citations=[Citation(evidence=1, quote="python slim image.")]
+            )
+        ],
+    )
+    provider = FakeLLMProvider(recommendation=recommendation)
+    document = _run_label_plans(tmp_path, monkeypatch, session, provider)
+    [case] = document["cases"]
+    assert case["evidence"][0]["repository"] == "python"
+    assert "content" not in case["evidence"][0]
+    result = next((tmp_path / "results").glob("*.json"))
+
+    out = tmp_path / "sample"
+    _cli("eval", "sample-citations", str(result), "--out-dir", str(out), "--seed", "3")
+
+    sample = (out / "citation-sample.yaml").read_text(encoding="utf-8")
+    assert result.name not in sample
+    assert "evidence: python — " in sample
+    assert "verdict: null" in sample
+    (out / "citation-sample.yaml").write_text(
+        sample.replace("verdict: null", "verdict: supported"), encoding="utf-8"
+    )
+    capsys.readouterr()
+
+    _cli(
+        "eval", "score-citations", str(out / "citation-sample.yaml"), str(out / "citation-key.json")
+    )
+
+    printed = capsys.readouterr().out
+    assert f"{result.name}" in printed
+    assert "1/1 100.0% 합격" in printed
+
+
+def test_scoring_a_damaged_sample_stops_with_the_problems(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    recommendation = Recommendation(
+        image="python:3.13-slim",
+        claims=[Claim(text="주장", citations=[Citation(evidence=1, quote="python slim image.")])],
+    )
+    _run_label_plans(tmp_path, monkeypatch, session, FakeLLMProvider(recommendation=recommendation))
+    result = next((tmp_path / "results").glob("*.json"))
+    out = tmp_path / "sample"
+    _cli("eval", "sample-citations", str(result), "--out-dir", str(out))
+    sample = out / "citation-sample.yaml"
+    sample.write_text(sample.read_text(encoding="utf-8").replace("verdict: null", "verdict: yes"))
+
+    with pytest.raises(SystemExit, match="verdict"):
+        _cli("eval", "score-citations", str(sample), str(out / "citation-key.json"))
+
+
 def test_the_case_interval_waits_only_between_cases_and_is_not_timed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
 ) -> None:

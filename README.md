@@ -216,11 +216,24 @@ repository 목록, 정규화, 미측정 문항 처리가 전체 모드와 같아
 - 결과 파일이 전체 모드가 아니거나, golden set 해시가 다르거나, 측정할 문항이 없으면 모델을 부르기 전에 멈춘다.
 - 조건 추출 단계를 부르지 않으므로 두 추출 지표는 출력하지 않는다. 결과 meta의 `plans_from`에 고정한 파일 이름이 남는다.
 
-라벨 고정 모드(`whatfrom eval --label-plans`)는 문항의 `expected_plan`과 repository를 검색 조건으로 쓴다.
-조건 추출 품질을 섞지 않고 두 번째 LLM 호출만 잴 때 쓴다. 후보는 운영 경로와 같은 검색(조건 필터 포함)으로 나온다.
+label 고정 mode(`whatfrom eval --label-plans`)는 문항의 `expected_plan`과 repository를 검색 조건으로 쓴다.
+조건 추출 품질을 섞지 않고 두 번째 LLM 호출만 잴 때 쓴다. 후보는 운영 경로와 같은 검색(조건 filter 포함)으로 나온다.
 - `--no-recommend`를 함께 주면 추천 단계도 부르지 않는다. LLM 호출 없이 후보, 검색 지표, 대조군만 잰다.
 - repository가 둘 이상인 문항이 있으면 모델을 부르기 전에 멈춘다.
 - 결과 meta의 mode는 `label-plans`, `--no-recommend`이면 `label-plans-retrieval`이다.
+
+인용 뒷받침률은 LLM judge 없이 사람이 표본으로 잰다.
+
+```bash
+uv run whatfrom eval sample-citations eval/results/a.json eval/results/b.json --out-dir <directory>
+uv run whatfrom eval score-citations <directory>/citation-sample.yaml <directory>/citation-key.json
+```
+
+- 결과 파일(안)마다 검증을 통과한 (주장, 인용) 쌍을 최대 50쌍, 문항당 최대 2쌍 뽑는다. `--seed`가 같으면 같은 표본이다.
+- 표본에는 결과 파일 이름이 없다. 어느 안의 인용인지는 key 파일에만 있으니 채점이 끝날 때까지 열지 않는다.
+- 항목마다 `verdict`에 `supported`, `unsupported`, `unclear` 중 하나를 채운다. 인용 문장만 보고 주장이 성립하는지 판단한다.
+- 뒷받침률은 supported ÷ (supported + unsupported)이고 합격선은 90%다. unclear가 표본의 10%를 넘으면 보류, 채점할 수 있는 쌍이 없으면 미측정이다.
+- 빈 칸, 세 어휘 밖의 값, 지우거나 복제한 행, `verdict` 밖의 내용 변경이 있으면 합격 여부를 내지 않고 멈춘다.
 
 LLM을 부르는 모드는 문항마다 LLM 호출 기록(`llm_calls`)을 결과에 남긴다.
 호출마다 단계, 시도 횟수, 성공 여부와 실패 이유, 입력·출력·reasoning token 수가 있다.
@@ -238,7 +251,7 @@ digest는 측정 시점 DB 기준이며, digest로 인정한 문항은 결과와
 
 필요한 repository가 색인되지 않은 문항은 **미측정**으로 분류하고 평가 분모에서 제외한다.
 실행 결과는 `eval/results/`에 JSON으로 저장하며, 모델명과 임베딩 모델, golden set 해시를 함께 기록한다.
-문항별 후보 목록과 그중 허용 정답 수, 무작위 선택 대조군과 검색 1위 대조군도 저장한다. 두 대조군은 후보가 있는 모든 모드에서 출력한다.
+문항별 후보 목록과 그중 허용 정답 수, 무작위 선택 대조군과 검색 1위 대조군도 저장한다. 두 대조군은 후보가 있는 모든 mode에서 출력한다.
 검색 1위 대조군은 판정 없이 검색 1위 후보를 추천으로 봤을 때의 정확도이고, 추천 정확도와 같은 허용 규칙으로 채점한다.
 전체 모드에서는 문항별 검색 조건, 필드별 추출 일치 여부, 응답 알림(조건 완화, 추출 실패)도 저장한다.
 추천의 digest·출처·수집 시점, 두 번째 LLM 호출에 보낸 prompt, 단계별 소요 시간(임베딩, 조건 추출 단계, 두 번째 LLM 호출, 전체)도 함께 저장한다.

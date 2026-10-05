@@ -406,7 +406,7 @@ class SkipRecommend:
 
 
 def _label_plans(measured: list) -> dict[str, dict]:
-    """문항 라벨(expected_plan과 repository)로 검색 조건을 만든다(--label-plans).
+    """문항 label(expected_plan과 repository)로 검색 조건을 만든다(--label-plans).
 
     repository가 둘 이상인 문항은 하나를 고를 규칙이 없어 모델을 부르기 전에 멈춘다.
     """
@@ -677,6 +677,39 @@ def question_file(goldenset: "GoldenSet", seed: int = 0, blocks: int = 12) -> di
     }
 
 
+def cmd_sample_citations(args: argparse.Namespace) -> None:
+    # eval과 같은 이유로 PyYAML을 쓰는 모듈은 여기서 가져온다.
+    from whatfrom.eval.citations import dump_sample, sample_citations
+
+    # 안 이름은 넘겨받은 경로 그대로다. 파일 이름만 쓰면 다른 directory의 같은 이름이 겹친다.
+    results = [(path, json.loads(Path(path).read_text(encoding="utf-8"))) for path in args.results]
+    try:
+        items, key = sample_citations(results, seed=args.seed)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    out = Path(args.out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "citation-sample.yaml").write_text(dump_sample(items), encoding="utf-8")
+    (out / "citation-key.json").write_text(
+        json.dumps(key, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(
+        f"{out / 'citation-sample.yaml'} 저장 ({len(items)}쌍). key 파일은 채점 전에 열지 않는다."
+    )
+
+
+def cmd_score_citations(args: argparse.Namespace) -> None:
+    from whatfrom.eval.citations import render_citation_score, score_citations
+
+    score = score_citations(
+        Path(args.sample).read_text(encoding="utf-8"),
+        json.loads(Path(args.key).read_text(encoding="utf-8")),
+    )
+    print(render_citation_score(score))
+    if score.problems:
+        raise SystemExit("합격 여부를 낼 수 없다:\n" + "\n".join(f"  {p}" for p in score.problems))
+
+
 def cmd_load_questions(args: argparse.Namespace) -> None:
     # eval과 같은 이유로 PyYAML을 쓰는 모듈은 여기서 가져온다.
     from whatfrom.eval.goldenset import load_goldenset
@@ -758,7 +791,7 @@ def build_parser() -> argparse.ArgumentParser:
     modes.add_argument(
         "--label-plans",
         action="store_true",
-        help="golden set 라벨을 검색 조건으로 쓰고 조건 추출 단계를 건너뛴다",
+        help="golden set label을 검색 조건으로 쓰고 조건 추출 단계를 건너뛴다",
     )
     p_eval.add_argument(
         "--no-recommend",
@@ -775,6 +808,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_eval.add_argument("--llm-provider", default=settings.llm_provider)
     p_eval.add_argument("--database-url", default=settings.database_url)
     p_eval.set_defaults(func=cmd_eval)
+    # 인용 뒷받침률을 사람이 표본으로 잰다. 하위 명령 없이 부르면 평가를 돌린다.
+    eval_sub = p_eval.add_subparsers(dest="eval_command")
+    p_sample = eval_sub.add_parser(
+        "sample-citations", help="draw blind citation samples from eval results"
+    )
+    p_sample.add_argument("results", nargs="+", metavar="RESULT_JSON")
+    p_sample.add_argument("--out-dir", required=True)
+    p_sample.add_argument("--seed", type=int, default=0)
+    p_sample.set_defaults(func=cmd_sample_citations)
+    p_score = eval_sub.add_parser("score-citations", help="score a filled citation sample")
+    p_score.add_argument("sample", metavar="SAMPLE_YAML")
+    p_score.add_argument("key", metavar="KEY_JSON")
+    p_score.set_defaults(func=cmd_score_citations)
 
     p_load = sub.add_parser("load-questions", help="export load test questions and a fixed order")
     p_load.add_argument("--goldenset", default="eval/goldenset.yaml")

@@ -220,7 +220,7 @@ def _pad(text: str, width: int) -> str:
     return text + " " * max(width - _display_width(text), 0)
 
 
-# 지표 라벨 중 가장 넓은 "repository 추출 일치율"이 22칸이다. 여유 두 칸을 더 둔다.
+# 지표 label 중 가장 넓은 "repository 추출 일치율"이 22칸이다. 여유 두 칸을 더 둔다.
 _LABEL_WIDTH = 24
 
 
