@@ -10,7 +10,13 @@ from sqlalchemy.orm import Session
 
 from whatfrom.admission import REJECTED_DETAIL, RecommendationLimiter, run_admitted
 from whatfrom.core.config import settings
-from whatfrom.core.contracts import Candidate, RecommendedImage, RecommendResponse, SearchPlan
+from whatfrom.core.contracts import (
+    Candidate,
+    NumberedEvidence,
+    RecommendedImage,
+    RecommendResponse,
+    SearchPlan,
+)
 from whatfrom.core.db import SessionFactory, make_engine, session_factory
 from whatfrom.core.embed import Embedder, get_embedder
 from whatfrom.core.httpclient import RemoteCallError
@@ -27,6 +33,7 @@ from whatfrom.metrics import (
     stage_timer,
 )
 from whatfrom.recommend.advisor import advise
+from whatfrom.recommend.evidence import number_evidence
 from whatfrom.recommend.llm import LLMProvider, get_provider
 from whatfrom.recommend.planner import extract_plan
 from whatfrom.recommend.verify import verify_recommendation
@@ -73,13 +80,16 @@ def recommend_for_question(
     degraded = False
 
     def without_recommendation(
-        candidates: list[Candidate], plan: SearchPlan | None = None
+        candidates: list[Candidate],
+        plan: SearchPlan | None = None,
+        evidence: list[NumberedEvidence] | None = None,
     ) -> RecommendResponse:
-        """추천 없이 멈춘 단계의 응답. 확보한 후보와 지금까지의 notes를 싣는다."""
+        """추천 없이 멈춘 단계의 응답. 확보한 후보와 근거, 지금까지의 notes를 싣는다."""
         return RecommendResponse(
             question=question,
             recommendation=None,
             candidates=candidates,
+            evidence=evidence or [],
             degraded=True,
             notes=notes,
             plan=plan,
@@ -121,13 +131,16 @@ def recommend_for_question(
         notes.append("검색된 후보가 없습니다. 수집·인덱싱이 되어 있는지 확인하세요.")
         return without_recommendation([], plan)
 
+    # 두 번째 LLM 호출도 같은 함수로 번호를 매긴다. 인용한 번호가 응답의 근거를 가리킨다.
+    evidence, candidates = number_evidence(candidates)
+
     try:
         with stage_timer("advise"):
             recommendation = advise(provider, question, candidates)
     except RemoteCallError as exc:
         STAGE_ERRORS.labels("advise").inc()
         notes.append(f"LLM 근거 생성에 실패해 후보 목록만 반환합니다: {exc}")
-        return without_recommendation(candidates, plan)
+        return without_recommendation(candidates, plan, evidence)
 
     with stage_timer("verify"), open_session() as session:
         verdict = verify_recommendation(session, recommendation, candidates)
@@ -141,7 +154,7 @@ def recommend_for_question(
         # 재시도를 도입하려면 먼저 답변이 검증에서 거부되는 비율을 확인해야 한다.
         # 재시도할 때는 이전 답변이 거부된 이유를 프롬프트에 포함해야 한다.
         notes.append(f"추천이 실재성 검증을 통과하지 못해 폐기했습니다: {verdict.reason}")
-        return without_recommendation(candidates, plan)
+        return without_recommendation(candidates, plan, evidence)
 
     if verdict.dropped_alternatives:
         # 검증을 통과하지 못한 대안은 응답에서 지운다. 주 추천은 유효하므로 남긴다.
@@ -169,6 +182,7 @@ def recommend_for_question(
         question=question,
         recommendation=recommendation,
         candidates=candidates,
+        evidence=evidence,
         degraded=degraded,
         notes=notes,
         plan=plan,

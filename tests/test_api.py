@@ -93,7 +93,6 @@ def test_recommend_returns_a_real_tag_with_evidence_and_provenance(session):
     assert body["candidates"]
     assert body["candidates"][0]["source_url"].startswith("https://hub.docker.com/_/")
     assert body["candidates"][0]["collected_at"]
-    assert body["candidates"][0]["evidence"]
 
 
 def test_recommend_returns_no_dockerfile_draft(session):
@@ -108,6 +107,70 @@ def test_recommend_returns_no_dockerfile_draft(session):
     assert body["recommendation"]["image"] == "python:3.13-slim"
     assert "dockerfile" not in body["recommendation"]
     assert body["notes"] == []
+
+
+def test_recommend_numbers_each_evidence_section_once_and_candidates_point_at_them(session):
+    """근거는 응답 최상위에 한 번씩 번호를 붙여 담고, 후보는 번호로 가리킨다."""
+    _seed_with_alpine(session)
+    provider = FakeLLMProvider(recommendation=SLIM)
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    evidence = body["evidence"]
+    numbers = [item["number"] for item in evidence]
+    assert numbers == list(range(1, len(evidence) + 1))
+    sections = [(item["repository"], item["section_title"]) for item in evidence]
+    assert len(sections) == len(set(sections))
+    assert all(item["content"] and item["source_url"] for item in evidence)
+    assert len(body["candidates"]) == 2
+    for candidate in body["candidates"]:
+        assert "evidence" not in candidate
+        assert candidate["evidence_numbers"]
+        assert set(candidate["evidence_numbers"]) <= set(numbers)
+
+
+def test_recommend_gives_each_candidate_a_pinned_reference(session):
+    _seed_with_alpine(session)
+    session.execute(
+        update(ImageTag).where(ImageTag.tag == "3.13-alpine").values(manifest_digest=None)
+    )
+    provider = FakeLLMProvider(recommendation=SLIM)
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    references = {c["image"]: c["reference"] for c in body["candidates"]}
+    assert references == {
+        "python:3.13-slim": "python:3.13-slim@sha256:aaa",
+        "python:3.13-alpine": None,
+    }
+
+
+def test_recommend_keeps_the_evidence_when_the_llm_call_fails(session):
+    _seed(session)
+    provider = FakeLLMProvider(error=RemoteCallError("upstream 500"))
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    assert body["recommendation"] is None
+    assert body["evidence"]
+    assert body["candidates"][0]["evidence_numbers"]
+
+
+def test_recommend_returns_no_evidence_without_candidates(session):
+    """임베딩이 실패하면 후보도 근거도 없다."""
+    _seed(session)
+
+    class Broken(FakeEmbedder):
+        def embed(self, texts):
+            raise RemoteCallError("embedding down")
+
+    body = (
+        _client(session, FakeLLMProvider(recommendation=SLIM), embedder=Broken())
+        .post("/recommend", json={"question": QUESTION})
+        .json()
+    )
+
+    assert (body["candidates"], body["evidence"]) == ([], [])
 
 
 def test_recommend_attaches_the_digest(session):

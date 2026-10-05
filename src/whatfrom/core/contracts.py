@@ -1,7 +1,7 @@
 # src/whatfrom/core/contracts.py
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
 def split_image(image: str) -> tuple[str, str] | None:
@@ -17,6 +17,12 @@ class Evidence(BaseModel):
     section_title: str
     content: str
     source_url: str
+
+
+class NumberedEvidence(Evidence):
+    """응답과 두 번째 LLM 호출이 함께 쓰는 근거. 번호는 한 요청 안에서만 쓴다(ADR 0003)."""
+
+    number: int
 
 
 class Platform(BaseModel):
@@ -55,11 +61,20 @@ class Candidate(BaseModel):
     last_pushed_at: datetime | None = None
     source_url: str
     collected_at: datetime
-    evidence: list[Evidence] = Field(default_factory=list)
+    # 검색이 찾은 근거. 응답에는 싣지 않는다. 응답은 근거를 최상위에 번호로 한 번만 담고,
+    # 후보는 evidence_numbers로 가리킨다.
+    evidence: list[Evidence] = Field(default_factory=list, exclude=True)
+    evidence_numbers: list[int] = Field(default_factory=list)
     version: str | None = None
     distribution: str | None = None
     distro_codename: str | None = None
     variant: str | None = None
+
+    @computed_field
+    @property
+    def reference(self) -> str | None:
+        """Dockerfile의 FROM에 그대로 쓰는 고정 참조. digest를 수집하지 못했으면 None이다."""
+        return f"{self.image}@{self.digest}" if self.digest else None
 
 
 class Recommendation(BaseModel):
@@ -114,6 +129,8 @@ class RecommendResponse(BaseModel):
     question: str
     recommendation: Recommendation | None
     candidates: list[Candidate]
+    # 후보들의 근거. (repository, 섹션 제목)마다 한 번씩, 두 번째 LLM 호출이 본 번호 그대로다.
+    evidence: list[NumberedEvidence] = Field(default_factory=list)
     # 스펙 §8의 정상 경로가 아닌 단계로 답했는가. 추천이 있어도 True일 수 있다
     # (검색 조건 추출 실패, 조건 완화). 이유는 notes에 있다.
     degraded: bool = False

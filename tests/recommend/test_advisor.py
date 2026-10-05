@@ -5,6 +5,7 @@ import pytest
 from whatfrom.core.contracts import Candidate, Evidence, Platform, Recommendation
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.recommend.advisor import advise, build_prompt
+from whatfrom.recommend.evidence import number_evidence
 from whatfrom.recommend.llm import FakeLLMProvider
 
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
@@ -95,12 +96,23 @@ def test_build_prompt_keeps_the_same_section_from_different_repositories():
 
     assert "python: musl libc instead of glibc" in prompt
     assert "node: musl libc instead of glibc" in prompt
-    assert "## python — Image Variants" in prompt
-    assert "## node — Image Variants" in prompt
+    assert "[1] python — Image Variants" in prompt
+    assert "[2] node — Image Variants" in prompt
 
 
 def test_build_prompt_lists_a_shared_section_once():
     """같은 repository의 같은 섹션은 후보마다 붙어 있어도 한 번만 넘긴다."""
     prompt = build_prompt("q", [_candidate("3.13-slim", 1), _candidate("3.13-alpine", 2)])
 
-    assert prompt.count("## python — Image Variants") == 1
+    assert prompt.count("python — Image Variants") == 1
+
+
+def test_build_prompt_numbers_evidence_the_way_the_response_does():
+    """LLM이 인용한 번호와 응답의 근거 번호가 같은 섹션을 가리켜야 한다."""
+    candidates = [_candidate("3.13-slim", 1), _candidate("24", 2, repository="node")]
+
+    prompt = build_prompt("q", candidates)
+
+    evidence, _ = number_evidence(candidates)
+    for item in evidence:
+        assert f"[{item.number}] {item.repository} — {item.section_title}" in prompt
