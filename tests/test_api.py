@@ -16,7 +16,7 @@ from whatfrom.admission import REJECTED_DETAIL
 from whatfrom.api import create_app
 from whatfrom.collect.hub import TagRow, VariantRow, parse_repository
 from whatfrom.collect.store import upsert_repository, upsert_tags
-from whatfrom.core.contracts import Recommendation, SearchPlan
+from whatfrom.core.contracts import Citation, Claim, Recommendation, SearchPlan
 from whatfrom.core.embed import FakeEmbedder
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import ImageTag
@@ -79,7 +79,6 @@ def test_recommend_returns_a_real_tag_with_evidence_and_provenance(session):
     provider = FakeLLMProvider(
         recommendation=Recommendation(
             image="python:3.13-slim",
-            reason="numpy는 glibc 기반이 빌드가 안정적입니다.",
             alternatives=[],
         )
     )
@@ -99,14 +98,15 @@ def test_recommend_returns_no_dockerfile_draft(session):
     """Dockerfile은 프로젝트를 보는 쪽이 쓴다(ADR 0003). 응답에 초안을 싣지 않는다."""
     _seed(session)
     provider = FakeLLMProvider(
-        recommendation=Recommendation(image="python:3.13-slim", reason="ok", alternatives=[])
+        recommendation=Recommendation(image="python:3.13-slim", alternatives=[])
     )
 
     body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
 
     assert body["recommendation"]["image"] == "python:3.13-slim"
     assert "dockerfile" not in body["recommendation"]
-    assert body["notes"] == []
+    # 인용이 없는 추천이라 그 알림만 남는다.
+    assert body["notes"] == ["검증된 근거 인용이 없습니다."]
 
 
 def test_recommend_numbers_each_evidence_section_once_and_candidates_point_at_them(session):
@@ -173,10 +173,92 @@ def test_recommend_returns_no_evidence_without_candidates(session):
     assert (body["candidates"], body["evidence"]) == ([], [])
 
 
+QUOTE = "it does use musl libc instead of glibc and friends"
+
+
+def _cited(*citations: tuple[int, str]) -> Recommendation:
+    return Recommendation(
+        image="python:3.13-slim",
+        claims=[
+            Claim(
+                text="alpine은 musl 기반이다.",
+                citations=[Citation(evidence=n, quote=q) for n, q in citations],
+            )
+        ],
+    )
+
+
+def _python_variants(body: dict) -> int:
+    return next(
+        item["number"]
+        for item in body["evidence"]
+        if item["repository"] == "python" and QUOTE in item["content"]
+    )
+
+
+def test_recommend_verifies_a_quote_found_in_the_evidence(session):
+    _seed(session)
+    first = _client(session, FakeLLMProvider(recommendation=SLIM)).post(
+        "/recommend", json={"question": QUESTION}
+    )
+    number = _python_variants(first.json())
+    provider = FakeLLMProvider(recommendation=_cited((number, QUOTE)))
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    [claim] = body["recommendation"]["claims"]
+    assert claim["text"] == "alpine은 musl 기반이다."
+    assert claim["citations"] == [
+        {"evidence": number, "quote": QUOTE, "verified": True, "problem": None}
+    ]
+    assert body["recommendation"]["verified_citations"] == 1
+    assert body["notes"] == []
+
+
+def test_recommend_marks_invented_citations_but_keeps_the_recommendation(session):
+    """LLM은 인용을 지어내지 않는다는 불변식. 지어낸 인용은 실패로 표시하고 추천은 남긴다."""
+    _seed(session)
+    provider = FakeLLMProvider(
+        recommendation=_cited((1, "alpine breaks every numpy build"), (999, QUOTE))
+    )
+
+    body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
+
+    assert body["recommendation"]["image"] == "python:3.13-slim"
+    problems = [c["problem"] for c in body["recommendation"]["claims"][0]["citations"]]
+    assert problems == ["quote not in evidence", "unknown evidence"]
+    assert body["recommendation"]["verified_citations"] == 0
+    assert body["degraded"] is False
+    assert any("검증에 실패한 근거 인용이 2개" in note for note in body["notes"])
+    assert any("검증된 근거 인용이 없습니다" in note for note in body["notes"])
+
+
+@pytest.mark.parametrize(
+    "recommendation",
+    [
+        Recommendation(image="python:3.13-slim"),
+        Recommendation(image="python:3.13-slim", claims=[Claim(text="근거 없는 주장")]),
+    ],
+)
+def test_recommend_warns_when_nothing_is_cited(session, recommendation):
+    """인용을 생략해도 경고는 남는다. 경로의 저하가 아니라 degraded는 그대로다."""
+    _seed(session)
+
+    body = (
+        _client(session, FakeLLMProvider(recommendation=recommendation))
+        .post("/recommend", json={"question": QUESTION})
+        .json()
+    )
+
+    assert body["recommendation"]["verified_citations"] == 0
+    assert body["degraded"] is False
+    assert body["notes"] == ["검증된 근거 인용이 없습니다."]
+
+
 def test_recommend_attaches_the_digest(session):
     """digest는 코드가 붙인다. LLM은 digest를 보지도 쓰지도 않는다."""
     _seed(session)
-    provider = FakeLLMProvider(recommendation=Recommendation(image="python:3.13-slim", reason="ok"))
+    provider = FakeLLMProvider(recommendation=Recommendation(image="python:3.13-slim"))
 
     body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
 
@@ -186,25 +268,27 @@ def test_recommend_attaches_the_digest(session):
         "source_url": "https://hub.docker.com/_/python",
         "collected_at": NOW.isoformat().replace("+00:00", "Z"),
     }
-    assert body["notes"] == []
+    # 인용이 없는 추천이라 그 알림만 남는다.
+    assert body["notes"] == ["검증된 근거 인용이 없습니다."]
 
 
 def test_recommend_leaves_the_digest_empty_when_the_tag_has_none(session):
     _seed(session)
     session.execute(update(ImageTag).values(manifest_digest=None))
-    provider = FakeLLMProvider(recommendation=Recommendation(image="python:3.13-slim", reason="ok"))
+    provider = FakeLLMProvider(recommendation=Recommendation(image="python:3.13-slim"))
 
     body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
 
     assert body["recommended"]["digest"] is None
-    assert body["notes"] == []
+    # 인용이 없는 추천이라 그 알림만 남는다.
+    assert body["notes"] == ["검증된 근거 인용이 없습니다."]
 
 
 def test_recommend_discards_a_hallucinated_answer_and_still_returns_candidates(session):
     """저하 사다리 3단계: verify가 거부하면 LLM 답변을 버리고 후보 표만 낸다."""
     _seed(session)
     provider = FakeLLMProvider(
-        recommendation=Recommendation(image="python:3.13-slim-bookworm-arm64", reason="plausible")
+        recommendation=Recommendation(image="python:3.13-slim-bookworm-arm64")
     )
 
     body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
@@ -222,7 +306,6 @@ def test_recommend_strips_unverifiable_alternatives_but_keeps_the_recommendation
     provider = FakeLLMProvider(
         recommendation=Recommendation(
             image="python:3.13-slim",
-            reason="numpy는 glibc 기반이 안정적입니다.",
             alternatives=["python:3.13-alpine(호환성 문제 가능성)"],
         )
     )
@@ -270,7 +353,7 @@ def test_recommend_degrades_when_the_llm_call_fails(session):
 
 def test_recommend_never_returns_502_when_nothing_is_indexed(session):
     """빈손으로 돌려보내는 경로가 없어야 한다 (스펙 §8)."""
-    provider = FakeLLMProvider(recommendation=Recommendation(image="x:y", reason=""))
+    provider = FakeLLMProvider(recommendation=Recommendation(image="x:y"))
 
     response = _client(session, provider).post("/recommend", json={"question": QUESTION})
 
@@ -319,7 +402,7 @@ def _seed_with_alpine(session) -> None:
     session.flush()
 
 
-SLIM = Recommendation(image="python:3.13-slim", reason="glibc")
+SLIM = Recommendation(image="python:3.13-slim")
 
 
 def test_recommend_filters_candidates_by_the_extracted_plan(session):
@@ -349,7 +432,11 @@ def test_recommend_gives_the_plan_prompt_the_collected_repositories(session):
 def test_recommend_keeps_answering_when_plan_extraction_fails(session):
     """스펙 §8의 1단계 저하. 벡터 검색 후보로 추천하되 저하로 표시한다."""
     _seed_with_alpine(session)
-    provider = FakeLLMProvider(recommendation=SLIM, plan_error=RemoteCallError("planner 500"))
+    # 근거 번호를 모르므로 앞 번호마다 같은 문장을 인용한다. 그 문장이 있는 근거 하나만 통과한다.
+    provider = FakeLLMProvider(
+        recommendation=_cited(*((n, QUOTE) for n in range(1, 10))),
+        plan_error=RemoteCallError("planner 500"),
+    )
 
     body = _client(session, provider).post("/recommend", json={"question": QUESTION}).json()
 
@@ -358,6 +445,9 @@ def test_recommend_keeps_answering_when_plan_extraction_fails(session):
     assert body["degraded"] is True
     assert {c["image"] for c in body["candidates"]} == {"python:3.13-slim", "python:3.13-alpine"}
     assert any("검색 조건 추출에 실패" in note and "planner 500" in note for note in body["notes"])
+    # v1의 저하 동작 그대로 두 번째 LLM을 부르고, v2 응답의 근거와 인용 검증도 담긴다.
+    assert body["evidence"]
+    assert body["recommendation"]["verified_citations"] == 1
 
 
 def test_recommend_marks_a_relaxed_answer_degraded_but_keeps_the_recommendation(session):
@@ -440,7 +530,7 @@ def test_metrics_endpoint_exposes_every_whatfrom_metric(session):
 
 def test_a_recommendation_records_every_stage_the_thread_wait_and_the_outcome(session):
     _seed(session)
-    provider = FakeLLMProvider(recommendation=Recommendation(image="python:3.13-slim", reason="ok"))
+    provider = FakeLLMProvider(recommendation=Recommendation(image="python:3.13-slim"))
     stages = _stage_counts()
     waits = _metric("whatfrom_threadpool_wait_seconds_count")
     ok = _metric("whatfrom_recommend_outcomes_total", {"outcome": "ok"})

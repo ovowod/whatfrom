@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from prometheus_client import REGISTRY
 
 from whatfrom.api import create_app
-from whatfrom.core.contracts import Recommendation, RecommendResponse
+from whatfrom.core.contracts import CheckedRecommendation, RecommendResponse
 from whatfrom.core.embed import FakeEmbedder
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.metrics import record_outcome, stage_timer
@@ -28,7 +28,7 @@ def test_stage_timer_records_the_time_even_when_the_stage_fails():
     assert value("whatfrom_stage_seconds_count", {"stage": "advise"}) == before + 1
 
 
-REC = Recommendation(image="python:3.13-slim", reason="ok")
+REC = CheckedRecommendation(image="python:3.13-slim")
 
 
 @pytest.mark.parametrize(

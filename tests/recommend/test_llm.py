@@ -15,7 +15,7 @@ from whatfrom.recommend.llm import (
     strict_json_schema,
 )
 
-VALID_CONTENT = '{"image": "python:3.13-slim", "reason": "glibc", "alternatives": []}'
+VALID_CONTENT = '{"image": "python:3.13-slim", "alternatives": [], "claims": []}'
 
 
 def _provider(handler, **kwargs) -> OpenAICompatibleProvider:
@@ -76,7 +76,7 @@ def test_provider_requests_a_json_schema_forbidding_extra_fields():
     schema = seen["body"]["response_format"]["json_schema"]["schema"]
 
     assert schema["additionalProperties"] is False
-    assert set(schema["properties"]) == {"image", "reason", "alternatives"}
+    assert set(schema["properties"]) == {"image", "alternatives", "claims"}
 
 
 def test_provider_raises_llm_error_when_the_server_ignores_the_schema():
@@ -514,3 +514,25 @@ def test_a_rate_limited_or_overloaded_anthropic_api_is_retried(status):
     provider.recommend("s", "p")
 
     assert (calls[0].attempts, calls[0].ok) == (2, True)
+
+
+def _objects(schema: dict) -> list[dict]:
+    found = [schema] if schema.get("type") == "object" else []
+    for value in schema.values():
+        if isinstance(value, dict):
+            found += _objects(value)
+        elif isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict):
+                    found += _objects(item)
+    return found
+
+
+def test_strict_schema_applies_to_nested_objects_too():
+    """OpenAI strict 모드는 중첩 객체($defs)에도 같은 조건을 요구한다."""
+    objects = _objects(strict_json_schema(Recommendation))
+
+    assert len(objects) == 3  # 추천, 주장, 근거 인용
+    for obj in objects:
+        assert set(obj["required"]) == set(obj["properties"])
+        assert obj["additionalProperties"] is False

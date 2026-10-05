@@ -1,9 +1,11 @@
 from datetime import UTC, datetime
 
+import pytest
+
 from whatfrom.collect.hub import RepositoryRow, TagRow, VariantRow
 from whatfrom.collect.store import upsert_repository, upsert_tags
-from whatfrom.core.contracts import Candidate, Recommendation
-from whatfrom.recommend.verify import image_exists, verify_recommendation
+from whatfrom.core.contracts import Candidate, Citation, NumberedEvidence, Recommendation
+from whatfrom.recommend.verify import image_exists, verify_citation, verify_recommendation
 
 NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC)
 
@@ -49,7 +51,7 @@ def _candidate() -> Candidate:
 
 def test_verify_accepts_a_tag_that_exists_and_was_offered(session):
     _seed(session)
-    rec = Recommendation(image="python:3.13-slim", reason="ok")
+    rec = Recommendation(image="python:3.13-slim")
 
     result = verify_recommendation(session, rec, [_candidate()])
 
@@ -62,7 +64,6 @@ def test_verify_rejects_a_hallucinated_tag_absent_from_the_database(session):
     _seed(session)
     rec = Recommendation(
         image="python:3.13-slim-bookworm-arm64",
-        reason="sounds plausible",
     )
 
     result = verify_recommendation(session, rec, [_candidate()])
@@ -88,7 +89,7 @@ def test_verify_rejects_a_real_tag_that_was_never_offered_as_a_candidate(session
         NOW,
     )
     session.flush()
-    rec = Recommendation(image="python:3.12-alpine", reason="")
+    rec = Recommendation(image="python:3.12-alpine")
 
     result = verify_recommendation(session, rec, [_candidate()])
 
@@ -98,7 +99,7 @@ def test_verify_rejects_a_real_tag_that_was_never_offered_as_a_candidate(session
 
 def test_verify_rejects_a_malformed_image_reference(session):
     _seed(session)
-    rec = Recommendation(image="python", reason="")
+    rec = Recommendation(image="python")
 
     result = verify_recommendation(session, rec, [_candidate()])
 
@@ -108,7 +109,7 @@ def test_verify_rejects_a_malformed_image_reference(session):
 
 def test_verify_rejects_when_the_candidate_set_is_stale_relative_to_the_database(session):
     """후보에는 있지만 DB에서 사라진 태그 — 수집 이후 삭제된 경우."""
-    rec = Recommendation(image="python:3.13-slim", reason="")
+    rec = Recommendation(image="python:3.13-slim")
 
     result = verify_recommendation(session, rec, [_candidate()])
 
@@ -121,7 +122,6 @@ def test_verify_drops_a_bad_alternative_without_discarding_a_valid_recommendatio
     _seed(session)
     rec = Recommendation(
         image="python:3.13-slim",
-        reason="ok",
         alternatives=["python:3.13-alpine(호환성 문제 가능성)"],
     )
 
@@ -135,7 +135,6 @@ def test_verify_keeps_alternatives_drawn_from_the_candidate_set(session):
     _seed(session)
     rec = Recommendation(
         image="python:3.13-slim",
-        reason="ok",
         alternatives=["python:3.13-slim"],
     )
 
@@ -151,3 +150,45 @@ def test_image_exists_checks_the_collected_tags(session):
     assert image_exists(session, "python:3.13-slim") is True
     assert image_exists(session, "python:3.99") is False
     assert image_exists(session, "python") is False
+
+
+EVIDENCE = {
+    1: NumberedEvidence(
+        number=1,
+        repository="python",
+        section_title="Image Variants",
+        content=(
+            "The main caveat to note is that it does use musl libc\ninstead of glibc and friends."
+        ),
+        source_url="https://example.invalid/python",
+    ),
+    2: NumberedEvidence(
+        number=2,
+        repository="node",
+        section_title="Image Variants",
+        content="node:<version>-slim does not contain the common packages.",
+        source_url="https://example.invalid/node",
+    ),
+}
+
+
+@pytest.mark.parametrize(
+    ("evidence", "quote", "repositories", "problem"),
+    [
+        (1, "it does use musl libc instead of glibc", {"python"}, None),
+        # README의 줄바꿈과 연속 공백은 인용과 다르게 감길 수 있다.
+        (1, "musl  libc instead\n of glibc", {"python"}, None),
+        # 대안의 repository 문서도 인용할 수 있다.
+        (2, "does not contain the common packages", {"python", "node"}, None),
+        (3, "it does use musl libc", {"python"}, "unknown evidence"),
+        (1, "", {"python"}, "empty quote"),
+        (1, "   \n", {"python"}, "empty quote"),
+        (1, "it does use MUSL libc", {"python"}, "quote not in evidence"),
+        (1, "musl libc is always broken", {"python"}, "quote not in evidence"),
+        (2, "does not contain the common packages", {"python"}, "evidence from another repository"),
+    ],
+)
+def test_verify_citation(evidence, quote, repositories, problem):
+    citation = Citation(evidence=evidence, quote=quote)
+
+    assert verify_citation(citation, EVIDENCE, repositories) == problem

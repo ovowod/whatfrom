@@ -197,7 +197,7 @@ def test_the_snapshot_records_indexed_repositories_and_accepted_tag_digests(sess
     }
 
 
-SCHEMA_ANSWER = json.dumps({"image": "python:3.13-slim", "reason": "r", "alternatives": []})
+SCHEMA_ANSWER = json.dumps({"image": "python:3.13-slim", "alternatives": [], "claims": []})
 
 
 def openai_body(finish_reason: str = "stop", content: str = SCHEMA_ANSWER, refusal=None) -> dict:
@@ -301,7 +301,7 @@ def test_the_api_key_never_reaches_the_record():
 
 
 def test_an_answer_outside_the_schema_is_recorded_as_a_schema_failure():
-    record = check("grok-none", transport(200, openai_body(content='{"image": "python"}')))
+    record = check("grok-none", transport(200, openai_body(content='{"alternatives": []}')))
 
     assert record["kind"] == "permanent"
     assert record["schema_ok"] is False

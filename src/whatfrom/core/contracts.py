@@ -77,19 +77,62 @@ class Candidate(BaseModel):
         return f"{self.image}@{self.digest}" if self.digest else None
 
 
+class Citation(BaseModel):
+    """근거 인용. evidence는 근거 번호, quote는 그 근거 본문에서 글자 그대로 옮긴 문장이다."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    evidence: int
+    quote: str
+
+
+class Claim(BaseModel):
+    """추천 이유의 주장 하나와 그것을 뒷받침하는 근거 인용. 짝은 구조가 정한다."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+    citations: list[Citation] = Field(default_factory=list)
+
+
 class Recommendation(BaseModel):
-    """LLM이 채우는 유일한 구조체. image는 반드시 후보 중 하나여야 한다.
+    """두 번째 LLM 호출이 채우는 구조체. image는 반드시 후보 중 하나여야 한다.
 
     extra="forbid"는 두 가지를 한다: LLM이 지어낸 필드를 거부하고,
     model_json_schema()가 additionalProperties: false를 내보내
     OpenAI 호환 서버의 strict json_schema 모드가 받아들이는 스키마가 된다.
+    중첩된 Claim과 Citation도 같은 이유로 extra="forbid"다.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     image: str
-    reason: str
     alternatives: list[str] = Field(default_factory=list)
+    claims: list[Claim] = Field(default_factory=list)
+
+
+class CitationCheck(Citation):
+    """응답의 근거 인용. 검증 결과는 서버가 붙인다. problem은 실패 이유다."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    verified: bool
+    problem: str | None = None
+
+
+class CheckedClaim(BaseModel):
+    text: str
+    citations: list[CitationCheck] = Field(default_factory=list)
+
+
+class CheckedRecommendation(BaseModel):
+    """응답의 추천. LLM의 추천에 인용 검증 결과를 붙인 것이다."""
+
+    image: str
+    alternatives: list[str] = Field(default_factory=list)
+    claims: list[CheckedClaim] = Field(default_factory=list)
+    # 검증을 통과한 인용 수. 0이면 인용이 없거나 모두 실패한 것이다.
+    verified_citations: int = 0
 
 
 class SearchPlan(BaseModel):
@@ -127,7 +170,7 @@ class RecommendedImage(BaseModel):
 
 class RecommendResponse(BaseModel):
     question: str
-    recommendation: Recommendation | None
+    recommendation: CheckedRecommendation | None
     candidates: list[Candidate]
     # 후보들의 근거. (repository, 섹션 제목)마다 한 번씩, 두 번째 LLM 호출이 본 번호 그대로다.
     evidence: list[NumberedEvidence] = Field(default_factory=list)

@@ -1,9 +1,19 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from whatfrom.core.contracts import Candidate, Recommendation, split_image
+from whatfrom.core.contracts import (
+    Candidate,
+    CheckedClaim,
+    CheckedRecommendation,
+    Citation,
+    CitationCheck,
+    NumberedEvidence,
+    Recommendation,
+    split_image,
+)
 from whatfrom.core.models import ImageTag
 
 
@@ -55,3 +65,59 @@ def verify_recommendation(
 
     dropped = tuple(a for a in rec.alternatives if not is_real(a))
     return VerifyResult(True, dropped_alternatives=dropped)
+
+
+def _normalized(text: str) -> str:
+    """연속 공백(줄바꿈 포함)을 공백 하나로. README의 줄바꿈과 인용의 줄바꿈이 다를 수 있다."""
+    return " ".join(text.split())
+
+
+def verify_citation(
+    citation: Citation, evidence: Mapping[int, NumberedEvidence], repositories: set[str]
+) -> str | None:
+    """근거 인용의 진위를 본다. 통과하면 None, 실패하면 그 이유다(ADR 0003).
+
+    DB가 아니라 그 요청에서 LLM에 넘긴 근거 본문으로 본다. 인용이 주장을 뒷받침하는지는
+    보지 않는다. 그것은 평가에서 잰다.
+    repositories는 인용이 뒷받침할 수 있는 repository다. 추천 이미지와 검증된 대안의 것이다.
+    """
+    source = evidence.get(citation.evidence)
+    if source is None:
+        return "unknown evidence"
+    quote = _normalized(citation.quote)
+    if not quote:
+        return "empty quote"
+    if quote not in _normalized(source.content):
+        return "quote not in evidence"
+    if source.repository not in repositories:
+        return "evidence from another repository"
+    return None
+
+
+def check_citations(
+    rec: Recommendation, evidence: list[NumberedEvidence]
+) -> tuple[CheckedRecommendation, int]:
+    """실재성 검증을 통과한 추천의 인용마다 검증 결과를 붙인다. (응답의 추천, 실패한 인용 수).
+
+    인용이 실패해도 추천과 주장은 버리지 않는다. 받는 쪽이 무엇이 검증되지 않았는지 본다.
+    """
+    by_number = {item.number: item for item in evidence}
+    repositories = {
+        parts[0] for image in [rec.image, *rec.alternatives] if (parts := split_image(image))
+    }
+    claims: list[CheckedClaim] = []
+    verified = failed = 0
+    for claim in rec.claims:
+        checks: list[CitationCheck] = []
+        for citation in claim.citations:
+            problem = verify_citation(citation, by_number, repositories)
+            verified += problem is None
+            failed += problem is not None
+            checks.append(
+                CitationCheck(**citation.model_dump(), verified=problem is None, problem=problem)
+            )
+        claims.append(CheckedClaim(text=claim.text, citations=checks))
+    checked = CheckedRecommendation(
+        image=rec.image, alternatives=rec.alternatives, claims=claims, verified_citations=verified
+    )
+    return checked, failed

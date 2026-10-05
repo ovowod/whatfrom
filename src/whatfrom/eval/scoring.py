@@ -179,6 +179,9 @@ class CaseScore:
     # 추천의 digest·출처·수집 시점. digest 부착을 결과 JSON만으로 확인하려고 남긴다.
     # 추천이 없으면 None이다.
     recommended: dict | None = None
+    # 응답의 추천: 이미지, 대안, 주장과 인용별 검증 결과. 인용 지표와 사람의 뒷받침 확인이
+    # 결과 파일만 읽도록 남긴다. 추천이 없으면 None이다.
+    recommendation: dict | None = None
     # runner가 채운다. 시간을 재지 않은 실행이면 None이다. 두 실행의 실제 입력을 비교할 때
     # LLM #2에 보낸 prompt를 쓴다.
     trace: RunTrace | None = None
@@ -305,4 +308,5 @@ def score_full(
         recommended=(
             response.recommended.model_dump(mode="json") if response.recommended else None
         ),
+        recommendation=recommendation.model_dump(mode="json") if recommendation else None,
     )

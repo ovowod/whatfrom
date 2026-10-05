@@ -25,7 +25,39 @@ FROM ???
 - 주 추천 이미지가 후보에 없거나 DB에서 확인되지 않으면 추천을 폐기하고 후보 목록을 반환한다.
 - 대안 이미지가 같은 검증을 통과하지 못하면 해당 대안만 제거한다.
 - 추천에는 수집 시점 digest를 붙인다. 이동 태그는 그 뒤 바뀌었을 수 있으므로 응답의 `recommended.collected_at`을 함께 본다.
+- 후보마다 `reference`(`image@digest`)를 준다. Dockerfile의 `FROM`에 그대로 쓴다. digest를 수집하지 못한 후보는 `null`이다.
+- 근거는 응답 최상위 `evidence`에 (repository, 섹션 제목)마다 한 번씩 번호를 붙여 담는다. 후보는 `evidence_numbers`로 가리키고, 두 번째 LLM도 같은 번호로 근거를 본다.
+- 추천 이유는 주장 목록(`claims`)이다. 주장마다 근거 인용(근거 번호와 글자 그대로의 문장)이 붙는다.
+- 인용은 그 요청에서 LLM에 넘긴 근거 본문으로 검증한다. 근거 번호가 없거나, 인용이 비었거나, 공백을 정규화해도 본문에 없거나(대소문자는 구분), 추천이나 대안이 아닌 repository의 근거면 실패다.
+- 검증에 실패한 인용은 `verified: false`와 실패 이유(`problem`)를 달고 남긴다. 추천은 버리지 않는다. 검증을 통과한 인용 수는 `verified_citations`이고, 0이면 알림을 남긴다.
+- 인용 검증은 인용이 실제 문서에 있는지까지만 본다. 인용이 주장을 뒷받침하는지는 평가에서 잰다.
 - 임베딩·LLM 호출 오류와 추천 검증 실패는 HTTP 200 응답으로 처리하고, 확보된 후보가 있으면 함께 반환한다. 임베딩 실패나 검색 결과가 없는 경우에는 후보 목록도 비어 있다.
+
+응답의 추천은 다음과 같은 모양이다(일부 생략).
+
+```json
+{
+  "recommendation": {
+    "image": "python:3.13-slim",
+    "alternatives": [],
+    "claims": [
+      {
+        "text": "alpine은 glibc 대신 musl을 쓴다.",
+        "citations": [
+          {"evidence": 2, "quote": "it does use musl libc instead of glibc", "verified": true, "problem": null}
+        ]
+      }
+    ],
+    "verified_citations": 1
+  },
+  "candidates": [
+    {"image": "python:3.13-slim", "reference": "python:3.13-slim@sha256:…", "evidence_numbers": [1, 2]}
+  ],
+  "evidence": [
+    {"number": 2, "repository": "python", "section_title": "Image Variants", "content": "…", "source_url": "…"}
+  ]
+}
+```
 
 이 처리는 모든 오류에 적용되지는 않는다. 잘못된 요청은 422를 반환하며, DB 오류는 위의 복구 처리에 포함되지 않는다.
 태그 검증은 수집된 DB를 기준으로 하므로, 요청 시점에 해당 태그를 실제로 내려받을 수 있는지까지 보장하지는 않는다.

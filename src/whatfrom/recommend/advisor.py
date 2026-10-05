@@ -9,9 +9,14 @@ Hard rules:
 - Pick `image` EXACTLY as written in one of the candidate lines. Never invent, \
 complete, or modify a tag. Never combine parts of two candidates.
 - Every entry in `alternatives` must also be copied verbatim from the candidate list.
-- Base `reason` only on the evidence provided. If the evidence does not settle the \
-question, say so plainly instead of guessing.
-- Answer in Korean, except for image names and tags."""
+- Explain the choice as `claims`, one statement per claim. Base every claim only on the \
+evidence provided. If the evidence does not settle the question, say so in a claim \
+instead of guessing.
+- Support each claim with `citations`. A citation gives the evidence number shown in \
+brackets and a `quote` copied character for character from that evidence. Never \
+paraphrase, translate, or shorten a quote into something the evidence does not contain.
+- Write claims in Korean, except for image names and tags. Keep quotes in the \
+evidence's original language."""
 
 
 def _format_platforms(platforms: list[Platform]) -> str:

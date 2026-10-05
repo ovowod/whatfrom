@@ -36,7 +36,7 @@ from whatfrom.recommend.advisor import advise
 from whatfrom.recommend.evidence import number_evidence
 from whatfrom.recommend.llm import LLMProvider, get_provider
 from whatfrom.recommend.planner import extract_plan
-from whatfrom.recommend.verify import verify_recommendation
+from whatfrom.recommend.verify import check_citations, verify_recommendation
 from whatfrom.search.retrieval import search_candidates_by_vector, search_candidates_with_plan
 
 
@@ -178,9 +178,16 @@ def recommend_for_question(
         collected_at=chosen.collected_at,
     )
 
+    # 인용은 실재성 검증 뒤에 본다. 떼어 낸 대안의 repository 문서는 인용할 수 없다.
+    checked, failed = check_citations(recommendation, evidence)
+    if failed:
+        notes.append(f"검증에 실패한 근거 인용이 {failed}개 있습니다.")
+    if checked.verified_citations == 0:
+        notes.append("검증된 근거 인용이 없습니다.")
+
     return RecommendResponse(
         question=question,
-        recommendation=recommendation,
+        recommendation=checked,
         candidates=candidates,
         evidence=evidence,
         degraded=degraded,

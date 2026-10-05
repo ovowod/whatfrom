@@ -3,8 +3,8 @@ from datetime import UTC, datetime
 
 from whatfrom.core.contracts import (
     Candidate,
+    CheckedRecommendation,
     Platform,
-    Recommendation,
     RecommendedImage,
     RecommendResponse,
     SearchPlan,
@@ -127,7 +127,7 @@ def make_response(
     candidates: list[Candidate],
     notes: list[str] | None = None,
 ) -> RecommendResponse:
-    recommendation = None if image is None else Recommendation(image=image, reason="이유")
+    recommendation = None if image is None else CheckedRecommendation(image=image)
     return RecommendResponse(
         question="질문",
         recommendation=recommendation,

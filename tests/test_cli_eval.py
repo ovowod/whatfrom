@@ -26,7 +26,7 @@ from whatfrom.cli import accepted_digests, cmd_eval, indexed_repositories
 from whatfrom.collect.hub import TagRow, VariantRow
 from whatfrom.collect.store import upsert_tags
 from whatfrom.core.config import Settings
-from whatfrom.core.contracts import Recommendation, SearchPlan
+from whatfrom.core.contracts import Citation, Claim, Recommendation, SearchPlan
 from whatfrom.core.embed import FakeEmbedder
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import Document, DocumentChunk, ImageTag, Repository
@@ -296,7 +296,7 @@ def _seed_python(session: Session) -> None:
     session.flush()
 
 
-RECOMMENDATION = Recommendation(image="python:3.13-slim", reason="ok")
+RECOMMENDATION = Recommendation(image="python:3.13-slim")
 
 
 def test_timed_recommendation_times_every_stage_and_keeps_the_advise_prompt(
@@ -539,6 +539,45 @@ def _plan_must_not_be_called() -> FakeLLMProvider:
     return FakeLLMProvider(
         recommendation=RECOMMENDATION, plan_error=RemoteCallError("plan must not be called")
     )
+
+
+def test_a_full_run_records_the_claims_and_their_citation_checks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """V2의 인용 지표와 사람의 뒷받침 확인은 저장된 결과 파일만 읽는다."""
+    recommendation = Recommendation(
+        image="python:3.13-slim",
+        claims=[Claim(text="지어낸 주장", citations=[Citation(evidence=99, quote="nope")])],
+    )
+    provider = FakeLLMProvider(recommendation=recommendation, plan=ARM64_PLAN)
+    _use_test_session(monkeypatch, session, provider)
+
+    document = run_document(
+        _plan_goldenset(tmp_path),
+        tmp_path / "results",
+        retrieval_only=False,
+        llm_provider="openai_compatible",
+    )
+
+    [case] = document["cases"]
+    assert case["recommendation"] == {
+        "image": "python:3.13-slim",
+        "alternatives": [],
+        "claims": [
+            {
+                "text": "지어낸 주장",
+                "citations": [
+                    {
+                        "evidence": 99,
+                        "quote": "nope",
+                        "verified": False,
+                        "problem": "unknown evidence",
+                    }
+                ],
+            }
+        ],
+        "verified_citations": 0,
+    }
 
 
 def test_fixed_plans_skip_the_plan_stage_and_build_the_same_candidates(
