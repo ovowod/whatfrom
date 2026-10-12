@@ -551,7 +551,7 @@ def _plan_must_not_be_called() -> FakeLLMProvider:
 def test_a_full_run_records_the_claims_and_their_citation_checks(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
 ) -> None:
-    """V2의 인용 지표와 사람의 뒷받침 확인은 저장된 결과 파일만 읽는다."""
+    """V2의 인용 지표와 인용 표본 검토는 저장된 결과 파일만 읽는다."""
     recommendation = Recommendation(
         image="python:3.13-slim",
         claims=[Claim(text="지어낸 주장", citations=[Citation(evidence=99, quote="nope")])],

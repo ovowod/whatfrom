@@ -1,6 +1,6 @@
 # 05: 인용 뒷받침 표본 도구
 
-**What to build:** 결과 JSON에 번호가 붙은 근거 목록을 저장하고, `whatfrom eval` 아래 하위 명령 두 개를 더한다. 표본 생성은 결과 파일 여러 개에서 검증을 통과한 (진술, 인용) 쌍을 파일(안)마다 뽑아, 설정 이름을 가린 YAML과 별도 key 파일을 만든다. 채점 집계는 사람이 `verdict: supported|unsupported|unclear`를 채운 YAML과 key 파일로 안마다 인용 뒷받침률과 합격 여부를 낸다.
+**What to build:** 결과 JSON에 번호가 붙은 근거 목록을 저장하고, `whatfrom eval` 아래 하위 명령 두 개를 더한다. 표본 생성은 결과 파일 여러 개에서 검증을 통과한 (진술, 인용) 쌍을 파일(안)마다 뽑아, 설정 이름을 가린 YAML과 별도 key 파일을 만든다. 채점 집계는 `verdict: supported|unsupported|unclear`를 채운 YAML과 key 파일로 안마다 인용 뒷받침률과 합격 여부를 낸다.
 
 spec: `.scratch/v2-eval/spec.md` (인용 뒷받침 표본 도구)
 

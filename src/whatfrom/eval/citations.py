@@ -1,9 +1,9 @@
 # src/whatfrom/eval/citations.py
-"""인용 뒷받침률을 사람이 표본으로 재는 도구 (design §10).
+"""인용이 주장에 맞게 붙었는지 표본으로 검토하는 도구 (design §10).
 
 eval 결과 파일에서 검증을 통과한 (진술, 인용) 쌍을 뽑아, 어느 설정의 결과인지 가린
-YAML 표본과 원래 위치를 담은 key를 만든다. 사람이 표본의 verdict를 채우면 key와
-대조해 안(결과 파일)마다 뒷받침률과 합격 여부를 낸다. LLM judge는 쓰지 않는다.
+YAML 표본과 원래 위치를 담은 key를 만든다. 표본의 verdict를 채우면 key와
+대조해 안(결과 파일)마다 뒷받침률과 합격 여부를 낸다.
 """
 
 import hashlib
@@ -97,7 +97,7 @@ def _digest(item: dict) -> str:
 def sample_citations(results: list[tuple[str, dict]], seed: int) -> tuple[list[dict], dict]:
     """(결과 파일 이름, 결과 문서) 목록에서 표본 항목과 key를 만든다. 같은 seed면 같은 표본이다.
 
-    항목에는 결과 파일 이름이 들어가지 않는다. 순서를 섞고 익명 id를 붙여 채점하는 사람이
+    항목에는 결과 파일 이름이 들어가지 않는다. 순서를 섞고 익명 id를 붙여 검토하는 쪽이
     어느 안의 인용인지 모르게 한다. 원래 위치는 key에만 남긴다.
     """
     names = [name for name, _ in results]

@@ -808,7 +808,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_eval.add_argument("--llm-provider", default=settings.llm_provider)
     p_eval.add_argument("--database-url", default=settings.database_url)
     p_eval.set_defaults(func=cmd_eval)
-    # 인용 뒷받침률을 사람이 표본으로 잰다. 하위 명령 없이 부르면 평가를 돌린다.
+    # 인용이 주장에 맞게 붙었는지 표본으로 검토한다. 하위 명령 없이 부르면 평가를 돌린다.
     eval_sub = p_eval.add_subparsers(dest="eval_command")
     p_sample = eval_sub.add_parser(
         "sample-citations", help="draw blind citation samples from eval results"

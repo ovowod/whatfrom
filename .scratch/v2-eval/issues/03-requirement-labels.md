@@ -1,6 +1,6 @@
 # 03: 판단 요구 라벨
 
-**What to build:** golden set 문항마다 기대 판단 요구 목록(`requirements`)이 있다. loader가 이 키를 필수로 검증한다. 라벨은 질문만 보고 쓴 초안을 근거와 대조하고 사람이 40문항 모두 검토해 넣는다.
+**What to build:** golden set 문항마다 기대 판단 요구 목록(`requirements`)이 있다. loader가 이 키를 필수로 검증한다. 라벨은 질문만 보고 쓴 초안을 근거와 대조해 40문항을 모두 검토한 뒤 넣는다.
 
 spec: `.scratch/v2-eval/spec.md` (golden set, 라벨 작업 절차)
 

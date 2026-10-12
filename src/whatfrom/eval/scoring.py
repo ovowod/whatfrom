@@ -194,7 +194,7 @@ class CaseScore:
     # 추천의 digest·출처·수집 시점. digest 부착을 결과 JSON만으로 확인하려고 남긴다.
     # 추천이 없으면 None이다.
     recommended: dict | None = None
-    # 응답의 추천: 이미지, 대안, 주장과 인용별 검증 결과. 인용 지표와 사람의 뒷받침 확인이
+    # 응답의 추천: 이미지, 대안, 주장과 인용별 검증 결과. 인용 지표와 인용 표본 검토가
     # 결과 파일만 읽도록 남긴다. 추천이 없으면 None이다.
     recommendation: dict | None = None
     # 불만족 판정을 하나 이상 받은 후보. 판정이 없는 실행(단일 선택)이면 None이고,

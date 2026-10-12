@@ -66,8 +66,8 @@ FROM ???
 ## 구조
 
 ```text
-요구사항 ─▶ 임베딩 ─▶ 검색 조건 추출 ─▶ 벡터 검색 + 조건 거르기 ─▶ 후보 태그 선택 ─▶ LLM 추천 ─▶ 검증 ─▶ 응답
-                      (LLM #1)          (PostgreSQL + pgvector)                    (LLM #2)
+요구사항 ─▶ 임베딩 ─▶ 검색 조건 추출 ─▶ 벡터 검색 + 조건 거르기 ─▶ 후보 태그 선택 ─▶ 검토 ─▶ 검증 ─▶ 응답
+                      (LLM)             (PostgreSQL + pgvector)                      (LLM)
 ```
 
 수집(`collect`)과 색인(`index`)은 CLI 배치로 실행한다. 추천 요청을 처리하는 동안에는 Docker Hub를 호출하지 않는다.
@@ -147,8 +147,8 @@ curl -s localhost:8000/recommend -H 'content-type: application/json' \
 LLM 공급자를 바꿀 때는 `.env`의 `WHATFROM_LLM_BASE_URL`, `WHATFROM_LLM_MODEL`, API 키를 변경한다.
 사용할 엔드포인트는 OpenAI 호환 `/v1/chat/completions`와 JSON Schema 응답 형식을 지원해야 한다.
 
-조건 추출 단계(LLM #1)와 추천 단계(LLM #2)에 다른 LLM을 쓸 수도 있다.
-`WHATFROM_PLAN_LLM_*`은 조건 추출 단계, `WHATFROM_RECOMMEND_LLM_*`은 추천 단계의 설정이다.
+조건 추출 단계와 검토 단계에 다른 LLM을 쓸 수도 있다.
+`WHATFROM_PLAN_LLM_*`은 조건 추출 단계, `WHATFROM_RECOMMEND_LLM_*`은 검토 단계의 설정이다.
 
 | 설정 | 설정하지 않았을 때 |
 | --- | --- |
@@ -223,11 +223,11 @@ label 고정 mode(`whatfrom eval --label-plans`)는 문항의 `expected_plan`과
 - repository가 둘 이상인 문항이 있으면 모델을 부르기 전에 멈춘다.
 - 결과 meta의 mode는 `label-plans`, `--no-recommend`이면 `label-plans-retrieval`이다.
 
-인용 뒷받침률은 LLM judge 없이 사람이 표본으로 잰다.
+인용 뒷받침률은 `sample-citations`로 뽑은 표본에서 각 인용이 주장에 맞게 붙었는지 검토해 잰다.
 
 ```bash
-uv run whatfrom eval sample-citations eval/results/a.json eval/results/b.json --out-dir <directory>
-uv run whatfrom eval score-citations <directory>/citation-sample.yaml <directory>/citation-key.json
+uv run python -m whatfrom.cli eval sample-citations eval/results/a.json eval/results/b.json --out-dir <directory>
+uv run python -m whatfrom.cli eval score-citations <directory>/citation-sample.yaml <directory>/citation-key.json
 ```
 
 - 결과 파일(안)마다 검증을 통과한 (주장, 인용) 쌍을 최대 50쌍, 문항당 최대 2쌍 뽑는다. `--seed`가 같으면 같은 표본이다.
@@ -256,7 +256,7 @@ digest는 측정 시점 DB 기준이며, digest로 인정한 문항은 결과와
 검색 1위 대조군은 판정 없이 검색 1위 후보를 추천으로 봤을 때의 정확도이고, 추천 정확도와 같은 허용 규칙으로 채점한다.
 전체 모드에서는 문항별 검색 조건, 필드별 추출 일치 여부, 응답 알림(조건 완화, 추출 실패)도 저장한다.
 추천의 digest·출처·수집 시점, 두 번째 LLM 호출에 보낸 prompt, 단계별 소요 시간(임베딩, 조건 추출 단계, 두 번째 LLM 호출, 전체)도 함께 저장한다.
-추천 이미지, 대안, 주장 목록과 근거 인용별 검증 결과도 저장한다. 인용 지표와 사람의 뒷받침 확인은 이 파일만 읽는다.
+추천 이미지, 대안, 주장 목록과 근거 인용별 검증 결과도 저장한다. 인용 지표와 인용 표본 검토는 이 파일만 읽는다.
 이 결과 폴더는 Git 추적 대상에서 제외되어 있다.
 
 모델 선택처럼 결정을 내린 비교는 `eval/experiments/<날짜>-<주제>/`에 조건, 결과, 한계, 결론과 재현 스크립트를 함께 남긴다.
@@ -264,7 +264,9 @@ digest는 측정 시점 DB 기준이며, digest로 인정한 문항은 결과와
 - [임베딩 모델 비교 (2026-09-24)](eval/experiments/2026-09-24-embedding-comparison/README.md): bge-m3, qwen3-embedding 0.6B, snowflake-arctic-embed2, OpenAI text-embedding-3-small·large를 비교했다. 교체할 만큼 확실한 이득을 확인하지 못해 bge-m3를 유지한다. 제목만 보는 Hit 지표가 한 문장짜리 "Image Variants" 소개문도 성공으로 세어 근거 품질을 과대평가할 수 있다는 점도 확인했다.
 - [틀 문장 섹션 제외 (2026-09-24)](eval/experiments/2026-09-24-template-exclusion/README.md): 본문이 README 틀의 한 문장뿐인 섹션 10개를 색인에서 뺐다. 같은 벡터로 재면 문서 Hit@5는 그대로이고, 다시 색인한 뒤 오른 2문항은 원본 README 변경 때문임을 확인했다.
 
-### 기준 측정 결과 (2026-09-24, F9 마무리)
+### 기준 측정 결과 (2026-09-24, F9 마무리, v1: Dockerfile 포함)
+
+추천과 함께 Dockerfile 초안을 만들던 v1 시점의 결과다. 지금 응답에는 Dockerfile이 없다([ADR 0003](docs/adr/0003-judge-candidates-instead-of-recommending.md)).
 
 추천 응답에 수집 시점 digest를 붙이고 Dockerfile의 `FROM`을 고정했다.
 내용 없이 틀 문장뿐인 섹션을 색인에서 빼고, 평가에 문항별 단계별 소요 시간을 남긴 뒤 측정했다.
