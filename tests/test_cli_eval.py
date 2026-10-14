@@ -804,9 +804,13 @@ def test_citation_samples_are_drawn_from_a_real_result_and_scored(
     sample = (out / "citation-sample.yaml").read_text(encoding="utf-8")
     assert result.name not in sample
     assert "evidence: python — " in sample
+    assert "question: " in sample
     assert "verdict: null" in sample
     (out / "citation-sample.yaml").write_text(
-        sample.replace("verdict: null", "verdict: supported"), encoding="utf-8"
+        sample.replace("verdict: null", "verdict: supported").replace(
+            "candidate_ok: null", "candidate_ok: not_applicable"
+        ),
+        encoding="utf-8",
     )
     capsys.readouterr()
 

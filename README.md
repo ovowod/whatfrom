@@ -230,11 +230,12 @@ uv run python -m whatfrom.cli eval sample-citations eval/results/a.json eval/res
 uv run python -m whatfrom.cli eval score-citations <directory>/citation-sample.yaml <directory>/citation-key.json
 ```
 
-- 결과 파일(안)마다 검증을 통과한 (주장, 인용) 쌍을 최대 50쌍, 문항당 최대 2쌍 뽑는다. `--seed`가 같으면 같은 표본이다.
-- 표본에는 결과 파일 이름이 없다. 어느 안의 인용인지는 key 파일에만 있으니 채점이 끝날 때까지 열지 않는다.
-- 항목마다 `verdict`에 `supported`, `unsupported`, `unclear` 중 하나를 채운다. 인용 문장만 보고 주장이 성립하는지 판단한다.
-- 뒷받침률은 supported ÷ (supported + unsupported)이고 합격선은 90%다. unclear가 표본의 10%를 넘으면 보류, 채점할 수 있는 쌍이 없으면 미측정이다.
-- 빈 칸, 세 어휘 밖의 값, 지우거나 복제한 행, `verdict` 밖의 내용 변경이 있으면 합격 여부를 내지 않고 멈춘다.
+- 결과 파일(안)마다 검증을 통과한 인용이 붙은 주장을 최대 50개, 문항당 최대 2개 뽑는다. 항목에는 질문, 주장, 그 주장의 인용 전부, LLM에게 넘긴 후보 목록이 들어간다. `--seed`가 같으면 같은 표본이다.
+- 표본에는 결과 파일 이름이 없다. 어느 안의 주장인지는 key 파일에만 있으니 검토가 끝날 때까지 열지 않는다.
+- `verdict`: 주장에 쓰인 문서 사실이 인용들로 모두 확인되면 `supported`, 하나라도 아니면 `unsupported`, 정말 정할 수 없으면 `unclear`, 문서 사실이 없으면 `no_doc_fact`다. 절차와 예시는 표본 파일 머리 주석에 있다. 사용자 조건은 전제로 받아들이고, 결론은 확인된 사실과 조건에서 합리적으로 나오면 된다.
+- `candidate_ok`: 주장 속 후보 정보(크기, 아키텍처, 후보 비교)가 후보 목록과 맞으면 `match`, 틀리면 `mismatch`, 확인할 수 없으면 `unclear`, 후보 정보가 없으면 `not_applicable`이다.
+- 뒷받침률은 supported ÷ (supported + unsupported)이고 합격선은 90%다. unclear가 표본의 10%를 넘으면 보류, 판정할 주장이 없으면 미측정이다. no_doc_fact는 분모와 unclear 한도에서 뺀다. 후보 정보 오류는 mismatch ÷ (match + mismatch)로 따로 내고 합격선은 없다.
+- 빈 칸, 정한 어휘 밖의 값, 지우거나 복제한 행, 검토 칸 밖의 내용 변경이 있으면 안별 집계만 내고 합격 여부는 비운다.
 
 LLM을 부르는 모드는 문항마다 LLM 호출 기록(`llm_calls`)을 결과에 남긴다.
 호출마다 단계, 시도 횟수, 성공 여부와 실패 이유, 입력·출력·reasoning token 수가 있다.

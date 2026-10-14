@@ -694,7 +694,7 @@ def cmd_sample_citations(args: argparse.Namespace) -> None:
         json.dumps(key, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(
-        f"{out / 'citation-sample.yaml'} 저장 ({len(items)}쌍). key 파일은 채점 전에 열지 않는다."
+        f"{out / 'citation-sample.yaml'} 저장 ({len(items)}개). key 파일은 채점 전에 열지 않는다."
     )
 
 
