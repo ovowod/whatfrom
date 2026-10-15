@@ -14,6 +14,7 @@ from whatfrom.eval.report import (
     random_baseline,
     render_summary,
     result_document,
+    top_candidate_baseline,
 )
 from whatfrom.eval.scoring import CaseScore, RetrievalScore
 from whatfrom.eval.timing import RunTrace
@@ -36,6 +37,9 @@ def make_score(**overrides: object) -> CaseScore:
         "sources_ok": True,
         "hit_declared": True,
         "hit_at5": True,
+        "top_candidate_accepted": True,
+        "rejected_candidates": [],
+        "accepted_candidates": ["python:3.13-slim"],
         "degraded_note": None,
     }
     base.update(overrides)
@@ -56,6 +60,7 @@ def make_case(**overrides: object) -> GoldenCase:
         "requires_repositories": ["python"],
         "accept": ["python:3.13-slim"],
         "expected_plan": {},
+        "requirements": [],
         "rationale": Rationale(note="근거", sources=["https://example.invalid/doc"]),
     }
     base.update(overrides)
@@ -151,6 +156,79 @@ def test_source_availability_counts_only_sources_ok() -> None:
     assert metric(aggregate_full(scores), "출처 제공률") == Metric("출처 제공률", 1, 2)
 
 
+def _claims(*verified: bool) -> dict:
+    citations = [{"evidence": 1, "quote": "q", "verified": v, "problem": None} for v in verified]
+    return {
+        "image": "python:3.13-slim",
+        "alternatives": [],
+        "claims": [{"text": "주장", "citations": citations}],
+        "verified_citations": sum(verified),
+    }
+
+
+def test_citation_pass_rate_counts_every_citation_of_every_claim() -> None:
+    scores = [
+        make_score(recommendation=_claims(True, False)),
+        make_score(recommendation=_claims(True)),
+        make_score(recommendation=None),
+    ]
+
+    assert metric(aggregate_full(scores), "인용 검증 통과율") == Metric("인용 검증 통과율", 2, 3)
+
+
+def test_citation_pass_rate_is_unmeasured_without_citations() -> None:
+    """인용이 없는 것과 인용이 모두 틀린 것은 다르다."""
+    scores = [make_score(recommendation=_claims()), make_score(recommendation=None)]
+
+    assert metric(aggregate_full(scores), "인용 검증 통과율").ratio is None
+
+
+def test_wrong_answer_detection_counts_rejected_candidates_with_an_unsatisfied_judgment() -> None:
+    scores = [
+        make_score(
+            rejected_candidates=["python:3.13-alpine", "python:latest"],
+            unsatisfied_candidates=["python:3.13-alpine"],
+        ),
+        # 명시적 오답이 후보에 없으면 적발할 기회가 없어 분모에서 빠진다.
+        make_score(rejected_candidates=[], unsatisfied_candidates=["python:3.13-slim"]),
+    ]
+
+    assert metric(aggregate_full(scores), "오답 적발률") == Metric("오답 적발률", 1, 2)
+
+
+def test_misjudgment_counts_accepted_candidates_with_an_unsatisfied_judgment() -> None:
+    scores = [
+        make_score(
+            accepted_candidates=["python:3.13-slim", "python:3.14-slim"],
+            unsatisfied_candidates=["python:3.14-slim", "python:3.13-alpine"],
+        ),
+        make_score(accepted_candidates=["python:3.13-slim"], unsatisfied_candidates=[]),
+    ]
+
+    assert metric(aggregate_full(scores), "오판정률") == Metric("오판정률", 1, 3)
+
+
+def test_judgment_metrics_are_unmeasured_when_the_run_has_no_judgments() -> None:
+    """단일 선택 안과 V2 실행에는 판정이 없다. 0%로 읽히면 안 된다."""
+    scores = [make_score(rejected_candidates=["python:3.13-alpine"])]
+
+    metrics = aggregate_full(scores)
+
+    assert metric(metrics, "오답 적발률").ratio is None
+    assert metric(metrics, "오판정률").ratio is None
+
+
+def test_cases_with_a_rejected_candidate_are_counted() -> None:
+    scores = [
+        make_score(rejected_candidates=["python:3.13-alpine"]),
+        make_score(rejected_candidates=[]),
+    ]
+
+    expected = Metric("명시적 오답 후보 문항", 1, 2)
+    assert metric(aggregate_full(scores), expected.label) == expected
+    assert metric(aggregate_retrieval(scores), expected.label) == expected
+
+
 def test_retrieval_and_full_aggregate_the_shared_metrics_identically() -> None:
     """검색 전용 모드와 전체 모드는 같은 입력에서 같은 검색 지표를 내야 한다."""
     values = [
@@ -158,7 +236,14 @@ def test_retrieval_and_full_aggregate_the_shared_metrics_identically() -> None:
         {"case_id": "b", "candidate_hit": False, "hit_declared": True, "hit_at5": False},
         {"case_id": "c", "candidate_hit": True, "hit_declared": False, "hit_at5": False},
     ]
-    record = {"candidate_count": 0, "accepted_count": 0, "candidate_images": []}
+    record = {
+        "candidate_count": 0,
+        "accepted_count": 0,
+        "candidate_images": [],
+        "top_candidate_accepted": False,
+        "rejected_candidates": [],
+        "accepted_candidates": [],
+    }
     case_scores = [make_score(**v) for v in values]
     retrieval_scores = [RetrievalScore(**v, **record) for v in values]  # type: ignore[arg-type]
 
@@ -481,6 +566,9 @@ def make_retrieval(accepted: int, count: int) -> RetrievalScore:
         candidate_images=[f"python:{i}" for i in range(count)],
         hit_declared=False,
         hit_at5=False,
+        top_candidate_accepted=accepted > 0,
+        rejected_candidates=[],
+        accepted_candidates=[f"python:{i}" for i in range(accepted)],
     )
 
 
@@ -501,6 +589,27 @@ def test_random_baseline_counts_a_case_without_candidates_as_zero() -> None:
 
     assert baseline.expected == 0.5
     assert baseline.total == 2
+
+
+def test_top_candidate_baseline_counts_cases_whose_first_candidate_is_accepted() -> None:
+    baseline = top_candidate_baseline([make_retrieval(1, 2), make_retrieval(0, 3)])
+
+    assert (baseline.hits, baseline.total, baseline.ratio) == (1, 2, 0.5)
+
+
+def test_top_candidate_baseline_is_unmeasured_without_cases() -> None:
+    assert top_candidate_baseline([]).ratio is None
+
+
+def test_summary_and_document_show_the_top_candidate_baseline() -> None:
+    baseline = top_candidate_baseline([make_score(), make_score(top_candidate_accepted=False)])
+
+    summary = render_summary([], [], [], [], 2, {}, top=baseline)
+    document = result_document([], [], [], {}, top=baseline)
+
+    assert "검색 1위 대조군" in summary
+    assert "1/2" in summary
+    assert document["top_candidate_baseline"] == {"hits": 1, "total": 2, "ratio": 0.5}
 
 
 def test_random_baseline_is_unmeasured_when_there_are_no_cases() -> None:
@@ -678,6 +787,9 @@ def test_result_document_of_a_retrieval_run_has_no_time_fields() -> None:
         candidate_images=["python:3.13-slim"],
         hit_declared=True,
         hit_at5=True,
+        top_candidate_accepted=True,
+        rejected_candidates=[],
+        accepted_candidates=["python:3.13-slim"],
     )
 
     document = result_document([], [score], [], {})

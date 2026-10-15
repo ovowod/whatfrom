@@ -20,6 +20,11 @@ class RetrievalScore:
     candidate_images: list[str]
     hit_declared: bool
     hit_at5: bool
+    # 검색 1위 대조군. 판정 없이 첫 후보를 추천으로 봤을 때 맞는가.
+    top_candidate_accepted: bool
+    # 후보 중 명시적 오답과 허용 정답. 오답 적발률과 오판정률의 분모다.
+    rejected_candidates: list[str]
+    accepted_candidates: list[str]
 
 
 def _is_accepted(case: GoldenCase, candidate: Candidate, accepted_digests: frozenset[str]) -> bool:
@@ -87,6 +92,13 @@ def score_retrieval(
         candidate_images=images,
         hit_declared=declared,
         hit_at5=declared and _hit_at5(case, sections),
+        # 후보 순서는 운영 경로가 정한 그대로다. 후보가 없으면 오답이다.
+        top_candidate_accepted=bool(candidates)
+        and _is_accepted(case, candidates[0], accepted_digests),
+        rejected_candidates=[c.image for c in candidates if c.image in case.reject],
+        accepted_candidates=[
+            c.image for c in candidates if _is_accepted(case, c, accepted_digests)
+        ],
     )
 
 
@@ -168,6 +180,9 @@ class CaseScore:
     sources_ok: bool
     hit_declared: bool
     hit_at5: bool
+    top_candidate_accepted: bool
+    rejected_candidates: list[str]
+    accepted_candidates: list[str]
     degraded_note: str | None
     # 검색 조건 추출(LLM #1). 추출에 실패했으면 plan과 plan_fields가 None이다.
     plan: dict | None = None
@@ -179,9 +194,15 @@ class CaseScore:
     # 추천의 digest·출처·수집 시점. digest 부착을 결과 JSON만으로 확인하려고 남긴다.
     # 추천이 없으면 None이다.
     recommended: dict | None = None
-    # 응답의 추천: 이미지, 대안, 주장과 인용별 검증 결과. 인용 지표와 사람의 뒷받침 확인이
+    # 응답의 추천: 이미지, 대안, 주장과 인용별 검증 결과. 인용 지표와 인용 표본 검토가
     # 결과 파일만 읽도록 남긴다. 추천이 없으면 None이다.
     recommendation: dict | None = None
+    # 불만족 판정을 하나 이상 받은 후보. 판정이 없는 실행(단일 선택)이면 None이고,
+    # 오답 적발률과 오판정률의 분모에서 빠진다.
+    unsatisfied_candidates: list[str] | None = None
+    # 응답의 번호 붙은 근거. 인용의 근거 번호를 repository와 section으로 풀 때 쓴다.
+    # 본문은 크기 때문에 남기지 않는다.
+    evidence: list[dict] = field(default_factory=list)
     # runner가 채운다. 시간을 재지 않은 실행이면 None이다. 두 실행의 실제 입력을 비교할 때
     # LLM #2에 보낸 prompt를 쓴다.
     trace: RunTrace | None = None
@@ -298,6 +319,9 @@ def score_full(
         sources_ok=_sources_ok(response),
         hit_declared=retrieval.hit_declared,
         hit_at5=retrieval.hit_at5,
+        top_candidate_accepted=retrieval.top_candidate_accepted,
+        rejected_candidates=retrieval.rejected_candidates,
+        accepted_candidates=retrieval.accepted_candidates,
         # 추천을 못 한 사유는 API가 맨 뒤에 붙인다. 앞에는 검색 단계의 알림이 올 수 있다.
         degraded_note=response.notes[-1] if recommendation is None and response.notes else None,
         plan=extraction.plan,
@@ -309,4 +333,5 @@ def score_full(
             response.recommended.model_dump(mode="json") if response.recommended else None
         ),
         recommendation=recommendation.model_dump(mode="json") if recommendation else None,
+        evidence=[e.model_dump(exclude={"content"}) for e in response.evidence],
     )

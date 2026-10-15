@@ -54,7 +54,21 @@
 #
 # 조건: conditions는 필수 요구만 담는다. 근거가 "가능하지만 권하지 않는다"고 적은
 # 선택지는 accept에서 빼는 것으로만 표현하고, 조건으로 위반 처리하지 않는다.
-version: 1
+#
+# 판단 요구: requirements는 판정 단계가 후보마다 판정할 요구다. 짧은 영어 문장으로 쓴다.
+#   - 후보 하나만 보고 만족과 불만족을 정할 수 있는 요구만 쓴다. "최대한 작게"처럼
+#     후보끼리 견줘야 하는 선호는 쓰지 않는다.
+#   - 검색 조건으로 거르는 것(버전 접두어, 아키텍처, 배포판, 숫자 크기 상한)은 쓰지 않는다.
+#     LTS, stable 브랜치, 정식 릴리스, Linux 이미지 여부는 검색 조건으로 거를 수 없어 쓴다.
+#   - 패키지를 더 설치하면 되는 것은 요구로 쓰지 않는다. 질문이 설치 없이 되기를
+#     요구할 때만 쓴다(node-native-addon).
+#   - 질문만 보고 쓴 초안을 conditions, reject, rationale과 대조해 2026-10-05에 고쳤다.
+#   - 모든 문항이 키를 가진다. 요구가 없으면 requirements: []다.
+# version 2에서 requirements를 더했다. 같은 날 명시적 오답도 고쳤다. 라벨 고정 입력의 후보에
+# 나온 태그를 기존 근거로 판정해 더하고, 선호와 질문이 요구하지 않은 버전 고정을 근거로 둔
+# reject는 뺐다. 근거 URL을 다시 열지는 않아 verified_on은 그대로다.
+# 기록: eval/experiments/2026-10-05-v2-labels/
+version: 2
 # 아래 라벨들이 인용한 출처를 마지막으로 전부 열어 확인한 날이다. latest가 무엇인지,
 # 어느 버전이 LTS인지, 최신 패치가 몇인지는 시간이 지나면 낡는다.
 # 2026-09-18~19에는 일부만 다시 검토했다. 9-18에는 네 문항의 질문과 허용 목록을
@@ -104,6 +118,8 @@ cases:
     expected_sections: [Image Variants]
     expected_plan:
       architectures: [arm64]
+    requirements:
+      - numpy must install from prebuilt wheels without compiling from source
     rationale:
       note: |
         alpine을 reject에서 뺐다. python-scientific-stack과 같은 전제를
@@ -167,14 +183,12 @@ cases:
       - python:3.12-slim-trixie
       - python:3.11-slim-trixie
       - python:3.10-slim-trixie
-    reject:
-      - python:3.14
-      - python:3.14-trixie
-      - python:latest
+    reject: []
     conditions:
       max_size_mb: 100
     expected_sections: [Image Variants]
     expected_plan: {}
+    requirements: []
     rationale:
       note: |
         질문의 전제를 고쳤다. 전에는 "순수 파이썬이고 C 확장이 하나도
@@ -191,6 +205,9 @@ cases:
         1/9 수준이라 함께 넣는다. DB 실측으로 alpine 약 20MB, slim 약 46MB,
         기본 태그 약 415MB라 기본 태그는 크기 최우선 요구와 정면으로
         어긋난다.
+        2026-10-05: 크기를 근거로 둔 reject를 뺐다. "작을수록
+        좋다"는 후보끼리 견줘야 하는 선호라 필수 요구 위반이 아니다. 큰 태그는
+        accept에 없는 것으로만 표현한다.
       sources:
         - https://hub.docker.com/_/python
         - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
@@ -230,6 +247,7 @@ cases:
     expected_sections: [Supported tags]
     expected_plan:
       version_prefix: "3.12"
+    requirements: []
     rationale:
       note: |
         3.12는 devguide 버전 표에서 security 단계이고 EOL이 2028-10이라
@@ -280,11 +298,12 @@ cases:
       - python:3.11-bookworm
       - python:3.10-bookworm
     reject:
-      - python:latest
       - python:3.15.0b1-slim
       - python:3.15.0a8-slim
     expected_sections: [Image Variants, How to use this image]
     expected_plan: {}
+    requirements:
+      - must be a final release, not a prerelease
     rationale:
       note: |
         FastAPI 공식 배포 문서가 별도 베이스 이미지를 쓰지 말고 공식 python
@@ -293,6 +312,9 @@ cases:
         빌드 모범 사례가 퍼블리셔가 태그를 갈아끼울 수 있으니 버전을 고정
         하라고 하기 때문이고, 3.15는 devguide 기준 prerelease라 프로덕션
         기본값이 될 수 없다.
+        2026-10-05: latest를 reject에서 뺐다. 질문이 버전
+        고정을 요구하지 않는다. prerelease는 "프로덕션"이 정식 릴리스를
+        요구한다고 보고 남기고, 판단 요구로 적었다.
       sources:
         - https://fastapi.tiangolo.com/deployment/docker/
         - https://docs.docker.com/build/building/best-practices/
@@ -335,11 +357,11 @@ cases:
       - python:3.12-bookworm
       - python:3.11-bookworm
       - python:3.10-bookworm
-    reject:
-      - python:3.15.0a8-slim
-      - python:latest
+    reject: []
     expected_sections: [Image Variants]
     expected_plan: {}
+    requirements:
+      - pandas and scipy must install from prebuilt wheels without compiling from source
     rationale:
       note: |
         여기서 alpine을 reject에 넣지 않았다. pandas와 scipy는 지금 PyPI에
@@ -349,6 +371,9 @@ cases:
         떨어지면 numpy 빌드에 C/C++ 컴파일러와 BLAS/LAPACK이 필요하므로
         여유 있는 데비안 기반을 accept의 중심에 둔다. alpha 릴리스와 고정
         되지 않은 latest는 야간 배치의 재현성 요구와 맞지 않는다.
+        2026-10-05: 질문이 버전 고정이나 정식 릴리스를 요구하지 않아
+        latest와 prerelease를 reject에서 뺐다. 권장하지 않는
+        것은 명시적 오답이 아니다.
       sources:
         - https://pypi.org/project/pandas/
         - https://pypi.org/project/scipy/
@@ -381,6 +406,7 @@ cases:
     reject: []
     expected_sections: [Image Variants, How to use this image]
     expected_plan: {}
+    requirements: []
     rationale:
       note: |
         기본 태그는 buildpack-deps 기반이라 흔한 데비안 개발 패키지를 이미
@@ -436,10 +462,29 @@ cases:
       - python:3.15.0a8
       - python:3.15.0a8-slim
       - python:latest
+      - python:3.13
+      - python:3.13-slim
+      - python:3.13-alpine
+      - python:3.12
+      - python:3.12-slim
+      - python:3.12-alpine
+      - python:3.11
+      - python:3.11-slim
+      - python:3.11-alpine
+      - python:3.10
+      - python:3.10-slim
+      - python:3.10-alpine
+      - python:3.13-trixie
+      - python:3.12-bookworm
+      - python:3.11-bookworm
+      - python:3.10-bookworm
     conditions:
       version_prefix: "3.14"
     expected_sections: [Supported tags]
     expected_plan: {}
+    requirements:
+      - must be a final Python release, not an alpha, beta, or release candidate
+      - must be the newest final Python release line
     rationale:
       note: |
         devguide 버전 표에서 3.15는 prerelease이고 정식 릴리스가 아직
@@ -457,6 +502,9 @@ cases:
         별칭인 3.15-rc 계열과 번호가 가장 높은 3.15.0rc2/rc1 — 만 대표로
         넣었다. latest는 버전이 태그에 드러나지 않아 "버전을 박아두고
         싶다"는 요구를 만족하지 않는다.
+        2026-10-05: 3.13 이하 계열을 reject에 더했다. 질문이
+        최신 안정 버전을 요구하므로 정식 릴리스 중 가장 새 줄기인 3.14가
+        아니면 요구를 어긴다.
       sources:
         - https://devguide.python.org/versions/
         - https://peps.python.org/pep-0745/
@@ -495,6 +543,7 @@ cases:
     expected_sections: [Image Variants]
     expected_plan:
       distributions: [alpine]
+    requirements: []
     rationale:
       note: |
         사용자가 배포판을 조직 정책으로 못 박았으므로 여기서 알려줄 것은
@@ -536,6 +585,7 @@ cases:
     expected_plan:
       distributions: [bookworm]
       exclude_distributions: [trixie]
+    requirements: []
     rationale:
       note: |
         공식 README가 bookworm/trixie는 데비안 릴리스의 suite 코드네임이고
@@ -595,6 +645,7 @@ cases:
     expected_sections: [Quick reference]
     expected_plan:
       architectures: [arm64]
+    requirements: []
     rationale:
       note: |
         공식 python 이미지의 지원 아키텍처 목록에 arm64v8이 들어 있어서
@@ -639,14 +690,12 @@ cases:
       - python:3.12-slim-bookworm
       - python:3.11-slim-bookworm
       - python:3.10-slim-bookworm
-    reject:
-      - python:3.14
-      - python:3.14-bookworm
-      - python:latest
+    reject: []
     conditions:
       max_size_mb: 100
     expected_sections: [Image Variants]
     expected_plan: {}
+    requirements: []
     rationale:
       note: |
         click은 순수 파이썬이라 컴파일할 확장이 없고, 그러면 alpine의 musl
@@ -654,6 +703,9 @@ cases:
         전송 속도와 취약점 표면을 함께 줄인다고 하고 alpine을 6MB 미만
         예시로 든다. 자주 pull 하는 배포 형태이므로 415MB짜리 기본 태그는
         맞지 않는다. slim도 기준을 만족해 함께 넣는다.
+        2026-10-05: 크기를 근거로 둔 reject를 뺐다. "작을수록
+        좋다"는 후보끼리 견줘야 하는 선호라 필수 요구 위반이 아니다. 큰 태그는
+        accept에 없는 것으로만 표현한다.
       sources:
         - https://docs.docker.com/build/building/best-practices/
         - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
@@ -699,10 +751,15 @@ cases:
     reject:
       - python:3.14-alpine
       - python:3.13-alpine
+      - python:3.12-alpine
+      - python:3.11-alpine
+      - python:3.10-alpine
     conditions:
       exclude_distributions: [alpine]
     expected_sections: [Image Variants]
     expected_plan: {}
+    requirements:
+      - pip install torch must succeed using prebuilt wheels without building from source
     rationale:
       note: |
         torch는 PyPI에 manylinux_2_28(x86_64/aarch64)·macOS·Windows 휠만
@@ -711,6 +768,8 @@ cases:
         필요해 현실적인 선택지가 아니다. 크기를 포기했다고 했으니 slim과
         기본 태그가 모두 타당하다. 휠은 CPython 3.10~3.14를 덮으므로
         3.14 계열도 안전하다.
+        2026-10-05: 라벨 고정 입력의 후보로 나온 같은 근거의 다른 버전,
+        별칭 태그를 reject에 더했다.
       sources:
         - https://pypi.org/project/torch/
         - https://packaging.python.org/en/latest/specifications/platform-compatibility-tags/
@@ -754,11 +813,10 @@ cases:
       - python:3.12-bookworm
       - python:3.11-bookworm
       - python:3.10-bookworm
-    reject:
-      - python:3.14-alpine
-      - python:3.14-windowsservercore
+    reject: []
     expected_sections: [Image Variants]
     expected_plan: {}
+    requirements: []
     rationale:
       note: |
         이 문항이 재는 것은 추천 자체보다 근거 문서를 제대로 끌어왔는지다.
@@ -768,6 +826,8 @@ cases:
         필요한 pip install에서 실패할 수 있다. 둘을 비교한 질문이므로 둘 다
         accept이고, 묻지도 않은 alpine이나 Windows 변형을 답으로 내면 문서를
         못 읽은 것이다.
+        2026-10-05: alpine과 Windows 변형을 reject에서
+        뺐다. 묻지 않은 변형을 답한 것은 질문의 필수 요구를 어긴 것이 아니다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/python/README.md
         - https://hub.docker.com/_/python
@@ -817,6 +877,8 @@ cases:
     expected_sections: [Image Variants]
     expected_plan:
       exclude_distributions: [alpine]
+    requirements:
+      - pip packages must install from prebuilt manylinux wheels without compiling from source
     rationale:
       note: |
         원인은 libc다. alpine은 glibc가 아니라 musl을 쓰는 별개의 표준 C
@@ -879,8 +941,15 @@ cases:
       - node:26-slim
       - node:current
       - node:latest
+      - node:26-alpine
+      - node:26-bookworm
+      - node:26-bullseye
+      - node:26-alpine3.23
+      - node:26-bookworm-slim
     expected_sections: [Supported tags]
     expected_plan: {}
+    requirements:
+      - must be a Node.js LTS release line
     rationale:
       note: |
         Node.js 릴리스 표에서 24(krypton)가 Active LTS, 22(jod)가
@@ -889,6 +958,8 @@ cases:
         못 박고, 버전을 안 적은 태그는 Current를 고른다고도 적는다.
         그래서 `latest`와 `current`는 요구와 정반대로 움직인다. slim과 기본
         태그 중 무엇을 고를지는 이 질문만으로 갈리지 않아 둘 다 넣는다.
+        2026-10-05: 라벨 고정 입력의 후보로 나온 같은 근거의 다른 버전,
+        별칭 태그를 reject에 더했다.
       sources:
         - https://raw.githubusercontent.com/nodejs/docker-node/main/README.md
         - https://raw.githubusercontent.com/nodejs/Release/main/README.md
@@ -926,13 +997,10 @@ cases:
       - node:26-slim
       - node:26-bookworm-slim
       - node:26-trixie-slim
-    reject:
-      - node:24
-      - node:24-bookworm
-      - node:lts
-      - node:latest
+    reject: []
     expected_sections: [Image Variants]
     expected_plan: {}
+    requirements: []
     rationale:
       note: |
         네이티브 애드온이 없으면 musl과 glibc의 차이가 설치 단계에 걸릴
@@ -945,6 +1013,9 @@ cases:
         질문이 프로덕션 LTS를 요구하지 않는다. docker-node 문서의 "Production
         applications should only use LTS releases"는 프로덕션을 명시한
         node-lts-prod에서만 좁히는 근거로 쓴다.
+        2026-10-05: 크기를 근거로 둔 reject를 뺐다. "작을수록
+        좋다"는 후보끼리 견줘야 하는 선호라 필수 요구 위반이 아니다. 큰 태그는
+        accept에 없는 것으로만 표현한다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/node/README.md
         - https://raw.githubusercontent.com/nodejs/Release/main/README.md
@@ -977,11 +1048,21 @@ cases:
       - node:24-slim
       - node:lts-alpine
       - node:lts-slim
+      - node:26-slim
+      - node:22-slim
+      - node:26-bookworm-slim
+      - node:24-trixie-slim
+      - node:22-trixie-slim
+      - node:26-bullseye-slim
+      - node:24-bullseye-slim
+      - node:22-bullseye-slim
     conditions:
       exclude_distributions: [alpine]
     expected_sections: [Image Variants]
     expected_plan:
       exclude_distributions: [alpine]
+    requirements:
+      - node-gyp must compile native addons without installing extra packages
     rationale:
       note: |
         node-gyp이 유닉스에서 요구하는 것은 파이썬, make, 그리고 제대로 된
@@ -994,6 +1075,8 @@ cases:
         질문이 프로덕션 LTS를 요구하지 않는다. docker-node 문서의 "Production
         applications should only use LTS releases"는 프로덕션을 명시한
         node-lts-prod에서만 좁히는 근거로 쓴다.
+        2026-10-05: 라벨 고정 입력의 후보로 나온 같은 근거의 다른 버전,
+        별칭 태그를 reject에 더했다.
       sources:
         - https://raw.githubusercontent.com/nodejs/node-gyp/main/README.md
         - https://raw.githubusercontent.com/docker-library/docs/master/node/README.md
@@ -1032,12 +1115,17 @@ cases:
       - node:lts-alpine
       - node:22-alpine
       - node:26-alpine
+      - node:26-alpine3.23
+      - node:24-alpine3.23
+      - node:22-alpine3.23
     conditions:
       architectures: [arm64]
       exclude_distributions: [alpine]
     expected_sections: [Quick reference, Image Variants]
     expected_plan:
       architectures: [arm64]
+    requirements:
+      - must use a Node.js build that is officially supported on arm64, not an experimental musl build
     rationale:
       note: |
         공식 이미지의 지원 아키텍처에 arm64v8이 있으므로 arm64 자체는
@@ -1059,6 +1147,8 @@ cases:
         질문이 프로덕션 LTS를 요구하지 않는다. docker-node 문서의 "Production
         applications should only use LTS releases"는 프로덕션을 명시한
         node-lts-prod에서만 좁히는 근거로 쓴다.
+        2026-10-05: 라벨 고정 입력의 후보로 나온 같은 근거의 다른 버전,
+        별칭 태그를 reject에 더했다.
       sources:
         - https://raw.githubusercontent.com/nodejs/docker-node/main/README.md
         - https://raw.githubusercontent.com/docker-library/docs/master/node/README.md
@@ -1091,10 +1181,10 @@ cases:
       - node:22-slim
       - node:22-bookworm-slim
       - node:22-alpine
-    reject:
-      - node:latest
+    reject: []
     expected_sections: [Image Variants]
     expected_plan: {}
+    requirements: []
     rationale:
       note: |
         이 문항이 재는 것은 추천보다 근거 문서를 끌어왔는지다. 답은 공식
@@ -1105,6 +1195,9 @@ cases:
         비교한 질문이므로 셋 다 accept다. 질문의 24는 비교하려고 적은
         태그일 뿐 요구가 아니므로, 버전 원칙대로 지원 중인 26·24·22 줄기를
         모두 허용한다.
+        2026-10-05: 질문이 버전 고정이나 정식 릴리스를 요구하지 않아
+        latest와 prerelease를 reject에서 뺐다. 권장하지 않는
+        것은 명시적 오답이 아니다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/node/README.md
         - https://raw.githubusercontent.com/nodejs/docker-node/main/README.md
@@ -1138,8 +1231,13 @@ cases:
       - postgres:19beta3-trixie
       - postgres:14
       - postgres:latest
+      - postgres:14-alpine
+      - postgres:14-bookworm
+      - postgres:14-alpine3.23
     expected_sections: [Supported tags]
     expected_plan: {}
+    requirements:
+      - must be a final release whose major version is supported for several more years
     rationale:
       note: |
         PostgreSQL은 메이저를 최초 릴리스 후 5년 지원한다. 18이 현재 최신
@@ -1151,6 +1249,8 @@ cases:
         넘어가면 그게 그대로 사고가 된다.
         16도 넣었다(2026-09-19). 판단 기준일에 16은 2028-11-09까지 2년 넘게 남아
         "앞으로 몇 년"을 만족한다. 15는 2027-11까지 1년 남짓이라 넣지 않았다.
+        2026-10-05: 라벨 고정 입력의 후보로 나온 같은 근거의 다른 버전,
+        별칭 태그를 reject에 더했다.
       sources:
         - https://www.postgresql.org/support/versioning/
         - https://raw.githubusercontent.com/docker-library/docs/master/postgres/README.md
@@ -1186,10 +1286,19 @@ cases:
       - postgres:18-alpine
       - postgres:17-alpine
       - postgres:16-alpine
+      - postgres:15-alpine
+      - postgres:14-alpine
+      - postgres:18-alpine3.23
+      - postgres:17-alpine3.23
+      - postgres:16-alpine3.23
+      - postgres:15-alpine3.23
+      - postgres:14-alpine3.23
     conditions:
       exclude_distributions: [alpine]
     expected_sections: [Additional Extensions, Image Variants]
     expected_plan: {}
+    requirements:
+      - must include the PostGIS extension
     rationale:
       note: |
         공식 README의 Additional Extensions 절이 이 질문에 직접 답한다.
@@ -1206,6 +1315,8 @@ cases:
         변형을 답으로 내놓는 것은 선호의 문제가 아니라 문서를 못 읽은 것이다.
         메이저는 좁히지 않는다. 질문에 버전 요구가 없어 판단 기준일(2026-09-19)에
         지원 중인 18~14를 모두 넣는다.
+        2026-10-05: 라벨 고정 입력의 후보로 나온 같은 근거의 다른 버전,
+        별칭 태그를 reject에 더했다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/postgres/README.md
         - https://hub.docker.com/_/postgres
@@ -1237,6 +1348,7 @@ cases:
     expected_sections: [Supported tags]
     expected_plan:
       version_prefix: "16"
+    requirements: []
     rationale:
       note: |
         메이저가 다르면 데이터 디렉터리 포맷이 호환되지 않아 덤프·복원이나
@@ -1274,11 +1386,10 @@ cases:
       - postgres:14-alpine
       - postgres:14-alpine3.24
       - postgres:14-alpine3.23
-    reject:
-      - postgres:19beta3-alpine
-      - postgres:latest
+    reject: []
     expected_sections: [Image Variants]
     expected_plan: {}
+    requirements: []
     rationale:
       note: |
         alpine 변형의 실질적인 제약은 contrib 밖의 확장을 직접 컴파일해야
@@ -1307,6 +1418,9 @@ cases:
         지원하지 않는다는 제약은 위의 전제 때문에 걸리지 않는다.
         alpine3.23 고정 태그도 넣는다. alpine 3.23은 지원 중인 브랜치이고
         공식 이미지가 3.24와 나란히 계속 발행한다.
+        2026-10-05: 질문이 버전 고정이나 정식 릴리스를 요구하지 않아
+        latest와 prerelease를 reject에서 뺐다. 권장하지 않는
+        것은 명시적 오답이 아니다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/postgres/README.md
         - https://hub.docker.com/_/postgres
@@ -1334,12 +1448,10 @@ cases:
       - redis:7.2-alpine
       - redis:6-alpine
       - redis:6.2-alpine
-    reject:
-      - redis:8
-      - redis:8-trixie
-      - redis:latest
+    reject: []
     expected_sections: [Image Variants]
     expected_plan: {}
+    requirements: []
     rationale:
       note: |
         redis 이미지가 담는 것은 배포판 패키지 스택이 아니라 소스에서 빌드한
@@ -1353,6 +1465,9 @@ cases:
         7.2는 2029-12-01까지 지원되고, 보안 정책도 6.2.x를 연장 지원으로
         적는다. 그래서 지금 발행되는 이 줄기들의 alpine 별칭을 모두 accept에
         둔다. 8.0은 지원 중이지만 공식 이미지가 더는 발행하지 않아 넣지 않는다.
+        2026-10-05: 크기를 근거로 둔 reject를 뺐다. "작을수록
+        좋다"는 후보끼리 견줘야 하는 선호라 필수 요구 위반이 아니다. 큰 태그는
+        accept에 없는 것으로만 표현한다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/redis/README.md
         - https://hub.docker.com/_/redis
@@ -1387,6 +1502,7 @@ cases:
     expected_sections: [Supported tags]
     expected_plan:
       version_prefix: "7"
+    requirements: []
     rationale:
       note: |
         공식 이미지가 7.4와 7.2 계열을 데비안·alpine 양쪽으로 지금도 계속
@@ -1432,10 +1548,11 @@ cases:
       - redis:7.2-alpine
       - redis:6.2-alpine
       - redis:6-alpine
-    reject:
-      - redis:latest
+    reject: []
     expected_sections: [How to use this image]
     expected_plan: {}
+    requirements:
+      - must support persisting data to a volume so it survives container restarts
     rationale:
       note: |
         이 문항이 재는 것은 태그 선택이 아니라 영속성 질문에서 공식 README의
@@ -1445,6 +1562,9 @@ cases:
         공식 영속성 문서가 설명한다. 영속성 설정은 변형과 무관하므로
         accept를 좁히지 않는다. 줄기도 같은 이유로 좁히지 않고, 판단 기준일
         (2026-09-19)에 지원 중이고 지금 발행되는 줄기를 모두 넣는다.
+        2026-10-05: 질문이 버전 고정이나 정식 릴리스를 요구하지 않아
+        latest와 prerelease를 reject에서 뺐다. 권장하지 않는
+        것은 명시적 오답이 아니다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/redis/README.md
         - https://hub.docker.com/_/redis
@@ -1470,13 +1590,10 @@ cases:
       - nginx:stable-alpine-slim
       - nginx:1.30-alpine3.24-slim
       - nginx:stable-alpine3.24-slim
-    reject:
-      - nginx:1.31
-      - nginx:1.31-perl
-      - nginx:1.31-otel
-      - nginx:latest
+    reject: []
     expected_sections: [Image Variants, How to use this image]
     expected_plan: {}
+    requirements: []
     rationale:
       note: |
         nginx 이미지는 배포판 패키지 스택 위에 도는 애플리케이션 런타임이
@@ -1485,6 +1602,9 @@ cases:
         따로 있고 README의 slim 설명은 기본 태그의 공통 패키지를 빼고
         nginx 실행에 필요한 최소만 담는다고 한다. perl과 otel 변형은 기본
         이미지 위에 쓰지도 않을 모듈을 얹은 것이라 크기 요구와 반대다.
+        2026-10-05: 크기와 쓰지 않는 모듈을 근거로 둔 reject를
+        뺐다. 선호이지 필수 요구 위반이 아니다. accept에 없는 것으로만
+        표현한다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/nginx/README.md
         - https://hub.docker.com/_/nginx
@@ -1510,10 +1630,18 @@ cases:
       - nginx:1.31.5
       - nginx:mainline
       - nginx:latest
+      - nginx:1.31-otel
+      - nginx:1.31-perl
+      - nginx:1.31-alpine
+      - nginx:1.31-alpine-otel
+      - nginx:1.31-alpine-perl
+      - nginx:1.31-alpine-slim
     conditions:
       version_prefix: "1.30"
     expected_sections: [Supported tags]
     expected_plan: {}
+    requirements:
+      - must be on the nginx stable branch, not mainline
     rationale:
       note: |
         nginx.org 다운로드 페이지가 1.31.5를 Mainline, 1.30.4를 Stable로
@@ -1531,6 +1659,8 @@ cases:
         이름으로만 판정하던 때는 `stable`이 조건 위반이 되는 모순 때문에
         이 조건을 뺐었다. expected_plan에는 버전을 적지 않는다. 질문이
         못 박은 것은 번호가 아니라 브랜치다.
+        2026-10-05: 라벨 고정 입력의 후보로 나온 같은 근거의 다른 버전,
+        별칭 태그를 reject에 더했다.
       sources:
         - https://nginx.org/en/download.html
         - https://nginx.org/en/linux_packages.html
@@ -1559,8 +1689,17 @@ cases:
       - nginx:1.31-alpine
       - nginx:1.31-perl
       - nginx:latest
+      - nginx:1.30
+      - nginx:1.30-perl
+      - nginx:1.30-alpine
+      - nginx:1.31-alpine-perl
+      - nginx:1.30-alpine-perl
+      - nginx:1.31-alpine-slim
+      - nginx:1.30-alpine-slim
     expected_sections: [Supported tags, Image Variants]
     expected_plan: {}
+    requirements:
+      - must include the OpenTelemetry (otel) module for exporting tracing spans
     rationale:
       note: |
         ngx_otel_module은 기본 nginx에 내장된 기능이 아니라 설정에서
@@ -1569,6 +1708,8 @@ cases:
         바로 그 패키지를 기본 이미지 위에 설치한 변형이다(해당 Dockerfile이
         `FROM nginx:1.31.5` 위에 nginx-module-otel을 깐다). 그래서 이건
         취향 문제가 아니라 그 변형을 고르지 않으면 기능이 없는 문제다.
+        2026-10-05: 라벨 고정 입력의 후보로 나온 같은 근거의 다른 버전,
+        별칭 태그를 reject에 더했다.
       sources:
         - https://nginx.org/en/docs/ngx_otel_module.html
         - https://raw.githubusercontent.com/nginx/docker-nginx/master/mainline/debian-otel/Dockerfile
@@ -1591,10 +1732,10 @@ cases:
       - golang:1.26-trixie
       - golang:1.26.8-trixie
       - golang:1.26-bookworm
-    reject:
-      - golang:latest
+    reject: []
     expected_sections: [Image Variants, How to use this image]
     expected_plan: {}
+    requirements: []
     rationale:
       note: |
         공식 README가 alpine 변형에 대해 "highly experimental, and not
@@ -1617,6 +1758,9 @@ cases:
         exclude_distributions [alpine] 조건을 뺐다(2026-09-19). 근거에는 alpine이
         틀렸다고 할 문서가 없다고 적어 놓고 조건으로는 위반으로 채점하고 있었다.
         선호는 accept를 데비안 계열로만 두는 것으로 표현한다.
+        2026-10-05: 질문이 버전 고정이나 정식 릴리스를 요구하지 않아
+        latest와 prerelease를 reject에서 뺐다. 권장하지 않는
+        것은 명시적 오답이 아니다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/golang/README.md
         - https://hub.docker.com/_/golang
@@ -1643,6 +1787,8 @@ cases:
       - golang:1.27-nanoserver-ltsc2025
     expected_sections: [Image Variants]
     expected_plan: {}
+    requirements:
+      - must be a Linux image
     rationale:
       note: |
         go-sqlite3는 cgo 패키지라 CGO_ENABLED=1과 경로상의 gcc를 요구한다고
@@ -1693,6 +1839,8 @@ cases:
       - golang:windowsservercore
     expected_sections: [How to use this image, Quick reference]
     expected_plan: {}
+    requirements:
+      - must be a Linux image
     rationale:
       note: |
         cgo를 안 쓰면 GOOS/GOARCH 환경변수만 바꿔도 크로스 컴파일이 되므로
@@ -1732,10 +1880,10 @@ cases:
       - eclipse-temurin:25-jre-alpine
       - eclipse-temurin:17-jre-jammy
       - eclipse-temurin:17-jre-alpine
-    reject:
-      - eclipse-temurin:latest
+    reject: []
     expected_sections: ["Do you provide JRE (Java Runtime Environment) Images?"]
     expected_plan: {}
+    requirements: []
     rationale:
       note: |
         컨테이너 안에서 컴파일하지 않으면 javac를 비롯한 개발 도구가 런타임
@@ -1759,6 +1907,9 @@ cases:
         26이 올라오면 같은 태그가 다른 자바 런타임이 된다.
         버전은 25·21·17로 둔다. 11과 8도 Adoptium이 지원하지만 Spring Boot 4.1이
         Java 17 이상을 요구해 지원 중인 스프링부트의 jar를 실행할 수 없다.
+        2026-10-05: 질문이 버전 고정이나 정식 릴리스를 요구하지 않아
+        latest와 prerelease를 reject에서 뺐다. 권장하지 않는
+        것은 명시적 오답이 아니다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/eclipse-temurin/README.md
         - https://hub.docker.com/_/eclipse-temurin
@@ -1790,8 +1941,19 @@ cases:
       - eclipse-temurin:21-jre
       - eclipse-temurin:25-jre
       - eclipse-temurin:21-jre-alpine
+      - eclipse-temurin:26-jre
+      - eclipse-temurin:17-jre
+      - eclipse-temurin:11-jre
+      - eclipse-temurin:8-jre
+      - eclipse-temurin:11
+      - eclipse-temurin:8
+      - eclipse-temurin:11-jammy
+      - eclipse-temurin:8-jammy
     expected_sections: [How to use this Image, Image Variants]
     expected_plan: {}
+    requirements:
+      - must include a full JDK (javac) to compile and run tests
+      - must be a JDK that current Gradle can run on (Java 17 or newer)
     rationale:
       note: |
         컴파일과 jlink는 JDK 쪽 도구다. README의 jlink 예시도 빌드 스테이지를
@@ -1802,6 +1964,9 @@ cases:
         버전은 25·21·17로 둔다. Gradle 9.7은 JVM 17~26에서만 실행되므로 빌드
         스테이지의 JDK가 11이나 8이면 Gradle 자체가 뜨지 않는다. 26은 Adoptium이
         EOSL로 표시한다.
+        2026-10-05: JDK 11, 8과 jre 태그를 reject에
+        더했다. Gradle 9.7은 JVM 17~26에서만 돌고, jre에는
+        javac가 없다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/eclipse-temurin/README.md
         - https://hub.docker.com/_/eclipse-temurin
@@ -1833,6 +1998,7 @@ cases:
     expected_plan:
       version_prefix: "17"
       distributions: [jammy]
+    requirements: []
     rationale:
       note: |
         temurin의 베이스는 데비안이 아니라 우분투이고 jammy·noble·resolute가
@@ -1860,14 +2026,13 @@ cases:
       - debian:12-slim
       - debian:bookworm-slim
     reject:
-      - debian:13
-      - debian:trixie
       - debian:sid-slim
       - debian:testing-slim
-      - debian:latest
     expected_sections: [Image Variants, About this image]
     expected_plan:
       distributions: [debian]
+    requirements:
+      - must be a released Debian suite, not testing or sid
     rationale:
       note: |
         debian 이미지는 원래 minbase 변형이라 이미 작지만, `-slim` 태그는
@@ -1876,6 +2041,9 @@ cases:
         definitely subject to change"라고 적으므로 날짜가 붙은 태그로
         고정하는 선택도 타당해서 함께 넣었다. sid와 testing은 개발이
         진행 중인 굴러가는 스위트라 런타임 베이스가 될 수 없다.
+        2026-10-05: 크기를 근거로 둔 reject를 뺐다. "작을수록
+        좋다"는 후보끼리 견줘야 하는 선호라 필수 요구 위반이 아니다. 큰 태그는
+        accept에 없는 것으로만 표현한다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/debian/README.md
         - https://hub.docker.com/_/debian
@@ -1898,13 +2066,10 @@ cases:
       - debian:12-slim
       - debian:13.6-slim
       - debian:bookworm-slim
-    reject:
-      - debian:stable
-      - debian:testing
-      - debian:sid
-      - debian:latest
+    reject: []
     expected_sections: [About this image, Supported tags]
     expected_plan: {}
+    requirements: []
     rationale:
       note: |
         `13`과 `trixie`는 같은 이미지다. 공식 README가 stable 릴리스는 버전
@@ -1914,6 +2079,8 @@ cases:
         sources.list에 쓰는 태그라 데비안이 다음 릴리스를 내는 순간 가리키는
         대상도 apt 저장소도 통째로 바뀐다. 지금 stable은 trixie지만 forky가
         testing에서 올라오면 같은 태그가 다른 OS가 된다.
+        2026-10-05: 질문은 차이를 묻기만 하고 요구가 없어 stable,
+        testing, sid, latest를 reject에서 뺐다.
       sources:
         - https://raw.githubusercontent.com/docker-library/docs/master/debian/README.md
         - https://hub.docker.com/_/debian
@@ -1941,6 +2108,8 @@ cases:
     expected_sections: ["What's in this image?", Supported tags]
     expected_plan:
       distributions: [ubuntu]
+    requirements:
+      - must be an Ubuntu LTS release
     rationale:
       note: |
         우분투는 2년마다 LTS를 내고 LTS는 5년의 표준 보안 유지보수를 받는
@@ -1975,6 +2144,7 @@ cases:
     expected_sections: [Supported tags]
     expected_plan:
       version_prefix: "24.04"
+    requirements: []
     rationale:
       note: |
         `24.04`와 `noble`은 태그 목록에서 한 줄에 묶인 같은 이미지라 어느
@@ -2013,9 +2183,10 @@ cases:
     reject:
       - alpine:edge
       - alpine:20260805
-      - alpine:latest
     expected_sections: ["What is Alpine Linux?", Supported tags]
     expected_plan: {}
+    requirements:
+      - must be a supported stable Alpine release branch, not edge
     rationale:
       note: |
         alpine은 musl libc와 BusyBox로 구성한 약 5MB 이미지라 정적 바이너리에
@@ -2036,6 +2207,9 @@ cases:
         community도 지원된다"를 다른 브랜치로 일반화하면 틀린다.
         릴리스 브랜치로 고정하는 것이 맞고 `latest`는 새 브랜치가 나면
         따라 움직인다.
+        2026-10-05: 질문이 버전 고정이나 정식 릴리스를 요구하지 않아
+        latest와 prerelease를 reject에서 뺐다. 권장하지 않는
+        것은 명시적 오답이 아니다.
       sources:
         - https://hub.docker.com/_/alpine
         - https://raw.githubusercontent.com/docker-library/docs/master/alpine/README.md

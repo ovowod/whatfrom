@@ -22,6 +22,7 @@ def make_case(**overrides: object) -> GoldenCase:
         "requires_repositories": ["python"],
         "accept": ["python:3.13-slim"],
         "expected_plan": {},
+        "requirements": [],
         "rationale": Rationale(note="근거", sources=["https://example.invalid/doc"]),
     }
     base.update(overrides)
@@ -51,6 +52,40 @@ def test_candidate_miss_when_no_accepted_image_is_offered() -> None:
     score = score_retrieval(make_case(), [make_candidate("3.13-alpine")], [])
 
     assert score.candidate_hit is False
+
+
+def test_top_candidate_counts_when_the_first_candidate_is_accepted_by_digest() -> None:
+    """검색 1위 대조군은 추천 정확도와 같은 허용 규칙으로 채점한다."""
+    first = make_candidate("3.13-slim-trixie")
+    second = make_candidate("3.13-slim")
+
+    score = score_retrieval(make_case(), [first, second], [], frozenset({"sha256:aaa"}))
+
+    assert score.top_candidate_accepted is True
+
+
+def test_top_candidate_misses_when_only_a_lower_candidate_is_accepted() -> None:
+    score = score_retrieval(
+        make_case(), [make_candidate("3.13-alpine"), make_candidate("3.13-slim")], []
+    )
+
+    assert score.top_candidate_accepted is False
+
+
+def test_top_candidate_misses_without_candidates() -> None:
+    assert score_retrieval(make_case(), [], []).top_candidate_accepted is False
+
+
+def test_rejected_and_accepted_candidates_are_named_by_the_same_rules_as_accuracy() -> None:
+    case = make_case(reject=["python:3.13-alpine"])
+    alias = make_candidate("3.13-slim-trixie")
+    rejected = make_candidate("3.13-alpine")
+    rejected.digest = "sha256:other"
+
+    score = score_retrieval(case, [alias, rejected], [], frozenset({"sha256:aaa"}))
+
+    assert score.accepted_candidates == ["python:3.13-slim-trixie"]
+    assert score.rejected_candidates == ["python:3.13-alpine"]
 
 
 def test_hit_is_not_declared_without_expected_sections() -> None:

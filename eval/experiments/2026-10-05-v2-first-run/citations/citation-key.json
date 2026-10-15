@@ -1,0 +1,308 @@
+{
+  "seed": 0,
+  "arms": [
+    "eval/experiments/2026-10-05-v2-first-run/luna-none.json"
+  ],
+  "items": {
+    "c001": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "redis-version-pinned-7",
+      "claim": 2,
+      "hash": "5f489c69d861e7680cc9b1dfea347f78595fa8d38631467bf7439f07669c951d"
+    },
+    "c002": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "ubuntu-noble-pinned",
+      "claim": 1,
+      "hash": "2707efa1fbf506aa915f8d3cdd618e225b37de9e86d0bcaa5216248196c59d67"
+    },
+    "c003": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "node-arm64-graviton",
+      "claim": 3,
+      "hash": "58f56eadd4bbe9ba7b8f119902f76c78c66a3a947348adcce0efb0a221e1b6f6"
+    },
+    "c004": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "nginx-static-spa",
+      "claim": 1,
+      "hash": "921c54ce103949566e63b944c2565a6b2b340795090f133fbe69fc2c95666c1d"
+    },
+    "c005": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "redis-version-pinned-7",
+      "claim": 0,
+      "hash": "8f4347365d1b9b1cb11d2c640a2d2c39ee0bae3f187eaa8db1f3f00c860f8ad6"
+    },
+    "c006": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "golang-multistage-build",
+      "claim": 1,
+      "hash": "dad2bc5a6d51969558bf3612bcba28657afc896c7da2d76fb1af1cbe65fff627"
+    },
+    "c007": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-ml-torch",
+      "claim": 0,
+      "hash": "10281471c3f37dc19e579eac089da3c84224b2240f3ba10b84fa7828bae138ee"
+    },
+    "c008": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "nginx-stable-branch",
+      "claim": 1,
+      "hash": "104edc1ff1320e3000029e294d54d2cfa68f8da0b376e26e216541e4584129c9"
+    },
+    "c009": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "golang-cgo-sqlite",
+      "claim": 0,
+      "hash": "42b120ffbc101a176868accd3bf03f1af0c0976c07dc13ed6fe9f8a96efcd00c"
+    },
+    "c010": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "alpine-static-binary",
+      "claim": 2,
+      "hash": "8133bc6c7866beb0f9e7e4edad7f1615dd7be5d5a136e968cea99e828a08bb50"
+    },
+    "c011": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "nginx-stable-branch",
+      "claim": 0,
+      "hash": "47e6a00a5c619451f26e722a360ec8dcdedca390d94fe95114df301a0ea16fec"
+    },
+    "c012": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-latest-stable",
+      "claim": 2,
+      "hash": "ddb77f310173c0596abe8c0bf5403c7115a41739e0327272bd1e30cba1b6b5d9"
+    },
+    "c013": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "ubuntu-lts-base",
+      "claim": 0,
+      "hash": "9c2ba6e0b438158e184b674686d3c9641783d42a112a01d4c97539b6965a7d61"
+    },
+    "c014": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-build-stage",
+      "claim": 0,
+      "hash": "71b2609c0611594d7b3a63591e768388681df02f8473dc02c448e779d7f72bf6"
+    },
+    "c015": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-debian-codename",
+      "claim": 0,
+      "hash": "e95c9cb793d532cb9effda900a8428ec29a7bea38a2c778b2469de65d03aa758"
+    },
+    "c016": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "temurin-jre-runtime",
+      "claim": 0,
+      "hash": "62480e951bf30f92e73bd1bd795fdfa3e6b1ea132bfefab0939e1ddc4364ab7a"
+    },
+    "c017": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-scientific-stack",
+      "claim": 2,
+      "hash": "64bca4e907a3442f82a790f3de6a09a1473e75cab4817eb44f87eb4878e0ed4b"
+    },
+    "c018": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "debian-slim-runtime",
+      "claim": 1,
+      "hash": "8a1c1e1213533b49ee381a632aae90503581057b93fd450d8572d20d6b65e192"
+    },
+    "c019": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "node-native-addon",
+      "claim": 1,
+      "hash": "1bb0825c6536f61f8547b00db8b0652a5055fb936609da2dd3e38d76b0f3027d"
+    },
+    "c020": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-latest-stable",
+      "claim": 0,
+      "hash": "ead7ad55c8df970b57cee49545de2733c70a56dafda4d409f51cd8e058c11188"
+    },
+    "c021": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "redis-cache-sidecar",
+      "claim": 1,
+      "hash": "93ec80b1faeb4b61c7f63e6fc12fb6f3b314127ba31c7890318789f916c6117f"
+    },
+    "c022": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "postgres-ci-ephemeral",
+      "claim": 1,
+      "hash": "8c811950f5b969a7e48568a1cb8898d37204d988d4107919d5649fecf52e2018"
+    },
+    "c023": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "temurin-jdk-build-stage",
+      "claim": 0,
+      "hash": "ae4c2f08a6507bf995f447c4724c9702f119633d1b616c8b7f1f20a04c917e5b"
+    },
+    "c024": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "node-alpine-vs-slim",
+      "claim": 3,
+      "hash": "853631f9b57cb32e64874633b8c74a7c10e6d6c9de70a5dcd08186b30f3469cf"
+    },
+    "c025": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "postgres-prod-default",
+      "claim": 2,
+      "hash": "0efc6c9771ea086a319716d51606be2e9be8840f938304df148bdb135736ea3b"
+    },
+    "c026": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "debian-codename-vs-number",
+      "claim": 0,
+      "hash": "d6a78eaab9566c42330e567b21b870e0f49246165ee9d7f5bae5b6fac1270cda"
+    },
+    "c027": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "node-lts-prod",
+      "claim": 0,
+      "hash": "a56c3ffdf62be371910734a1eda5a6f474f61c72d66817730346701625b1d2a0"
+    },
+    "c028": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-version-pinned-312",
+      "claim": 2,
+      "hash": "ddd1a5dc9f503ad09f9a8b2db79e20d6fca43b0557dcf55066566b20bd75d7f0"
+    },
+    "c029": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-fastapi-prod",
+      "claim": 1,
+      "hash": "7f8b84797a669eaa8f08dbbec4652880a2b25301eae38b872a26ceac8f952ac6"
+    },
+    "c030": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "golang-cross-compile-arm64",
+      "claim": 0,
+      "hash": "15a30d6d87e461ca5c1ea8b4fa7503d6c747e11849c56669ba3a46b8cb4fec9e"
+    },
+    "c031": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "ubuntu-noble-pinned",
+      "claim": 0,
+      "hash": "e72d905940d1792cbae40b3e625ba3ea6d6c4bea61daf7d1c166e6e87ca7e130"
+    },
+    "c032": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-musl-explained",
+      "claim": 3,
+      "hash": "71d4e6bc0fb3a3136fb9547a500ddf6eecc76c0aeca842b04f217a06d4deb49f"
+    },
+    "c033": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "node-alpine-vs-slim",
+      "claim": 0,
+      "hash": "a68d8cc9dee7ae07661007ed67adbfc53b6322a65c5250bfd5e649b01d6c5cb1"
+    },
+    "c034": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-alpine-explicit",
+      "claim": 0,
+      "hash": "457d8deed3fc368b54fb8c2409ac8de7a8d039746b99f44ea6fb9ce6fcc3a1ca"
+    },
+    "c035": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "temurin-jre-runtime",
+      "claim": 3,
+      "hash": "d66bccc611edbd3a333c1bc03336e784153932a878316ff6a0440d93c6dbe4c1"
+    },
+    "c036": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "node-native-addon",
+      "claim": 0,
+      "hash": "4b20370b2eef53a9623d3c1918bd6bcc2090123f5983dcefd6dccc0d86db0d51"
+    },
+    "c037": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-size-first",
+      "claim": 1,
+      "hash": "fbace683efe2c50c98569a4d57824cfdb9dd9ace8e3fd1b9fef5705186dba822"
+    },
+    "c038": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "debian-codename-vs-number",
+      "claim": 1,
+      "hash": "8dda49f66a92bb085fbdab5d199e0f56d01d5472fbe8a83e2ccc19504b64b0eb"
+    },
+    "c039": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-small-cli",
+      "claim": 1,
+      "hash": "39c3fada5e369840e002016e1e2c830b1d715affaa3f79587166241e5d17cd18"
+    },
+    "c040": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-arm64-only",
+      "claim": 1,
+      "hash": "21856f8d7224e359555dae084f86148b2628194dcf4fbed71387f6b059e4b78c"
+    },
+    "c041": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "postgres-postgis-extension",
+      "claim": 0,
+      "hash": "4d3cfb58640d23866ceacb58c24220ff2444f57ec9cb18f26c6b89a146c308e3"
+    },
+    "c042": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "temurin-jdk-build-stage",
+      "claim": 1,
+      "hash": "477aecb3a3bf331e68e6bb2e9cf16986df949d98f87c4be2da1fcfa4378cdee0"
+    },
+    "c043": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-debian-codename",
+      "claim": 1,
+      "hash": "9ab80b3c688a9df72569bb93af6320a9adb35bd2bbdd59f418608aeb44009405"
+    },
+    "c044": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "redis-persistence-docs",
+      "claim": 0,
+      "hash": "8fcc65481937ed30f52351ae0d868443cd57e936307cfaf2fd3d1f9911f63e27"
+    },
+    "c045": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-musl-explained",
+      "claim": 0,
+      "hash": "10bba335fac46b932d59b6ed8d3db4ee14255332e573c4c9a35bddfba1006f15"
+    },
+    "c046": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "nginx-static-spa",
+      "claim": 2,
+      "hash": "36cdc49d3071dc8db1f9027c8e70e845a220fe0b6fe89c7c9d32ead69185cd30"
+    },
+    "c047": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-numpy-arm64",
+      "claim": 0,
+      "hash": "3840e3693b3e180f92956baf40eccd535eefd29f2c43cec862d972be80039dd6"
+    },
+    "c048": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "golang-cgo-sqlite",
+      "claim": 1,
+      "hash": "2cfe79057fe2f4977a6415109cacc8d8835611d746ba22524d58a96c11c773ae"
+    },
+    "c049": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "python-build-stage",
+      "claim": 1,
+      "hash": "6bfea87955cfd0a84aaf25b9107d096b5003f0505ac6961348c60b9f9e1c71b7"
+    },
+    "c050": {
+      "arm": "eval/experiments/2026-10-05-v2-first-run/luna-none.json",
+      "case_id": "golang-cross-compile-arm64",
+      "claim": 1,
+      "hash": "5bfaf3ee13858c1428de534485fffe264b115def1de8230d426c719dd33949a9"
+    }
+  }
+}

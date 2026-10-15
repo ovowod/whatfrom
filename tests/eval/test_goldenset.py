@@ -16,6 +16,7 @@ cases:
     tags: [arch, native-deps]
     accept: [python:3.13-slim]
     reject: [python:3.13-alpine]
+    requirements: [numpy must install from prebuilt wheels]
     conditions:
       architectures: [arm64]
       exclude_distributions: [alpine]
@@ -57,6 +58,7 @@ cases:
     requires_repositories: [python]
     accept: [python:3.13-slim]
     expected_plan: {}
+    requirements: []
     rationale:
       note: 근거
       sources: [https://hub.docker.com/_/python]
@@ -77,6 +79,7 @@ cases:
     requires_repositories: [python]
     accept: [python:3.13-slim]
     expected_plan: {}
+    requirements: []
     rationale:
       note: 근거를 못 찾았다
       sources: []
@@ -159,6 +162,34 @@ def test_a_case_without_expected_plan_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(GoldenSetError):
         load_goldenset(write(tmp_path, missing))
+
+
+def test_loads_the_judgment_requirements(tmp_path: Path) -> None:
+    [case] = load_goldenset(write(tmp_path, VALID)).cases
+
+    assert case.requirements == ["numpy must install from prebuilt wheels"]
+
+
+def test_a_case_without_requirements_is_rejected(tmp_path: Path) -> None:
+    """빈 목록은 "요구 없음"이고, 키가 없으면 "아직 안 씀"이다. 둘을 가른다."""
+    missing = VALID.replace("    requirements: [numpy must install from prebuilt wheels]\n", "")
+
+    with pytest.raises(GoldenSetError):
+        load_goldenset(write(tmp_path, missing))
+
+
+def test_an_empty_requirement_list_is_accepted(tmp_path: Path) -> None:
+    empty = VALID.replace("[numpy must install from prebuilt wheels]", "[]")
+
+    assert load_goldenset(write(tmp_path, empty)).cases[0].requirements == []
+
+
+@pytest.mark.parametrize("blank", ['""', '"   "'])
+def test_a_blank_requirement_is_rejected(tmp_path: Path, blank: str) -> None:
+    text = VALID.replace("[numpy must install from prebuilt wheels]", f"[{blank}]")
+
+    with pytest.raises(GoldenSetError):
+        load_goldenset(write(tmp_path, text))
 
 
 def test_expected_plan_rejects_an_unknown_key(tmp_path: Path) -> None:

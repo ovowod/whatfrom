@@ -66,8 +66,8 @@ FROM ???
 ## 구조
 
 ```text
-요구사항 ─▶ 임베딩 ─▶ 검색 조건 추출 ─▶ 벡터 검색 + 조건 거르기 ─▶ 후보 태그 선택 ─▶ LLM 추천 ─▶ 검증 ─▶ 응답
-                      (LLM #1)          (PostgreSQL + pgvector)                    (LLM #2)
+요구사항 ─▶ 임베딩 ─▶ 검색 조건 추출 ─▶ 벡터 검색 + 조건 거르기 ─▶ 후보 태그 선택 ─▶ 검토 ─▶ 검증 ─▶ 응답
+                      (LLM)             (PostgreSQL + pgvector)                      (LLM)
 ```
 
 수집(`collect`)과 색인(`index`)은 CLI 배치로 실행한다. 추천 요청을 처리하는 동안에는 Docker Hub를 호출하지 않는다.
@@ -147,8 +147,8 @@ curl -s localhost:8000/recommend -H 'content-type: application/json' \
 LLM 공급자를 바꿀 때는 `.env`의 `WHATFROM_LLM_BASE_URL`, `WHATFROM_LLM_MODEL`, API 키를 변경한다.
 사용할 엔드포인트는 OpenAI 호환 `/v1/chat/completions`와 JSON Schema 응답 형식을 지원해야 한다.
 
-조건 추출 단계(LLM #1)와 추천 단계(LLM #2)에 다른 LLM을 쓸 수도 있다.
-`WHATFROM_PLAN_LLM_*`은 조건 추출 단계, `WHATFROM_RECOMMEND_LLM_*`은 추천 단계의 설정이다.
+조건 추출 단계와 검토 단계에 다른 LLM을 쓸 수도 있다.
+`WHATFROM_PLAN_LLM_*`은 조건 추출 단계, `WHATFROM_RECOMMEND_LLM_*`은 검토 단계의 설정이다.
 
 | 설정 | 설정하지 않았을 때 |
 | --- | --- |
@@ -179,6 +179,7 @@ WHATFROM_RECOMMEND_LLM_EXTRA_BODY={"reasoning_effort": "none"}
 - **버전 요구가 없으면 지원 중인 줄기를 모두 허용한다.** 질문이 버전·기간을 요구하거나 문서가 그 버전으로는 요구를 만족할 수 없다고 적은 경우에만 좁힌다. 기준일과 repository별 지원 줄기는 golden set 머리 주석에 출처와 함께 적었다.
 - **질문에서 답이 될 제품을 알 수 있어야 한다.** 평가는 모델에 질문만 넘기므로, 제품명이나 그 제품에만 해당하는 단서를 질문에 넣는다.
 - **검색 조건 추출의 정답은 따로 둔다.** `conditions`는 답이 지켜야 할 조건이라 문서 지식에서 나온 것도 있다. 추출기는 질문에 명시된 것만 뽑아야 하므로, 질문에 적힌 조건을 `expected_plan`에 따로 적는다. 라벨 규칙은 golden set 머리 주석에 있다.
+- **판단 요구는 후보 하나만 보고 판정할 수 있는 것만 쓴다.** `requirements`는 판정 단계가 후보마다 판정할 요구다. 검색 조건으로 거르는 것, 후보끼리 견줘야 하는 선호, 패키지를 더 설치하면 되는 것은 쓰지 않는다. 질문만 보고 쓴 초안을 근거와 대조해 고쳤다.
 
 실행 절차에 따라 수집·색인과 `.env` 설정을 마친 뒤 평가한다.
 
@@ -186,7 +187,7 @@ WHATFROM_RECOMMEND_LLM_EXTRA_BODY={"reasoning_effort": "none"}
 make eval-retrieval    # LLM 호출 없이 검색 지표만 측정
 make eval-plan         # 조건 추출 단계만 불러 추출 지표 2종 측정
 make eval-recommend PLANS=eval/results/<파일>.json  # 검색 조건을 고정하고 추천 단계만 측정
-make eval             # .env의 모델 설정으로 지표 8종 측정
+make eval             # .env의 모델 설정으로 전체 지표 측정
 ```
 
 | 지표 | 정의 |
@@ -197,6 +198,10 @@ make eval             # .env의 모델 설정으로 지표 8종 측정
 | 조건 일치율 | 조건이 지정된 문항 중 추천이 아키텍처·버전·배포판·크기 조건을 모두 만족한 비율. 추천이 없으면 실패로 계산 |
 | 출처 제공률 | 추천 이미지에 출처 URL과 수집 시점이 있는 비율. 추천이 없으면 반환된 후보 전체를 검사 |
 | 문서 Hit@5 | 기대 섹션이 지정된 문항 중 상위 5개 청크에 해당 섹션이 하나 이상 포함된 비율. repository도 일치해야 함. 검색은 섹션마다 가장 가까운 청크 하나만 돌려주므로 상위 5개 섹션과 같다 |
+| 인용 검증 통과율 | 주장들에 붙은 근거 인용 중 근거 본문에 글자 그대로 있는 비율. 인용이 없으면 미측정 |
+| 오답 적발률 | 후보로 나온 명시적 오답 중 불만족 판정을 하나 이상 받은 비율. 판정이 없는 실행이면 미측정 |
+| 오판정률 | 후보로 나온 허용 정답 중 불만족 판정을 하나 이상 받은 비율. 판정이 없는 실행이면 미측정 |
+| 명시적 오답 후보 문항 | 명시적 오답이 후보에 하나 이상 나온 문항의 비율. 오답 적발률이 잴 기회가 있던 문항이다 |
 | repository 추출 일치율 | 검색 조건의 repository가 문항의 필요 repository인 비율. 추출에 실패하면 실패로 계산 |
 | 조건 추출 일치율 | 검색 조건의 버전·아키텍처·배포판·크기가 `expected_plan`과 모두 같은 비율. 조건이 없는 문항도 분모에 넣어 없는 조건을 만든 것을 잡는다 |
 
@@ -211,6 +216,26 @@ repository 목록, 정규화, 미측정 문항 처리가 전체 모드와 같아
 - 그 결과에서 추출이 실패한 문항은 이번에도 추출 실패로 다룬다.
 - 결과 파일이 전체 모드가 아니거나, golden set 해시가 다르거나, 측정할 문항이 없으면 모델을 부르기 전에 멈춘다.
 - 조건 추출 단계를 부르지 않으므로 두 추출 지표는 출력하지 않는다. 결과 meta의 `plans_from`에 고정한 파일 이름이 남는다.
+
+label 고정 mode(`whatfrom eval --label-plans`)는 문항의 `expected_plan`과 repository를 검색 조건으로 쓴다.
+조건 추출 품질을 섞지 않고 두 번째 LLM 호출만 잴 때 쓴다. 후보는 운영 경로와 같은 검색(조건 filter 포함)으로 나온다.
+- `--no-recommend`를 함께 주면 검토 단계도 부르지 않는다. LLM 호출 없이 후보, 검색 지표, 대조군만 잰다.
+- repository가 둘 이상인 문항이 있으면 모델을 부르기 전에 멈춘다.
+- 결과 meta의 mode는 `label-plans`, `--no-recommend`이면 `label-plans-retrieval`이다.
+
+인용 뒷받침률은 `sample-citations`로 뽑은 표본에서 각 인용이 주장에 맞게 붙었는지 검토해 잰다.
+
+```bash
+uv run python -m whatfrom.cli eval sample-citations eval/results/a.json eval/results/b.json --out-dir <directory>
+uv run python -m whatfrom.cli eval score-citations <directory>/citation-sample.yaml <directory>/citation-key.json
+```
+
+- 결과 파일(안)마다 검증을 통과한 인용이 붙은 주장을 최대 50개, 문항당 최대 2개 뽑는다. 항목에는 질문, 주장, 그 주장의 인용 전부, LLM에게 넘긴 후보 목록이 들어간다. `--seed`가 같으면 같은 표본이다.
+- 표본에는 결과 파일 이름이 없다. 어느 안의 주장인지는 key 파일에만 있으니 검토가 끝날 때까지 열지 않는다.
+- `verdict`: 주장에 쓰인 문서 사실이 인용들로 모두 확인되면 `supported`, 하나라도 아니면 `unsupported`, 정말 정할 수 없으면 `unclear`, 문서 사실이 없으면 `no_doc_fact`다. 절차와 예시는 표본 파일 머리 주석에 있다. 사용자 조건은 전제로 받아들이고, 결론은 확인된 사실과 조건에서 합리적으로 나오면 된다.
+- `candidate_ok`: 주장 속 후보 정보(크기, 아키텍처, 후보 비교)가 후보 목록과 맞으면 `match`, 틀리면 `mismatch`, 확인할 수 없으면 `unclear`, 후보 정보가 없으면 `not_applicable`이다.
+- 뒷받침률은 supported ÷ (supported + unsupported)이고 합격선은 90%다. unclear가 표본의 10%를 넘으면 보류, 판정할 주장이 없으면 미측정이다. no_doc_fact는 분모와 unclear 한도에서 뺀다. 후보 정보 오류는 mismatch ÷ (match + mismatch)로 따로 내고 합격선은 없다.
+- 빈 칸, 정한 어휘 밖의 값, 지우거나 복제한 행, 검토 칸 밖의 내용 변경이 있으면 안별 집계만 내고 합격 여부는 비운다.
 
 LLM을 부르는 모드는 문항마다 LLM 호출 기록(`llm_calls`)을 결과에 남긴다.
 호출마다 단계, 시도 횟수, 성공 여부와 실패 이유, 입력·출력·reasoning token 수가 있다.
@@ -228,10 +253,11 @@ digest는 측정 시점 DB 기준이며, digest로 인정한 문항은 결과와
 
 필요한 repository가 색인되지 않은 문항은 **미측정**으로 분류하고 평가 분모에서 제외한다.
 실행 결과는 `eval/results/`에 JSON으로 저장하며, 모델명과 임베딩 모델, golden set 해시를 함께 기록한다.
-문항별 후보 목록과 그중 허용 정답 수, 무작위 선택 대조군도 저장한다. 무작위 선택 대조군은 두 모드 모두 출력한다.
+문항별 후보 목록과 그중 허용 정답 수, 무작위 선택 대조군과 검색 1위 대조군도 저장한다. 두 대조군은 후보가 있는 모든 mode에서 출력한다.
+검색 1위 대조군은 판정 없이 검색 1위 후보를 추천으로 봤을 때의 정확도이고, 추천 정확도와 같은 허용 규칙으로 채점한다.
 전체 모드에서는 문항별 검색 조건, 필드별 추출 일치 여부, 응답 알림(조건 완화, 추출 실패)도 저장한다.
 추천의 digest·출처·수집 시점, 두 번째 LLM 호출에 보낸 prompt, 단계별 소요 시간(임베딩, 조건 추출 단계, 두 번째 LLM 호출, 전체)도 함께 저장한다.
-추천 이미지, 대안, 주장 목록과 근거 인용별 검증 결과도 저장한다. 인용 지표와 사람의 뒷받침 확인은 이 파일만 읽는다.
+추천 이미지, 대안, 주장 목록과 근거 인용별 검증 결과도 저장한다. 인용 지표와 인용 표본 검토는 이 파일만 읽는다.
 이 결과 폴더는 Git 추적 대상에서 제외되어 있다.
 
 모델 선택처럼 결정을 내린 비교는 `eval/experiments/<날짜>-<주제>/`에 조건, 결과, 한계, 결론과 재현 스크립트를 함께 남긴다.
@@ -239,7 +265,30 @@ digest는 측정 시점 DB 기준이며, digest로 인정한 문항은 결과와
 - [임베딩 모델 비교 (2026-09-24)](eval/experiments/2026-09-24-embedding-comparison/README.md): bge-m3, qwen3-embedding 0.6B, snowflake-arctic-embed2, OpenAI text-embedding-3-small·large를 비교했다. 교체할 만큼 확실한 이득을 확인하지 못해 bge-m3를 유지한다. 제목만 보는 Hit 지표가 한 문장짜리 "Image Variants" 소개문도 성공으로 세어 근거 품질을 과대평가할 수 있다는 점도 확인했다.
 - [틀 문장 섹션 제외 (2026-09-24)](eval/experiments/2026-09-24-template-exclusion/README.md): 본문이 README 틀의 한 문장뿐인 섹션 10개를 색인에서 뺐다. 같은 벡터로 재면 문서 Hit@5는 그대로이고, 다시 색인한 뒤 오른 2문항은 원본 README 변경 때문임을 확인했다.
 
-### 기준 측정 결과 (2026-09-24, F9 마무리)
+- [판단 요구 라벨과 명시적 오답 보강 (2026-10-05)](eval/experiments/2026-10-05-v2-labels/README.md): golden set에 판단 요구를 넣고, 명시적 오답을 필수 요구 위반만 남도록 고쳤다. 후보로 나온 명시적 오답이 28개에서 84개로 늘었다.
+- [V2 첫 측정 (2026-10-05~15)](eval/experiments/2026-10-05-v2-first-run/README.md): 라벨 고정 입력으로 단일 선택을 재고, 인용 검토 기준을 정했다. 인용 뒷받침률이 합격선에 못 미쳤다.
+
+### 기준 측정 결과 (2026-10-15, V2)
+
+라벨 고정 입력(조건 추출 단계 없이 golden set의 검색 조건)으로 잰 v2 첫 결과다.
+검토 단계는 단일 선택이고 `gpt-6-luna` + `reasoning_effort: none`을 썼다. 경로를 확인하려고 돌린 것이라 모델 선택 근거로 쓰지 않는다.
+golden set은 version 2 `a6e8db88`이다. 자세한 내용은 [실험 기록](eval/experiments/2026-10-05-v2-first-run/README.md)에 있다.
+
+| 지표 | 값 |
+| --- | --- |
+| 추천 정확도 | 39/40 (97.5%) |
+| 검색 1위 대조군 | 27/40 (67.5%) |
+| 인용 검증 통과율 | 81/84 (96.4%) |
+| 인용 뒷받침률 | 26/43 (60.5%), 합격선 90% 미달 |
+| 후보 정보 오류 | 0/8 |
+| 문서 Hit@5 | 33/40 |
+
+인용은 근거 본문에 글자 그대로 있지만, 그 인용이 주장에 쓰인 문서 사실을 모두 받치는 주장은 열에 여섯이다.
+결론에 필요한 사실을 인용하지 않거나 사실의 일부만 인용한 경우가 많았다. M3에서 이 부분을 개선한다.
+
+### 이전 측정: F9 마무리 (2026-09-24, v1: Dockerfile 포함)
+
+추천과 함께 Dockerfile 초안을 만들던 v1 시점의 결과다. 지금 응답에는 Dockerfile이 없다([ADR 0003](docs/adr/0003-judge-candidates-instead-of-recommending.md)).
 
 추천 응답에 수집 시점 digest를 붙이고 Dockerfile의 `FROM`을 고정했다.
 내용 없이 틀 문장뿐인 섹션을 색인에서 빼고, 평가에 문항별 단계별 소요 시간을 남긴 뒤 측정했다.

@@ -84,6 +84,30 @@ def random_baseline(scores: list[CaseScore] | list[RetrievalScore]) -> RandomBas
 
 
 @dataclass(frozen=True)
+class TopCandidateBaseline:
+    """판정 없이 검색 1위 후보를 추천으로 본 대조군의 정확도.
+
+    추천 정확도가 이보다 높아야 LLM이 검색 순위보다 나은 판단을 했다고 말할 수 있다.
+    """
+
+    hits: int
+    total: int
+
+    @property
+    def ratio(self) -> float | None:
+        """Metric.ratio와 같은 규칙. 분모가 0이면 0%가 아니라 미측정이다."""
+        return self.hits / self.total if self.total else None
+
+
+def top_candidate_baseline(
+    scores: list[CaseScore] | list[RetrievalScore],
+) -> TopCandidateBaseline:
+    return TopCandidateBaseline(
+        hits=sum(s.top_candidate_accepted for s in scores), total=len(scores)
+    )
+
+
+@dataclass(frozen=True)
 class Skipped:
     case_id: str
     missing: list[str]
@@ -111,6 +135,9 @@ def aggregate_recommendation(scores: list[CaseScore]) -> list[Metric]:
             sum(s.conditions_declared for s in scores),
         ),
         Metric("출처 제공률", sum(s.sources_ok for s in scores), len(scores)),
+        _citation_pass_rate(scores),
+        *_judgment_metrics(scores),
+        _rejected_cases(scores),
         Metric(
             # Recall이 아니라 Hit이다. 기대 섹션 중 하나만 상위 5청크에서 나와도
             # 히트로 세므로, 관련 문서 전체 중 회수한 비율(Recall)이 아니다.
@@ -120,6 +147,45 @@ def aggregate_recommendation(scores: list[CaseScore]) -> list[Metric]:
             sum(s.hit_declared for s in scores),
         ),
     ]
+
+
+def _citation_pass_rate(scores: list[CaseScore]) -> Metric:
+    """주장들에 붙은 인용 전체 중 글자 그대로 검증을 통과한 비율. 인용이 없으면 미측정이다."""
+    citations = [
+        citation["verified"]
+        for s in scores
+        if s.recommendation is not None
+        for claim in s.recommendation["claims"]
+        for citation in claim["citations"]
+    ]
+    return Metric("인용 검증 통과율", sum(citations), len(citations))
+
+
+def _judgment_metrics(scores: list[CaseScore]) -> list[Metric]:
+    """후보 단위로 센다. 판정이 없는 문항은 두 지표의 분모에서 빠지므로,
+    판정이 없는 실행에서는 둘 다 0%가 아니라 미측정이다."""
+    detected = total_rejected = misjudged = total_accepted = 0
+    for s in scores:
+        if s.unsatisfied_candidates is None:
+            continue
+        unsatisfied = set(s.unsatisfied_candidates)
+        detected += sum(image in unsatisfied for image in s.rejected_candidates)
+        total_rejected += len(s.rejected_candidates)
+        misjudged += sum(image in unsatisfied for image in s.accepted_candidates)
+        total_accepted += len(s.accepted_candidates)
+    return [
+        Metric("오답 적발률", detected, total_rejected),
+        Metric("오판정률", misjudged, total_accepted),
+    ]
+
+
+def _rejected_cases(scores: list[CaseScore] | list[RetrievalScore]) -> Metric:
+    """명시적 오답 후보 문항. 오답 적발률이 잴 기회가 있던 문항 수다."""
+    return Metric(
+        "명시적 오답 후보 문항",
+        sum(bool(s.rejected_candidates) for s in scores),
+        len(scores),
+    )
 
 
 def aggregate_plan(scores: list[CaseScore] | list[PlanScore]) -> list[Metric]:
@@ -140,6 +206,7 @@ def aggregate_retrieval(scores: list[RetrievalScore]) -> list[Metric]:
             sum(s.hit_at5 for s in scores),
             sum(s.hit_declared for s in scores),
         ),
+        _rejected_cases(scores),
     ]
 
 
@@ -153,8 +220,8 @@ def _pad(text: str, width: int) -> str:
     return text + " " * max(width - _display_width(text), 0)
 
 
-# 지표 라벨 중 가장 넓은 "조건 추출 일치율"이 16칸이다. 여유 두 칸을 더 둔다.
-_LABEL_WIDTH = 18
+# 지표 label 중 가장 넓은 "repository 추출 일치율"이 22칸이다. 여유 두 칸을 더 둔다.
+_LABEL_WIDTH = 24
 
 
 def _format_metric(metric: Metric) -> str:
@@ -181,6 +248,15 @@ def _format_random_baseline(baseline: RandomBaseline) -> str:
     return (
         f"※ 무작위 선택 대조군 — 후보 중 하나를 무작위로 고르면 기대 정확도 "
         f"{baseline.expected:.1%} (측정 {baseline.total}문항, 지표 아님)"
+    )
+
+
+def _format_top_baseline(baseline: TopCandidateBaseline) -> str:
+    if baseline.ratio is None:
+        return "※ 검색 1위 대조군: 측정 문항이 없어 계산할 수 없다 (지표 아님)"
+    return (
+        f"※ 검색 1위 대조군 — 판정 없이 검색 1위 후보를 고르면 "
+        f"{baseline.hits}/{baseline.total} {baseline.ratio:.1%} (지표 아님)"
     )
 
 
@@ -219,6 +295,7 @@ def render_summary(
     meta: dict,
     baseline: ConstantBaseline | None = None,
     random: RandomBaseline | None = None,
+    top: TopCandidateBaseline | None = None,
 ) -> str:
     by_id = {case.id: case for case in cases}
     missing_repos = sorted({repo for s in skipped for repo in s.missing})
@@ -246,6 +323,8 @@ def render_summary(
     # 후보만 있으면 계산되므로 고정답 대조군과 달리 검색 전용 모드에도 나온다.
     if random is not None:
         lines += ["", _format_random_baseline(random)]
+    if top is not None:
+        lines += ["", _format_top_baseline(top)]
     # 추천 정확도를 읽기 위한 기준선이므로 그것이 없는 실행(--retrieval-only)에는
     # 놓일 자리가 없다. 호출자가 넘겨도 여기서 걸러 둘이 어긋나지 않게 한다.
     if baseline is not None and any(m.label == "추천 정확도" for m in metrics):
@@ -294,6 +373,7 @@ def result_document(
     meta: dict,
     baseline: ConstantBaseline | None = None,
     random: RandomBaseline | None = None,
+    top: TopCandidateBaseline | None = None,
 ) -> dict:
     """저장용 JSON. 실행 메타가 없으면 나중에 점수를 비교할 수 없다."""
     document: dict = {
@@ -307,4 +387,6 @@ def result_document(
         document["constant_baseline"] = asdict(baseline) | {"ratio": baseline.ratio}
     if random is not None:
         document["random_baseline"] = asdict(random)
+    if top is not None:
+        document["top_candidate_baseline"] = asdict(top) | {"ratio": top.ratio}
     return document
