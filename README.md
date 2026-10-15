@@ -219,7 +219,7 @@ repository 목록, 정규화, 미측정 문항 처리가 전체 모드와 같아
 
 label 고정 mode(`whatfrom eval --label-plans`)는 문항의 `expected_plan`과 repository를 검색 조건으로 쓴다.
 조건 추출 품질을 섞지 않고 두 번째 LLM 호출만 잴 때 쓴다. 후보는 운영 경로와 같은 검색(조건 filter 포함)으로 나온다.
-- `--no-recommend`를 함께 주면 추천 단계도 부르지 않는다. LLM 호출 없이 후보, 검색 지표, 대조군만 잰다.
+- `--no-recommend`를 함께 주면 검토 단계도 부르지 않는다. LLM 호출 없이 후보, 검색 지표, 대조군만 잰다.
 - repository가 둘 이상인 문항이 있으면 모델을 부르기 전에 멈춘다.
 - 결과 meta의 mode는 `label-plans`, `--no-recommend`이면 `label-plans-retrieval`이다.
 
@@ -265,7 +265,28 @@ digest는 측정 시점 DB 기준이며, digest로 인정한 문항은 결과와
 - [임베딩 모델 비교 (2026-09-24)](eval/experiments/2026-09-24-embedding-comparison/README.md): bge-m3, qwen3-embedding 0.6B, snowflake-arctic-embed2, OpenAI text-embedding-3-small·large를 비교했다. 교체할 만큼 확실한 이득을 확인하지 못해 bge-m3를 유지한다. 제목만 보는 Hit 지표가 한 문장짜리 "Image Variants" 소개문도 성공으로 세어 근거 품질을 과대평가할 수 있다는 점도 확인했다.
 - [틀 문장 섹션 제외 (2026-09-24)](eval/experiments/2026-09-24-template-exclusion/README.md): 본문이 README 틀의 한 문장뿐인 섹션 10개를 색인에서 뺐다. 같은 벡터로 재면 문서 Hit@5는 그대로이고, 다시 색인한 뒤 오른 2문항은 원본 README 변경 때문임을 확인했다.
 
-### 기준 측정 결과 (2026-09-24, F9 마무리, v1: Dockerfile 포함)
+- [판단 요구 라벨과 명시적 오답 보강 (2026-10-05)](eval/experiments/2026-10-05-v2-labels/README.md): golden set에 판단 요구를 넣고, 명시적 오답을 필수 요구 위반만 남도록 고쳤다. 후보로 나온 명시적 오답이 28개에서 84개로 늘었다.
+- [V2 첫 측정 (2026-10-05~15)](eval/experiments/2026-10-05-v2-first-run/README.md): 라벨 고정 입력으로 단일 선택을 재고, 인용 검토 기준을 정했다. 인용 뒷받침률이 합격선에 못 미쳤다.
+
+### 기준 측정 결과 (2026-10-15, V2)
+
+라벨 고정 입력(조건 추출 단계 없이 golden set의 검색 조건)으로 잰 v2 첫 결과다.
+검토 단계는 단일 선택이고 `gpt-6-luna` + `reasoning_effort: none`을 썼다. 경로를 확인하려고 돌린 것이라 모델 선택 근거로 쓰지 않는다.
+golden set은 version 2 `a6e8db88`이다. 자세한 내용은 [실험 기록](eval/experiments/2026-10-05-v2-first-run/README.md)에 있다.
+
+| 지표 | 값 |
+| --- | --- |
+| 추천 정확도 | 39/40 (97.5%) |
+| 검색 1위 대조군 | 27/40 (67.5%) |
+| 인용 검증 통과율 | 81/84 (96.4%) |
+| 인용 뒷받침률 | 26/43 (60.5%), 합격선 90% 미달 |
+| 후보 정보 오류 | 0/8 |
+| 문서 Hit@5 | 33/40 |
+
+인용은 근거 본문에 글자 그대로 있지만, 그 인용이 주장에 쓰인 문서 사실을 모두 받치는 주장은 열에 여섯이다.
+결론에 필요한 사실을 인용하지 않거나 사실의 일부만 인용한 경우가 많았다. M3에서 이 부분을 개선한다.
+
+### 이전 측정: F9 마무리 (2026-09-24, v1: Dockerfile 포함)
 
 추천과 함께 Dockerfile 초안을 만들던 v1 시점의 결과다. 지금 응답에는 Dockerfile이 없다([ADR 0003](docs/adr/0003-judge-candidates-instead-of-recommending.md)).
 

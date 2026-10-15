@@ -353,7 +353,7 @@ EVAL_MODES = {
         EvalMode("plan-only", calls_plan=True, calls_recommend=False, has_candidates=False),
         EvalMode("fixed-plans", calls_plan=False, calls_recommend=True, has_candidates=True),
         EvalMode("label-plans", calls_plan=False, calls_recommend=True, has_candidates=True),
-        # 추천 단계를 부르지 않지만 retrieval-only와 달리 검색 조건으로 후보를 거른다.
+        # 검토 단계를 부르지 않지만 retrieval-only와 달리 검색 조건으로 후보를 거른다.
         EvalMode(
             "label-plans-retrieval", calls_plan=False, calls_recommend=False, has_candidates=True
         ),
@@ -396,13 +396,13 @@ class FixedPlanProvider:
 
 
 class SkipRecommend:
-    """추천 단계를 실패로 돌려, 운영 경로의 저하 응답으로 후보와 근거만 얻는다(--no-recommend)."""
+    """검토 단계를 실패로 돌려, 운영 경로의 저하 응답으로 후보와 근거만 얻는다(--no-recommend)."""
 
     def plan(self, system: str, prompt: str) -> SearchPlan:
         raise RemoteCallError("검색 조건은 FixedPlanProvider가 준다")
 
     def recommend(self, system: str, prompt: str) -> Recommendation:
-        raise RemoteCallError("추천 단계를 부르지 않는 실행이다")
+        raise RemoteCallError("검토 단계를 부르지 않는 실행이다")
 
 
 def _label_plans(measured: list) -> dict[str, dict]:
@@ -796,7 +796,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_eval.add_argument(
         "--no-recommend",
         action="store_true",
-        help="--label-plans에서 추천 단계를 부르지 않고 후보와 검색 지표만 잰다",
+        help="--label-plans에서 검토 단계를 부르지 않고 후보와 검색 지표만 잰다",
     )
     p_eval.add_argument(
         "--case-interval-seconds",

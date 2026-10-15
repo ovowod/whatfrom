@@ -10,7 +10,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 입력 | 라벨 고정 입력(`eval --label-plans --no-recommend`). 조건 추출과 추천 단계를 부르지 않는다. LLM 호출 0회 |
+| 입력 | 라벨 고정 입력(`eval --label-plans --no-recommend`). 조건 추출과 검토 단계를 부르지 않는다. LLM 호출 0회 |
 | golden set | 보강 전 version 2(판단 요구만 넣은 상태), 보강 후 version 2 `a6e8db88`. 40문항 |
 | embedding | bge-m3(로컬 ollama). 운영과 같다 |
 | 결과 | `before.json`, `after.json`. 두 파일의 문항별 후보 목록은 같다 |
