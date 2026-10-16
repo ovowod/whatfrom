@@ -9,7 +9,7 @@ spec: `.scratch/m3-review-structure/spec.md` (검토 방식 선택, 판정 단�
 **Status:** ready-for-agent
 
 - [ ] eval에 검토 방식 option(단일 선택, 판정 단계)이 있다. 생략하면 단일 선택이고, 기존 결과와 같다.
-- [ ] 라벨 고정 입력이 아닌 mode에서 판정 단계를 고르면 시작할 때 거부한다.
+- [ ] label 고정 입력이 아닌 mode에서 판정 단계를 고르면 시작할 때 거부한다.
 - [ ] 결과 meta에 검토 방식이 남는다.
 - [ ] 판정 출력 모델: 판정 목록. 판정 하나는 후보, 판단 요구 번호, 판정(`satisfied`, `violated`, `unknown`), 인용 목록(`Citation`)이다. `extra="forbid"`이고 strict schema가 중첩 객체까지 모든 속성을 required로 둔다.
 - [ ] `LLMProvider`에 판정 호출이 있다. OpenAI 호환, Anthropic, 단계별, fake provider와 eval의 고정 조건 provider, 시간 측정 감싸기가 모두 이 호출을 가진다. 검토 단계(`recommend`) 설정을 쓰고, 호출 기록에 판정 호출임을 구분하는 단계 이름을 남긴다.
@@ -22,5 +22,5 @@ spec: `.scratch/m3-review-structure/spec.md` (검토 방식 선택, 판정 단�
 - [ ] 판단 요구가 없는 문항은 `unsatisfied_candidates`가 `None`이라 두 지표의 분모에서 빠진다. 판정했지만 불만족 후보가 없는 문항은 `[]`이고 분모에 들어간다. CLI seam에서 분모까지 확인한다.
 - [ ] 검토 단계 함수 seam: fake provider로 등급 정렬, 만족 수 동점 시 검색 순위, 확인됨 없음, 판단 요구 없음, 인용 검증 실패로 내려간 칸을 확인한다.
 - [ ] provider seam: 각 provider가 판정 호출을 기존 호출과 같은 방식(schema 이름, 요청 본문, 호출 기록)으로 보낸다. Anthropic은 가짜 transport로 확인한다.
-- [ ] CLI seam: fake provider로 라벨 고정 입력에 판정 단계를 돌려 결과 JSON의 meta, 추천, 등급, 판정 칸, `unsatisfied_candidates`, 오답 적발률, 오판정률을 확인한다.
+- [ ] CLI seam: fake provider로 label 고정 입력에 판정 단계를 돌려 결과 JSON의 meta, 추천, 등급, 판정 칸, `unsatisfied_candidates`, 오답 적발률, 오판정률을 확인한다.
 - [ ] 계층 규칙 테스트가 통과한다.

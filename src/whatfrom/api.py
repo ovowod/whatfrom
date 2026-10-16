@@ -1,5 +1,6 @@
 # src/whatfrom/api.py
 import time
+from collections.abc import Sequence
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
@@ -64,8 +65,12 @@ def recommend_for_question(
     embedder: Embedder,
     provider: LLMProvider,
     question: str,
+    requirements: Sequence[str] = (),
 ) -> RecommendResponse:
     """성능 저하 사다리 (스펙 §8). 어느 단계에서 멈추든 200으로 답한다.
+
+    requirements는 검토 단계에 넘기는 판단 요구다. 조건 추출 단계는 아직 판단 요구를 뽑지
+    않는다.
 
     세션 하나가 아니라 세션 팩토리를 받는다. 이 경로에는 외부 HTTP 호출이 둘
     있고(임베딩, LLM) 둘 다 수 초가 걸릴 수 있는데, 한 세션으로 묶으면 그동안
@@ -136,7 +141,7 @@ def recommend_for_question(
 
     try:
         with stage_timer("advise"):
-            recommendation = advise(provider, question, candidates, evidence)
+            recommendation = advise(provider, question, candidates, evidence, requirements)
     except RemoteCallError as exc:
         STAGE_ERRORS.labels("advise").inc()
         notes.append(f"LLM 근거 생성에 실패해 후보 목록만 반환합니다: {exc}")

@@ -18,6 +18,7 @@ from pathlib import Path
 
 import httpx2
 import pytest
+import yaml
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
@@ -738,6 +739,79 @@ def test_label_plans_stop_on_a_case_with_several_repositories(
         _run_label_plans(tmp_path, monkeypatch, session, provider, goldenset=goldenset)
 
     assert provider.calls == []
+
+
+NODE_GYP = "node-gyp must compile native addons without extra packages"
+
+
+def test_label_plans_pass_the_case_requirements_to_the_review_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """M3의 두 안이 같은 판단 요구를 받아야 차이가 구조에서 온다고 말할 수 있다."""
+    goldenset = LABEL_GOLDENSET.replace("requirements: []", f'requirements: ["{NODE_GYP}"]', 1)
+
+    document = _run_label_plans(
+        tmp_path, monkeypatch, session, _plan_must_not_be_called(), goldenset=goldenset
+    )
+
+    assert NODE_GYP in document["cases"][0]["advise_prompt"]
+
+
+def test_citation_samples_read_a_prompt_that_carries_requirements(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """판단 요구는 번호를 달고 실리되, 표본 도구가 읽는 질문과 후보 줄은 그대로다."""
+    musl = "musl-based images must not be used"
+    goldenset = LABEL_GOLDENSET.replace(
+        "requirements: []", f'requirements: ["{NODE_GYP}", "{musl}"]', 1
+    )
+    recommendation = Recommendation(
+        image="python:3.13-slim",
+        claims=[
+            Claim(text="slim이다", citations=[Citation(evidence=1, quote="python slim image.")])
+        ],
+    )
+    document = _run_label_plans(
+        tmp_path,
+        monkeypatch,
+        session,
+        FakeLLMProvider(recommendation=recommendation),
+        goldenset=goldenset,
+    )
+    prompt = document["cases"][0]["advise_prompt"]
+    assert f"1. {NODE_GYP}" in prompt
+    assert f"2. {musl}" in prompt
+    result = next((tmp_path / "results").glob("*.json"))
+    out = tmp_path / "sample"
+
+    _cli("eval", "sample-citations", str(result), "--out-dir", str(out))
+
+    [item] = yaml.safe_load((out / "citation-sample.yaml").read_text(encoding="utf-8"))
+    assert item["question"] == "ARM64에서 도는 python 이미지"
+    assert [line.split(" | ")[0] for line in item["candidates"]] == ["python:3.13-slim"]
+
+
+NO_REQUIREMENTS = "Judgment requirements: none"
+
+
+def test_a_case_without_requirements_says_so_in_the_review_prompt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """빈 목록을 누락으로 읽지 않도록 요구가 없다고 적는다."""
+    document = _run_label_plans(tmp_path, monkeypatch, session, _plan_must_not_be_called())
+
+    assert NO_REQUIREMENTS in document["cases"][0]["advise_prompt"]
+
+
+def test_fixed_plans_pass_no_requirements_to_the_review_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """판단 요구는 label 고정 입력에서만 온다. 다른 mode에는 판단 요구를 뽑는 단계가 없다."""
+    plans = _full_run(tmp_path, monkeypatch, session)
+
+    document = _run_fixed(tmp_path, monkeypatch, plans, _plan_must_not_be_called())
+
+    assert NO_REQUIREMENTS in document["cases"][0]["advise_prompt"]
 
 
 def test_no_recommend_needs_label_plans() -> None:

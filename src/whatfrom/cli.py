@@ -248,6 +248,7 @@ def timed_recommendation(
     provider: LLMProvider,
     question: str,
     call_log: list[LLMCall] | None = None,
+    requirements: Sequence[str] = (),
 ) -> tuple[RecommendResponse, RunTrace]:
     """추천 경로를 한 번 돌리며 전체·단계별 시간과 LLM #2의 입력을 남긴다.
 
@@ -260,7 +261,9 @@ def timed_recommendation(
     timed_embedder = Timed(embedder, ["embed"])
     timed_provider = Timed(provider, ["plan", "recommend"])
     start = time.perf_counter()
-    response = recommend_for_question(open_session, timed_embedder, timed_provider, question)
+    response = recommend_for_question(
+        open_session, timed_embedder, timed_provider, question, requirements
+    )
     total = time.perf_counter() - start
     advise = timed_provider.calls.get("recommend")
     return response, RunTrace(
@@ -323,7 +326,11 @@ def cmd_eval(args: argparse.Namespace) -> None:
                 case_provider = FixedPlanProvider(fixed_plans[case.id], provider)
             else:
                 case_provider = FixedPlanProvider(fixed_plans[case.id], SkipRecommend())
-            scores.append(_score_case(case, open_session, embedder, case_provider, call_log))
+            # 판단 요구는 label 고정 입력만 넘긴다. 다른 mode에는 판단 요구를 뽑는 단계가 없다.
+            requirements = case.requirements if args.label_plans else ()
+            scores.append(
+                _score_case(case, open_session, embedder, case_provider, call_log, requirements)
+            )
 
     meta = _eval_meta(args, mode, goldenset, started_at)
     out = results_dir / f"{started_at.strftime('%Y-%m-%dT%H-%M-%S')}.json"
@@ -465,6 +472,7 @@ def _score_case(
     embedder: Embedder,
     provider: LLMProvider | None,
     call_log: list[LLMCall],
+    requirements: Sequence[str] = (),
 ):
     """문항 하나를 채점한다. provider가 None이면 검색 지표만 잰다."""
     from whatfrom.eval.scoring import score_full, score_retrieval
@@ -487,7 +495,7 @@ def _score_case(
     # 추천 응답의 evidence에는 후보 선택에서 제외된 문서가 없을 수 있다.
     # 추천 경로도 별도로 실행하므로 전체 모드는 질문을 두 번 임베딩한다.
     response, trace = timed_recommendation(
-        open_session, embedder, provider, case.question, call_log
+        open_session, embedder, provider, case.question, call_log, requirements
     )
 
     exists: bool | None = None
