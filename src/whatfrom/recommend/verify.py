@@ -72,6 +72,10 @@ def _normalized(text: str) -> str:
     return " ".join(text.split())
 
 
+# 인용한 근거가 인용이 받칠 수 있는 repository의 문서가 아니라는 실패 이유.
+OTHER_REPOSITORY = "evidence from another repository"
+
+
 def verify_citation(
     citation: Citation, evidence: Mapping[int, NumberedEvidence], repositories: set[str]
 ) -> str | None:
@@ -90,7 +94,7 @@ def verify_citation(
     if quote not in _normalized(source.content):
         return "quote not in evidence"
     if source.repository not in repositories:
-        return "evidence from another repository"
+        return OTHER_REPOSITORY
     return None
 
 

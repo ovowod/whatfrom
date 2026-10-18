@@ -525,7 +525,14 @@ def _score_case(
             exists = image_exists(session, response.recommendation.image)
     with open_session() as session:
         digests = accepted_digests(session, case.accept)
-    return replace(score_full(case, response, sections, exists, digests), trace=trace)
+    # 판정 단계는 후보와 판단 요구가 있을 때만 LLM을 부른다. 불렀는데 후보 비교표가 없으면
+    # 판정 호출이 실패한 것이다.
+    attempted = review == "judge" and bool(requirements) and bool(response.candidates)
+    return replace(
+        score_full(case, response, sections, exists, digests),
+        trace=trace,
+        judge_failed=response.judgments is None if attempted else None,
+    )
 
 
 def _eval_meta(

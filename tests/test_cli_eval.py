@@ -925,6 +925,28 @@ def test_a_judge_run_detects_an_explicit_wrong_answer_it_judged_violated(
     assert metrics["오답 적발률"] == (1, 1)
 
 
+def test_a_failed_judge_call_degrades_the_case_and_counts_as_a_judge_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """판정하지 못한 문항은 오답이지만, 오답 적발률과 오판정률의 분모에서는 빠진다."""
+    goldenset = LABEL_GOLDENSET.replace("requirements: []", f'requirements: ["{NODE_GYP}"]', 1)
+    provider = FakeLLMProvider(judge_error=RemoteCallError("judge down"))
+
+    document = _run_label_plans(
+        tmp_path, monkeypatch, session, provider, goldenset=goldenset, review="judge"
+    )
+
+    assert len(provider.judge_calls) == 1
+    [case] = document["cases"]
+    assert case["recommended_image"] is None
+    assert case["accurate"] is False
+    assert "판정에 실패" in case["degraded_note"]
+    assert case["unsatisfied_candidates"] is None
+    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
+    assert metrics["판정 실패 문항"] == (1, 1)
+    assert metrics["오판정률"] == (0, 0)
+
+
 def test_a_judge_run_skips_the_llm_for_a_case_without_requirements(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
 ) -> None:

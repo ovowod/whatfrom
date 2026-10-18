@@ -202,6 +202,9 @@ class CaseScore:
     unsatisfied_candidates: list[str] | None = None
     # 판정 단계의 후보 비교표: 정규화한 칸, 후보별 등급, 추천. 단일 선택이면 None이다.
     judgments: dict | None = None
+    # 판정 호출이 실패했는가. 판정을 시도하지 않은 문항(단일 선택, 판단 요구 없음, 후보 없음)은
+    # None이다. runner가 채운다.
+    judge_failed: bool | None = None
     # 응답의 번호 붙은 근거. 인용의 근거 번호를 repository와 section으로 풀 때 쓴다.
     # 본문은 크기 때문에 남기지 않는다.
     evidence: list[dict] = field(default_factory=list)

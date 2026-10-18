@@ -154,18 +154,37 @@ class CheckedClaim(BaseModel):
     citations: list[CitationCheck] = Field(default_factory=list)
 
 
-class CheckedJudgment(BaseModel):
-    """정규화한 판정 칸. claimed는 LLM이 낸 판정, verdict는 인용 검증 뒤의 판정이다.
+# 판정 칸의 정규화 이유.
+# - unknown candidate, unknown requirement: 후보 목록이나 판단 요구 번호 밖을 가리켜 버린 칸
+# - duplicate: 같은 칸에 판정이 둘 이상 왔다
+# - missing: LLM이 내지 않은 칸
+# - no citation, citation failed, other repository: 확정 판정의 인용이 받치지 못했다.
+#   인용 검증 실패와 다른 repository 문서가 함께 있으면 citation failed다
+JudgmentProblem = Literal[
+    "unknown candidate",
+    "unknown requirement",
+    "duplicate",
+    "missing",
+    "no citation",
+    "citation failed",
+    "other repository",
+]
 
-    problem은 verdict를 바꾼 이유다. 바꾸지 않았으면 None이다.
+
+class CheckedJudgment(BaseModel):
+    """정규화한 판정 칸. claimed는 LLM이 낸 판정, verdict는 정규화 뒤의 판정이다.
+
+    problem은 정규화가 일어난 이유이고, 일어나지 않았으면 None이다. 중복 칸은 originals에
+    원래 판정들을 담고, 빠진 칸은 claimed가 None이다. 버린 칸은 인용을 검증하지 않는다.
     """
 
     candidate: str
     requirement: int
-    claimed: Verdict
+    claimed: Verdict | None
     verdict: Verdict
     citations: list[CitationCheck] = Field(default_factory=list)
-    problem: str | None = None
+    problem: JudgmentProblem | None = None
+    originals: list["CheckedJudgment"] = Field(default_factory=list)
 
 
 Grade = Literal["confirmed", "unconfirmed", "violated"]
@@ -180,13 +199,16 @@ class RankedCandidate(BaseModel):
 
 
 class JudgedCandidates(BaseModel):
-    """후보 비교표. ranking은 등급, 만족 수, 검색 순위 순이다.
+    """후보 비교표. ranking은 등급, 만족 수, 검색 순위 순이다(설계 문서 §7).
 
     recommended는 확인됨 등급의 1위다. 확인됨 후보가 없으면 None이다.
     """
 
     requirements: list[str]
+    # 후보 순서(검색 순위)와 판단 요구 번호 순으로 칸마다 하나씩 있다.
     judgments: list[CheckedJudgment] = Field(default_factory=list)
+    # 후보 목록이나 판단 요구 번호 밖을 가리켜 버린 판정.
+    dropped: list[CheckedJudgment] = Field(default_factory=list)
     ranking: list[RankedCandidate] = Field(default_factory=list)
     recommended: str | None = None
 

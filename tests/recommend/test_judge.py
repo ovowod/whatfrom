@@ -134,3 +134,132 @@ def test_the_prompt_carries_the_question_numbered_requirements_and_every_candida
     assert f"1. {NODE_GYP}" in prompt and f"2. {MUSL}" in prompt
     assert all(c.image in prompt for c in CANDIDATES)
     assert "node:<version> includes build tools." in prompt
+
+
+def _cells(judged) -> dict[tuple[str, int], object]:
+    return {(j.candidate, j.requirement): j for j in judged.judgments}
+
+
+def _rest_satisfied(skip: str) -> list[Judgment]:
+    return [_cell(c.image, 1, "satisfied") for c in CANDIDATES if c.image != skip]
+
+
+@pytest.mark.parametrize(
+    ("stray", "problem"),
+    [
+        (_cell("node:99", 1, "satisfied"), "unknown candidate"),
+        (_cell("node:24", 2, "violated"), "unknown requirement"),
+    ],
+    ids=["candidate-not-offered", "requirement-out-of-range"],
+)
+def test_a_cell_pointing_outside_the_table_is_dropped_with_its_reason(stray, problem):
+    """LLM이 지어낸 참조는 비교표에 남지 않는다. 버린 칸은 이유와 함께 기록한다."""
+    table = JudgmentTable(judgments=[*[_cell(c.image, 1, "satisfied") for c in CANDIDATES], stray])
+
+    judged = _judge(FakeLLMProvider(judgments=table), [NODE_GYP])
+
+    assert [(d.candidate, d.requirement, d.problem) for d in judged.dropped] == [
+        (stray.candidate, stray.requirement, problem)
+    ]
+    assert len(judged.judgments) == 4
+    assert {j.verdict for j in judged.judgments} == {"satisfied"}
+
+
+def test_every_candidate_gets_one_cell_per_requirement_and_a_missing_one_is_unknown():
+    table = JudgmentTable(judgments=_rest_satisfied("node:22"))
+
+    judged = _judge(FakeLLMProvider(judgments=table), [NODE_GYP])
+
+    assert [(j.candidate, j.requirement) for j in judged.judgments] == [
+        ("node:24", 1),
+        ("node:24-slim", 1),
+        ("node:24-alpine", 1),
+        ("node:22", 1),
+    ]
+    missing = _cells(judged)[("node:22", 1)]
+    assert (missing.claimed, missing.verdict, missing.problem) == (None, "unknown", "missing")
+
+
+@pytest.mark.parametrize(
+    ("pair", "second_verified"),
+    [
+        ([_cell("node:24", 1, "satisfied"), _cell("node:24", 1, "violated")], True),
+        (
+            [
+                _cell("node:24", 1, "satisfied"),
+                _cell("node:24", 1, "satisfied", [Citation(evidence=99, quote="no such evidence")]),
+            ],
+            False,
+        ),
+    ],
+    ids=["conflicting", "one-with-a-missing-evidence-number"],
+)
+def test_two_judgments_for_one_cell_make_it_unknown_and_keep_both(pair, second_verified):
+    """어느 쪽이 맞는지 고를 근거가 없다.
+
+    없는 근거 번호를 가리킨 판정도 버리지 않으므로 중복이 된다.
+    """
+    table = JudgmentTable(judgments=[*pair, *_rest_satisfied("node:24")])
+
+    judged = _judge(FakeLLMProvider(judgments=table), [NODE_GYP])
+
+    cell = _cells(judged)[("node:24", 1)]
+    assert (cell.verdict, cell.problem) == ("unknown", "duplicate")
+    assert [o.claimed for o in cell.originals] == [p.verdict for p in pair]
+    assert cell.originals[1].citations[0].verified is second_verified
+
+
+def test_a_missing_evidence_number_fails_the_citation():
+    table = JudgmentTable(
+        judgments=[
+            _cell("node:24", 1, "satisfied", [Citation(evidence=99, quote="no such evidence")]),
+            *_rest_satisfied("node:24"),
+        ]
+    )
+
+    judged = _judge(FakeLLMProvider(judgments=table), [NODE_GYP])
+
+    cell = _cells(judged)[("node:24", 1)]
+    assert (cell.verdict, cell.problem) == ("unknown", "citation failed")
+
+
+def test_a_citation_from_another_repository_makes_the_cell_unknown():
+    """같은 근거 본문이라도 그 후보의 repository 문서가 아니면 판정을 받칠 수 없다."""
+    python = _candidate("24").model_copy(
+        update={
+            "image": "python:3.13",
+            "repository": "python",
+            "tag": "3.13",
+            "evidence": [
+                Evidence(
+                    repository="python",
+                    section_title="Image Variants",
+                    content="python:<version> includes build tools.",
+                    source_url="https://github.com/docker-library/docs/blob/master/python/README.md",
+                )
+            ],
+        }
+    )
+    evidence, candidates = number_evidence([CANDIDATES[0], python])
+    python_number = next(e.number for e in evidence if e.repository == "python")
+    table = JudgmentTable(
+        judgments=[
+            _cell(
+                "node:24",
+                1,
+                "satisfied",
+                [Citation(evidence=python_number, quote="python:<version> includes build tools.")],
+            ),
+            _cell("python:3.13", 1, "satisfied", GOOD),
+        ]
+    )
+
+    judged = judge(FakeLLMProvider(judgments=table), "q", candidates, evidence, [NODE_GYP])
+
+    cells = _cells(judged)
+    assert (cells[("node:24", 1)].verdict, cells[("node:24", 1)].problem) == (
+        "unknown",
+        "other repository",
+    )
+    # 근거 1은 node 문서다. python 후보가 인용하면 다른 repository다.
+    assert cells[("python:3.13", 1)].problem == "other repository"

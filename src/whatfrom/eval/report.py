@@ -162,8 +162,11 @@ def _citation_pass_rate(scores: list[CaseScore]) -> Metric:
 
 
 def _judgment_metrics(scores: list[CaseScore]) -> list[Metric]:
-    """후보 단위로 센다. 판정이 없는 문항은 두 지표의 분모에서 빠지므로,
-    판정이 없는 실행에서는 둘 다 0%가 아니라 미측정이다."""
+    """오답 적발률과 오판정률은 후보 단위로 센다. 판정이 없는 문항은 두 지표의 분모에서
+    빠지므로, 판정이 없는 실행에서는 둘 다 0%가 아니라 미측정이다.
+
+    판정 호출이 실패한 문항도 분모에서 빠진다. 그 수를 옆에 내서 감춰지지 않게 한다.
+    """
     detected = total_rejected = misjudged = total_accepted = 0
     for s in scores:
         if s.unsatisfied_candidates is None:
@@ -176,6 +179,11 @@ def _judgment_metrics(scores: list[CaseScore]) -> list[Metric]:
     return [
         Metric("오답 적발률", detected, total_rejected),
         Metric("오판정률", misjudged, total_accepted),
+        Metric(
+            "판정 실패 문항",
+            sum(s.judge_failed is True for s in scores),
+            sum(s.judge_failed is not None for s in scores),
+        ),
     ]
 
 
