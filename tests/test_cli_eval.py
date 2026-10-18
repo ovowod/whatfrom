@@ -874,6 +874,8 @@ def test_a_judge_run_recommends_the_confirmed_candidate_and_records_the_table(
     assert case["seconds_advise"] is not None
     metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
     assert metrics["오판정률"] == (0, 1)
+    # server가 고른 추천도 runner가 DB에서 실재를 따로 확인한다.
+    assert metrics["태그 실재율"] == (1, 1)
 
 
 def test_a_judge_run_counts_a_violated_accepted_candidate_as_a_misjudgment(
@@ -945,6 +947,150 @@ def test_a_failed_judge_call_degrades_the_case_and_counts_as_a_judge_failure(
     metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
     assert metrics["판정 실패 문항"] == (1, 1)
     assert metrics["오판정률"] == (0, 0)
+
+
+def _two_group_goldenset() -> str:
+    """판단 요구가 있는 문항(python-arm64)과 없는 문항(python-plain)을 하나씩 둔다."""
+    python_case = LABEL_GOLDENSET[LABEL_GOLDENSET.index("  - id: python-arm64") :]
+    python_case = python_case[: python_case.index("  - id: not-indexed")]
+    with_requirement = LABEL_GOLDENSET.replace(
+        "requirements: []", f'requirements: ["{NODE_GYP}"]', 1
+    )
+    return with_requirement + python_case.replace("python-arm64", "python-plain")
+
+
+DUPLICATED_CELL = JudgmentTable(
+    judgments=[
+        Judgment(
+            candidate="python:3.13-slim",
+            requirement=1,
+            verdict="satisfied",
+            citations=[Citation(evidence=1, quote="python slim image.")],
+        ),
+        Judgment(
+            candidate="python:3.13-slim",
+            requirement=1,
+            verdict="satisfied",
+            citations=[Citation(evidence=1, quote="not in the evidence")],
+        ),
+    ]
+)
+
+
+def test_a_judge_run_counts_the_citations_of_every_kept_judgment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """중복 칸을 어떻게 합치든 값이 같도록, LLM이 낸 판정 중 버리지 않은 것의 인용을 센다."""
+    document = _run_label_plans(
+        tmp_path,
+        monkeypatch,
+        session,
+        FakeLLMProvider(judgments=DUPLICATED_CELL),
+        goldenset=_two_group_goldenset(),
+        review="judge",
+    )
+
+    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
+    assert metrics["인용 검증 통과율"] == (1, 2)
+
+
+def test_a_judge_run_scores_the_unconfirmed_top_as_a_reference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """정확도가 낮을 때 원인이 판정 품질인지 "확인됨만 추천" 규칙인지 가른다."""
+    document = _run_label_plans(
+        tmp_path,
+        monkeypatch,
+        session,
+        FakeLLMProvider(judgments=DUPLICATED_CELL),
+        goldenset=_two_group_goldenset(),
+        review="judge",
+    )
+
+    cases = {c["case_id"]: c for c in document["cases"]}
+    judged = cases["python-arm64"]
+    assert judged["recommended_image"] is None
+    assert judged["unconfirmed_top"] == "python:3.13-slim"
+    assert judged["reference_accurate"] is True
+    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
+    assert metrics["추천 정확도"] == (1, 2)
+    assert metrics["참고 정확도"] == (2, 2)
+
+
+def test_a_single_choice_run_reports_no_reference_accuracy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    document = _run_label_plans(tmp_path, monkeypatch, session, _plan_must_not_be_called())
+
+    assert "참고 정확도" not in {m["label"] for m in document["metrics"]}
+
+
+def _groups(document: dict) -> dict[str, dict[str, tuple[int, int]]]:
+    return {
+        group: {m["label"]: (m["hits"], m["total"]) for m in metrics}
+        for group, metrics in document["metric_groups"].items()
+    }
+
+
+def test_metrics_split_into_cases_with_and_without_requirements(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, capsys
+) -> None:
+    """판정 단계가 요구 없는 문항에서 검색 1위에 묶이는 효과를 따로 본다. 두 방식 모두 낸다."""
+    recommendation = Recommendation(
+        image="python:3.13-slim",
+        claims=[
+            Claim(text="slim이다", citations=[Citation(evidence=1, quote="python slim image.")])
+        ],
+    )
+
+    document = _run_label_plans(
+        tmp_path,
+        monkeypatch,
+        session,
+        FakeLLMProvider(recommendation=recommendation),
+        goldenset=_two_group_goldenset(),
+    )
+
+    group = {"추천 정확도": (1, 1), "검색 1위 대조군": (1, 1), "인용 검증 통과율": (1, 1)}
+    assert _groups(document) == {"요구 있음": group, "요구 없음": group}
+    printed = capsys.readouterr().out
+    assert "요구 있음 1문항" in printed and "요구 없음 1문항" in printed
+
+
+def test_a_judge_run_adds_the_reference_accuracy_to_each_group(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, capsys
+) -> None:
+    document = _run_label_plans(
+        tmp_path,
+        monkeypatch,
+        session,
+        FakeLLMProvider(judgments=DUPLICATED_CELL),
+        goldenset=_two_group_goldenset(),
+        review="judge",
+    )
+
+    groups = _groups(document)
+    assert groups["요구 있음"] == {
+        "추천 정확도": (0, 1),
+        "참고 정확도": (1, 1),
+        "검색 1위 대조군": (1, 1),
+        "인용 검증 통과율": (1, 2),
+    }
+    assert groups["요구 없음"]["참고 정확도"] == (1, 1)
+    assert groups["요구 없음"]["인용 검증 통과율"] == (0, 0)
+    printed = capsys.readouterr().out
+    assert (
+        "요구 있음 1문항 — 추천 정확도 0/1 0.0% · 참고 정확도 1/1 100.0% · "
+        "검색 1위 대조군 1/1 100.0% · 인용 검증 통과율 1/2 50.0%"
+    ) in printed
+
+
+def test_an_empty_group_is_unmeasured(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    document, _provider = _judge_run(tmp_path, monkeypatch, session, "satisfied")
+
+    assert {m["ratio"] for m in document["metric_groups"]["요구 없음"]} == {None}
 
 
 def test_a_judge_run_skips_the_llm_for_a_case_without_requirements(

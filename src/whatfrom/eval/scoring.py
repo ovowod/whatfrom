@@ -202,6 +202,13 @@ class CaseScore:
     unsatisfied_candidates: list[str] | None = None
     # 판정 단계의 후보 비교표: 정규화한 칸, 후보별 등급, 추천. 단일 선택이면 None이다.
     judgments: dict | None = None
+    # 판정 단계에서 미확인 등급의 1위. 판정하지 않았거나 미확인 후보가 없으면 None이다.
+    unconfirmed_top: str | None = None
+    # 추천이 없으면 미확인 1위를 추천으로 보고 채점한 값. 판정 단계의 참고 정확도다.
+    # 단일 선택에서는 미확인 1위가 없어 accurate와 같다.
+    reference_accurate: bool = False
+    # 문항에 판단 요구 label이 있는가. 지표를 묶음으로 나눌 때 쓴다.
+    has_requirements: bool = False
     # 판정 호출이 실패했는가. 판정을 시도하지 않은 문항(단일 선택, 판단 요구 없음, 후보 없음)은
     # None이다. runner가 채운다.
     judge_failed: bool | None = None
@@ -255,6 +262,21 @@ def score_plan(case: GoldenCase, plan: SearchPlan | None, notes: list[str]) -> P
     )
 
 
+def _image_accepted(
+    case: GoldenCase,
+    image: str | None,
+    candidates: list[Candidate],
+    accepted_digests: frozenset[str],
+) -> bool:
+    """추천으로 본 image가 허용 집합에 드는가. 이름이 accept에 있거나 그 후보가 정답과 같다."""
+    if image is None:
+        return False
+    if image in case.accept:
+        return True
+    candidate = next((c for c in candidates if c.image == image), None)
+    return candidate is not None and _is_accepted(case, candidate, accepted_digests)
+
+
 def _sources_ok(response: RecommendResponse) -> bool:
     """출처 URL과 수집 시점이 갖춰졌는가.
 
@@ -297,8 +319,12 @@ def score_full(
     )
 
     by_name = image is not None and image in case.accept
-    accurate = by_name or (
-        recommended is not None and _is_accepted(case, recommended, accepted_digests)
+    accurate = _image_accepted(case, image, response.candidates, accepted_digests)
+
+    unconfirmed = (
+        next((c.image for c in judged.ranking if c.grade == "unconfirmed"), None)
+        if judged is not None
+        else None
     )
 
     extraction = score_plan(case, response.plan, response.notes)
@@ -346,5 +372,10 @@ def score_full(
             else None
         ),
         judgments=judged.model_dump(mode="json") if judged is not None else None,
+        unconfirmed_top=unconfirmed,
+        reference_accurate=_image_accepted(
+            case, image or unconfirmed, response.candidates, accepted_digests
+        ),
+        has_requirements=bool(case.requirements),
         evidence=[e.model_dump(exclude={"content"}) for e in response.evidence],
     )

@@ -520,9 +520,10 @@ def _score_case(
     )
 
     exists: bool | None = None
-    if response.recommendation is not None:
+    # 단일 선택이든 판정 단계든 추천은 recommended에 있다.
+    if response.recommended is not None:
         with open_session() as session:
-            exists = image_exists(session, response.recommendation.image)
+            exists = image_exists(session, response.recommended.image)
     with open_session() as session:
         digests = accepted_digests(session, case.accept)
     # 판정 단계는 후보와 판단 요구가 있을 때만 LLM을 부른다. 불렀는데 후보 비교표가 없으면
@@ -636,15 +637,20 @@ def _report_eval(
         aggregate_recommendation,
         aggregate_retrieval,
         constant_baseline,
+        metric_groups,
         random_baseline,
         render_summary,
         result_document,
         top_candidate_baseline,
     )
 
+    # 판정 단계는 label 고정 입력에서만 돌아 조건 추출 지표와 함께 나오지 않는다.
+    judged = meta["review"] == "judge"
     # 부른 단계의 지표만 낸다. 검색 조건을 고정한 실행의 추출 지표는 이번 실행의 것이 아니다.
     if mode.calls_recommend:
-        metrics = aggregate_full(scores) if mode.calls_plan else aggregate_recommendation(scores)
+        metrics = (
+            aggregate_full(scores) if mode.calls_plan else aggregate_recommendation(scores, judged)
+        )
     elif mode.has_candidates:
         metrics = aggregate_retrieval(scores)
     else:
@@ -655,6 +661,8 @@ def _report_eval(
     # 후보 기록만으로 계산하므로 후보가 있는 모드만 구한다.
     random = random_baseline(scores) if mode.has_candidates else None
     top = top_candidate_baseline(scores) if mode.has_candidates else None
+    # 검토 단계를 부른 실행만 묶음으로 나눈다. 묶음별 지표가 모두 검토 단계의 결과를 쓴다.
+    groups = metric_groups(scores, judged) if mode.calls_recommend else None
 
     print()
     # 실패 목록은 추천 결과를 보여 준다. 추천이 없는 모드에는 놓일 자리가 없다.
@@ -670,12 +678,13 @@ def _report_eval(
             baseline,
             random,
             top,
+            groups,
         )
     )
 
     out.write_text(
         json.dumps(
-            result_document(metrics, scores, skipped, meta, baseline, random, top),
+            result_document(metrics, scores, skipped, meta, baseline, random, top, groups),
             ensure_ascii=False,
             indent=2,
         ),
