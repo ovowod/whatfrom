@@ -61,13 +61,14 @@ def build_prompt(
     candidates: list[Candidate],
     evidence: list[NumberedEvidence],
     requirements: Sequence[str] = (),
+    candidates_heading: str = "Candidates (choose exactly one):",
 ) -> str:
     """evidence는 응답에 싣는 그 근거다. 같은 목록을 보여 줘야 인용 번호가 응답과 맞는다.
 
     질문과 후보 줄의 형식은 인용 표본 도구가 결과 파일의 prompt에서 다시 읽는다. 판단 요구는
-    그 형식을 건드리지 않도록 후보 목록 뒤에 둔다.
+    그 형식을 건드리지 않도록 후보 목록 뒤에 둔다. 판정 단계는 후보 목록의 제목만 바꿔 쓴다.
     """
-    lines = [f"Requirement: {question}", "", "Candidates (choose exactly one):"]
+    lines = [f"Requirement: {question}", "", candidates_heading]
     for candidate in candidates:
         pushed = candidate.last_pushed_at.date() if candidate.last_pushed_at else "unknown"
         lines.append(

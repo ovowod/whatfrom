@@ -1,6 +1,7 @@
 # src/whatfrom/api.py
 import time
 from collections.abc import Sequence
+from typing import Literal, get_args
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
@@ -35,6 +36,7 @@ from whatfrom.metrics import (
 )
 from whatfrom.recommend.advisor import advise
 from whatfrom.recommend.evidence import number_evidence
+from whatfrom.recommend.judge import judge
 from whatfrom.recommend.llm import LLMProvider, get_provider
 from whatfrom.recommend.planner import extract_plan
 from whatfrom.recommend.verify import check_citations, verify_recommendation
@@ -60,17 +62,23 @@ def repository_names(session: Session) -> list[str]:
     return sorted(session.execute(select(Repository.name)).scalars())
 
 
+# 검토 단계의 방식. judge(판정 단계)는 M3에서 단일 선택과 비교하려고 평가에서만 부른다.
+Review = Literal["single", "judge"]
+REVIEWS: tuple[Review, ...] = get_args(Review)
+
+
 def recommend_for_question(
     open_session: SessionFactory,
     embedder: Embedder,
     provider: LLMProvider,
     question: str,
     requirements: Sequence[str] = (),
+    review: Review = "single",
 ) -> RecommendResponse:
     """성능 저하 사다리 (스펙 §8). 어느 단계에서 멈추든 200으로 답한다.
 
     requirements는 검토 단계에 넘기는 판단 요구다. 조건 추출 단계는 아직 판단 요구를 뽑지
-    않는다.
+    않는다. review가 judge면 단일 선택 대신 판정 단계로 후보 비교표를 만든다.
 
     세션 하나가 아니라 세션 팩토리를 받는다. 이 경로에는 외부 HTTP 호출이 둘
     있고(임베딩, LLM) 둘 다 수 초가 걸릴 수 있는데, 한 세션으로 묶으면 그동안
@@ -139,6 +147,28 @@ def recommend_for_question(
     # 번호는 여기서 한 번만 매기고, 같은 근거를 응답과 두 번째 LLM 호출에 함께 넘긴다.
     evidence, candidates = number_evidence(candidates)
 
+    if review == "judge":
+        try:
+            with stage_timer("advise"):
+                judged = judge(provider, question, candidates, evidence, requirements)
+        except RemoteCallError as exc:
+            STAGE_ERRORS.labels("advise").inc()
+            notes.append(f"LLM 판정에 실패해 후보 목록만 반환합니다: {exc}")
+            return without_recommendation(candidates, plan, evidence)
+        if judged.recommended is None:
+            notes.append("근거로 확인된 후보가 없습니다.")
+        return RecommendResponse(
+            question=question,
+            recommendation=None,
+            candidates=candidates,
+            evidence=evidence,
+            degraded=degraded,
+            notes=notes,
+            plan=plan,
+            recommended=_recommended(candidates, judged.recommended),
+            judgments=judged,
+        )
+
     try:
         with stage_timer("advise"):
             recommendation = advise(provider, question, candidates, evidence, requirements)
@@ -175,13 +205,7 @@ def recommend_for_question(
         )
 
     # digest는 코드가 후보에서 붙인다. 검증을 통과한 뒤라 추천은 반드시 후보 중 하나다.
-    chosen = next(c for c in candidates if c.image == recommendation.image)
-    recommended = RecommendedImage(
-        image=chosen.image,
-        digest=chosen.digest,
-        source_url=chosen.source_url,
-        collected_at=chosen.collected_at,
-    )
+    recommended = _recommended(candidates, recommendation.image)
 
     # 인용은 실재성 검증 뒤에 본다. 떼어 낸 대안의 repository 문서는 인용할 수 없다.
     checked, failed = check_citations(recommendation, evidence)
@@ -199,6 +223,19 @@ def recommend_for_question(
         notes=notes,
         plan=plan,
         recommended=recommended,
+    )
+
+
+def _recommended(candidates: list[Candidate], image: str | None) -> RecommendedImage | None:
+    """추천한 후보의 digest·출처·수집 시점. 추천은 반드시 후보 중 하나다."""
+    if image is None:
+        return None
+    chosen = next(c for c in candidates if c.image == image)
+    return RecommendedImage(
+        image=chosen.image,
+        digest=chosen.digest,
+        source_url=chosen.source_url,
+        collected_at=chosen.collected_at,
     )
 
 

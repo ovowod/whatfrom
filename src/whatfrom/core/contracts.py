@@ -1,7 +1,9 @@
 # src/whatfrom/core/contracts.py
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic.json_schema import SkipJsonSchema
 
 
 def split_image(image: str) -> tuple[str, str] | None:
@@ -111,6 +113,31 @@ class Recommendation(BaseModel):
     claims: list[Claim] = Field(default_factory=list)
 
 
+Verdict = Literal["satisfied", "violated", "unknown"]
+
+
+class Judgment(BaseModel):
+    """판정 단계가 채우는 칸 하나. 후보 하나가 판단 요구 하나를 만족하는지와 그 근거 인용이다.
+
+    candidate는 후보 줄의 이미지, requirement는 prompt에서 판단 요구에 붙인 번호(1부터)다.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    candidate: str
+    requirement: int
+    verdict: Verdict
+    citations: list[Citation] = Field(default_factory=list)
+
+
+class JudgmentTable(BaseModel):
+    """판정 단계의 LLM 출력. strict schema의 최상위는 객체여야 해서 목록을 한 번 감싼다."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    judgments: list[Judgment] = Field(default_factory=list)
+
+
 class CitationCheck(Citation):
     """응답의 근거 인용. 검증 결과는 서버가 붙인다. problem은 실패 이유다."""
 
@@ -125,6 +152,43 @@ class CheckedClaim(BaseModel):
 
     text: str
     citations: list[CitationCheck] = Field(default_factory=list)
+
+
+class CheckedJudgment(BaseModel):
+    """정규화한 판정 칸. claimed는 LLM이 낸 판정, verdict는 인용 검증 뒤의 판정이다.
+
+    problem은 verdict를 바꾼 이유다. 바꾸지 않았으면 None이다.
+    """
+
+    candidate: str
+    requirement: int
+    claimed: Verdict
+    verdict: Verdict
+    citations: list[CitationCheck] = Field(default_factory=list)
+    problem: str | None = None
+
+
+Grade = Literal["confirmed", "unconfirmed", "violated"]
+
+
+class RankedCandidate(BaseModel):
+    """서버가 판정으로 매긴 후보의 등급(설계 문서 §7). satisfied는 만족 판정 수다."""
+
+    image: str
+    grade: Grade
+    satisfied: int
+
+
+class JudgedCandidates(BaseModel):
+    """후보 비교표. ranking은 등급, 만족 수, 검색 순위 순이다.
+
+    recommended는 확인됨 등급의 1위다. 확인됨 후보가 없으면 None이다.
+    """
+
+    requirements: list[str]
+    judgments: list[CheckedJudgment] = Field(default_factory=list)
+    ranking: list[RankedCandidate] = Field(default_factory=list)
+    recommended: str | None = None
 
 
 class CheckedRecommendation(BaseModel):
@@ -184,3 +248,7 @@ class RecommendResponse(BaseModel):
     plan: SearchPlan | None = None
     # 검증을 통과한 추천의 digest·출처·수집 시점. 추천이 없으면 None이다.
     recommended: RecommendedImage | None = None
+    # 판정 단계의 후보 비교표. 단일 선택이면 None이다. 판정 단계는 아직 평가에서만 부르므로
+    # HTTP 응답에는 싣지 않는다(M3).
+    # SkipJsonSchema는 OpenAPI 문서에서도 뺀다.
+    judgments: SkipJsonSchema[JudgedCandidates | None] = Field(default=None, exclude=True)

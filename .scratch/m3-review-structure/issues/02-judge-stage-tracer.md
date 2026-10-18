@@ -6,21 +6,21 @@ spec: `.scratch/m3-review-structure/spec.md` (검토 방식 선택, 판정 단�
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] eval에 검토 방식 option(단일 선택, 판정 단계)이 있다. 생략하면 단일 선택이고, 기존 결과와 같다.
-- [ ] label 고정 입력이 아닌 mode에서 판정 단계를 고르면 시작할 때 거부한다.
-- [ ] 결과 meta에 검토 방식이 남는다.
-- [ ] 판정 출력 모델: 판정 목록. 판정 하나는 후보, 판단 요구 번호, 판정(`satisfied`, `violated`, `unknown`), 인용 목록(`Citation`)이다. `extra="forbid"`이고 strict schema가 중첩 객체까지 모든 속성을 required로 둔다.
-- [ ] `LLMProvider`에 판정 호출이 있다. OpenAI 호환, Anthropic, 단계별, fake provider와 eval의 고정 조건 provider, 시간 측정 감싸기가 모두 이 호출을 가진다. 검토 단계(`recommend`) 설정을 쓰고, 호출 기록에 판정 호출임을 구분하는 단계 이름을 남긴다.
-- [ ] 판정 prompt는 질문, 번호를 붙인 판단 요구, 단일 선택과 같은 형식의 후보 줄과 근거를 싣고, 01과 같은 인용 지시를 담는다. 모든 후보와 모든 판단 요구의 칸을 내라고 지시한다. 후보를 자르지 않는다.
-- [ ] 기본 정규화: `satisfied`와 `violated`는 인용이 하나 이상이고 모든 인용이 글자 그대로 검증을 통과할 때만 유지한다. 아니면 `unknown`으로 내린다. 인용마다 검증 결과를 남긴다.
-- [ ] 순위: 확인됨, 미확인, 위반 등급, 만족 수(내림차순), 검색 순위 순. 추천은 확인됨 1위이고, 확인됨이 없으면 추천이 없다.
-- [ ] 판단 요구가 없는 문항은 LLM을 부르지 않고 검색 1위를 추천한다.
-- [ ] 문항 기록에 정규화한 후보 비교표, 후보별 등급, 불만족 판정을 받은 후보 목록(`unsatisfied_candidates`)이 남는다. 검토 단계 소요 시간, prompt, LLM 호출 기록은 단일 선택과 같은 자리를 쓴다.
-- [ ] 판정 단계 실행에서 오답 적발률과 오판정률이 값을 낸다. 단일 선택 실행에서는 지금처럼 미측정이다.
-- [ ] 판단 요구가 없는 문항은 `unsatisfied_candidates`가 `None`이라 두 지표의 분모에서 빠진다. 판정했지만 불만족 후보가 없는 문항은 `[]`이고 분모에 들어간다. CLI seam에서 분모까지 확인한다.
-- [ ] 검토 단계 함수 seam: fake provider로 등급 정렬, 만족 수 동점 시 검색 순위, 확인됨 없음, 판단 요구 없음, 인용 검증 실패로 내려간 칸을 확인한다.
-- [ ] provider seam: 각 provider가 판정 호출을 기존 호출과 같은 방식(schema 이름, 요청 본문, 호출 기록)으로 보낸다. Anthropic은 가짜 transport로 확인한다.
-- [ ] CLI seam: fake provider로 label 고정 입력에 판정 단계를 돌려 결과 JSON의 meta, 추천, 등급, 판정 칸, `unsatisfied_candidates`, 오답 적발률, 오판정률을 확인한다.
-- [ ] 계층 규칙 테스트가 통과한다.
+- [x] eval에 검토 방식 option(단일 선택, 판정 단계)이 있다. 생략하면 단일 선택이고, 기존 결과와 같다.
+- [x] label 고정 입력이 아닌 mode에서 판정 단계를 고르면 시작할 때 거부한다.
+- [x] 결과 meta에 검토 방식이 남는다.
+- [x] 판정 출력 모델: 판정 목록. 판정 하나는 후보, 판단 요구 번호, 판정(`satisfied`, `violated`, `unknown`), 인용 목록(`Citation`)이다. `extra="forbid"`이고 strict schema가 중첩 객체까지 모든 속성을 required로 둔다.
+- [x] `LLMProvider`에 판정 호출이 있다. OpenAI 호환, Anthropic, 단계별, fake provider와 eval의 고정 조건 provider, 시간 측정 감싸기가 모두 이 호출을 가진다. 검토 단계(`recommend`) 설정을 쓰고, 호출 기록에 판정 호출임을 구분하는 단계 이름을 남긴다.
+- [x] 판정 prompt는 질문, 번호를 붙인 판단 요구, 단일 선택과 같은 형식의 후보 줄과 근거를 싣고, 01과 같은 인용 지시를 담는다. 모든 후보와 모든 판단 요구의 칸을 내라고 지시한다. 후보를 자르지 않는다.
+- [x] 기본 정규화: `satisfied`와 `violated`는 인용이 하나 이상이고 모든 인용이 글자 그대로 검증을 통과할 때만 유지한다. 아니면 `unknown`으로 내린다. 인용마다 검증 결과를 남긴다.
+- [x] 순위: 확인됨, 미확인, 위반 등급, 만족 수(내림차순), 검색 순위 순. 추천은 확인됨 1위이고, 확인됨이 없으면 추천이 없다.
+- [x] 판단 요구가 없는 문항은 LLM을 부르지 않고 검색 1위를 추천한다.
+- [x] 문항 기록에 정규화한 후보 비교표, 후보별 등급, 불만족 판정을 받은 후보 목록(`unsatisfied_candidates`)이 남는다. 검토 단계 소요 시간, prompt, LLM 호출 기록은 단일 선택과 같은 자리를 쓴다.
+- [x] 판정 단계 실행에서 오답 적발률과 오판정률이 값을 낸다. 단일 선택 실행에서는 지금처럼 미측정이다.
+- [x] 판단 요구가 없는 문항은 `unsatisfied_candidates`가 `None`이라 두 지표의 분모에서 빠진다. 판정했지만 불만족 후보가 없는 문항은 `[]`이고 분모에 들어간다. CLI seam에서 분모까지 확인한다.
+- [x] 검토 단계 함수 seam: fake provider로 등급 정렬, 만족 수 동점 시 검색 순위, 확인됨 없음, 판단 요구 없음, 인용 검증 실패로 내려간 칸을 확인한다.
+- [x] provider seam: 각 provider가 판정 호출을 기존 호출과 같은 방식(schema 이름, 요청 본문, 호출 기록)으로 보낸다. Anthropic은 가짜 transport로 확인한다.
+- [x] CLI seam: fake provider로 label 고정 입력에 판정 단계를 돌려 결과 JSON의 meta, 추천, 등급, 판정 칸, `unsatisfied_candidates`, 오답 적발률, 오판정률을 확인한다.
+- [x] 계층 규칙 테스트가 통과한다.

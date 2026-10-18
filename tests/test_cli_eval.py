@@ -27,7 +27,14 @@ from whatfrom.cli import accepted_digests, cmd_eval, indexed_repositories
 from whatfrom.collect.hub import TagRow, VariantRow
 from whatfrom.collect.store import upsert_tags
 from whatfrom.core.config import Settings
-from whatfrom.core.contracts import Citation, Claim, Recommendation, SearchPlan
+from whatfrom.core.contracts import (
+    Citation,
+    Claim,
+    Judgment,
+    JudgmentTable,
+    Recommendation,
+    SearchPlan,
+)
 from whatfrom.core.embed import FakeEmbedder
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import Document, DocumentChunk, ImageTag, Repository
@@ -73,6 +80,7 @@ def run_document(
     case_interval_seconds: float = 0.0,
     label_plans: bool = False,
     no_recommend: bool = False,
+    review: str = "single",
 ) -> dict:
     args = argparse.Namespace(
         goldenset=str(goldenset),
@@ -83,6 +91,7 @@ def run_document(
         plans=plans,
         label_plans=label_plans,
         no_recommend=no_recommend,
+        review=review,
         embedder="fake",
         llm_provider=llm_provider,
         database_url="",
@@ -669,6 +678,7 @@ def _run_label_plans(
     provider,
     no_recommend: bool = False,
     goldenset: str = LABEL_GOLDENSET,
+    review: str = "single",
 ) -> dict:
     _use_test_session(monkeypatch, session, provider)
     path = tmp_path / "goldenset.yaml"
@@ -680,6 +690,7 @@ def _run_label_plans(
         llm_provider="openai_compatible",
         label_plans=True,
         no_recommend=no_recommend,
+        review=review,
     )
 
 
@@ -812,6 +823,142 @@ def test_fixed_plans_pass_no_requirements_to_the_review_stage(
     document = _run_fixed(tmp_path, monkeypatch, plans, _plan_must_not_be_called())
 
     assert NO_REQUIREMENTS in document["cases"][0]["advise_prompt"]
+
+
+def _judge_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, verdict: str
+) -> tuple[dict, FakeLLMProvider]:
+    """판단 요구 하나가 있는 문항을 판정 단계로 돌린다. 후보는 python:3.13-slim 하나다."""
+    table = JudgmentTable(
+        judgments=[
+            Judgment(
+                candidate="python:3.13-slim",
+                requirement=1,
+                verdict=verdict,
+                citations=[Citation(evidence=1, quote="python slim image.")],
+            )
+        ]
+    )
+    provider = FakeLLMProvider(
+        judgments=table,
+        error=RemoteCallError("single choice must not be called"),
+        plan_error=RemoteCallError("plan must not be called"),
+    )
+    goldenset = LABEL_GOLDENSET.replace("requirements: []", f'requirements: ["{NODE_GYP}"]', 1)
+    document = _run_label_plans(
+        tmp_path, monkeypatch, session, provider, goldenset=goldenset, review="judge"
+    )
+    return document, provider
+
+
+def test_a_judge_run_recommends_the_confirmed_candidate_and_records_the_table(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    document, provider = _judge_run(tmp_path, monkeypatch, session, "satisfied")
+
+    assert provider.calls == []
+    assert len(provider.judge_calls) == 1
+    assert document["meta"]["review"] == "judge"
+    [case] = document["cases"]
+    assert case["recommended_image"] == "python:3.13-slim"
+    assert case["accurate"] is True
+    assert case["recommended"]["digest"] is not None
+    assert case["recommendation"] is None
+    [cell] = case["judgments"]["judgments"]
+    assert (cell["verdict"], cell["citations"][0]["verified"]) == ("satisfied", True)
+    assert case["judgments"]["ranking"] == [
+        {"image": "python:3.13-slim", "grade": "confirmed", "satisfied": 1}
+    ]
+    assert case["unsatisfied_candidates"] == []
+    assert NODE_GYP in case["advise_prompt"]
+    assert case["seconds_advise"] is not None
+    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
+    assert metrics["오판정률"] == (0, 1)
+
+
+def test_a_judge_run_counts_a_violated_accepted_candidate_as_a_misjudgment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """확인됨 후보가 없으면 추천도 없고, 오답으로 센다."""
+    document, _provider = _judge_run(tmp_path, monkeypatch, session, "violated")
+
+    [case] = document["cases"]
+    assert case["recommended_image"] is None
+    assert case["accurate"] is False
+    assert case["unsatisfied_candidates"] == ["python:3.13-slim"]
+    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
+    assert metrics["오판정률"] == (1, 1)
+    assert metrics["추천 정확도"] == (0, 1)
+
+
+def test_a_judge_run_detects_an_explicit_wrong_answer_it_judged_violated(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """명시적 오답 후보가 불만족 판정을 받으면 오답 적발률이 센다."""
+    goldenset = LABEL_GOLDENSET.replace("requirements: []", f'requirements: ["{NODE_GYP}"]', 1)
+    goldenset = goldenset.replace(
+        "accept: [python:3.13-slim]", "accept: [python:3.13]\n    reject: [python:3.13-slim]", 1
+    )
+    table = JudgmentTable(
+        judgments=[
+            Judgment(
+                candidate="python:3.13-slim",
+                requirement=1,
+                verdict="violated",
+                citations=[Citation(evidence=1, quote="python slim image.")],
+            )
+        ]
+    )
+
+    document = _run_label_plans(
+        tmp_path,
+        monkeypatch,
+        session,
+        FakeLLMProvider(judgments=table),
+        goldenset=goldenset,
+        review="judge",
+    )
+
+    [case] = document["cases"]
+    assert case["rejected_candidates"] == ["python:3.13-slim"]
+    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
+    assert metrics["오답 적발률"] == (1, 1)
+
+
+def test_a_judge_run_skips_the_llm_for_a_case_without_requirements(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """판정하지 않은 문항은 오답 적발률과 오판정률의 분모에서 빠진다."""
+    provider = FakeLLMProvider(
+        judge_error=RemoteCallError("judge must not be called"),
+        error=RemoteCallError("single choice must not be called"),
+    )
+
+    document = _run_label_plans(tmp_path, monkeypatch, session, provider, review="judge")
+
+    assert provider.judge_calls == []
+    [case] = document["cases"]
+    assert case["recommended_image"] == "python:3.13-slim"
+    assert case["unsatisfied_candidates"] is None
+    assert case["llm_calls"] == []
+    # 묶음별 지연을 잴 때 빠지지 않도록, 부르지 않은 판정 단계는 0초로 남는다.
+    assert case["seconds_advise"] == 0.0
+    metrics = {m["label"]: m for m in document["metrics"]}
+    assert metrics["오판정률"]["total"] == 0
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["eval", "--review", "judge"],
+        ["eval", "--label-plans", "--no-recommend", "--review", "judge"],
+    ],
+    ids=["full-mode", "no-recommend"],
+)
+def test_the_judge_review_needs_label_plans_that_call_the_review_stage(argv) -> None:
+    """판단 요구는 golden set label에서만 온다."""
+    with pytest.raises(SystemExit, match="--review judge"):
+        cli._eval_mode(cli.build_parser().parse_args(argv))
 
 
 def test_no_recommend_needs_label_plans() -> None:
