@@ -446,13 +446,18 @@ def _label_plans(measured: list) -> dict[str, dict]:
     }
 
 
+def _goldenset_sha256(path: Path) -> str:
+    """결과 meta에 남기는 golden set 파일 hash. 두 결과가 같은 golden set으로 잰 것인지 본다."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def _load_fixed_plans(path: Path, goldenset: Path, measured: list) -> dict[str, dict | None]:
     """--plans 결과 파일에서 문항별 검색 조건을 읽는다. 비교할 수 없는 파일이면 멈춘다."""
     document = json.loads(path.read_text(encoding="utf-8"))
     meta = document.get("meta", {})
     if meta.get("mode") != "full":
         raise SystemExit(f"--plans에는 전체 모드(full) 결과가 필요하다: {path}")
-    if meta.get("goldenset_sha256") != hashlib.sha256(goldenset.read_bytes()).hexdigest():
+    if meta.get("goldenset_sha256") != _goldenset_sha256(goldenset):
         raise SystemExit(f"--plans 결과의 golden set이 지금 golden set과 다르다: {path}")
     plans = {case["case_id"]: case.get("plan") for case in document.get("cases", [])}
     missing = [case.id for case in measured if case.id not in plans]
@@ -566,7 +571,7 @@ def _eval_meta(
         "goldenset_version": goldenset.version,
         # 버전 번호를 유지한 채 라벨을 수정할 수 있으므로 파일 해시도 기록한다.
         # 해시가 다르면 두 실행이 사용한 golden set 내용이 달랐다는 뜻이다.
-        "goldenset_sha256": hashlib.sha256(Path(args.goldenset).read_bytes()).hexdigest(),
+        "goldenset_sha256": _goldenset_sha256(Path(args.goldenset)),
         # golden set이 인용한 출처를 마지막으로 확인한 날. latest·LTS·최신 패치 주장은
         # 시간이 지나면 낡는다. 언제 기준의 라벨인지 결과에 남긴다.
         "goldenset_verified_on": (
@@ -728,10 +733,19 @@ def cmd_sample_citations(args: argparse.Namespace) -> None:
     # eval과 같은 이유로 PyYAML을 쓰는 모듈은 여기서 가져온다.
     from whatfrom.eval.citations import dump_sample, sample_citations
 
-    # 안 이름은 넘겨받은 경로 그대로다. 파일 이름만 쓰면 다른 directory의 같은 이름이 겹친다.
-    results = [(path, json.loads(Path(path).read_text(encoding="utf-8"))) for path in args.results]
+    # 인자 하나가 한 안이다. 쉼표로 이은 결과 파일들은 한 안으로 묶는다(1·2회차).
+    # 안 이름은 넘겨받은 인자 그대로다. 파일 이름만 쓰면 다른 directory의 같은 이름이 겹친다.
+    paths = [(path, arm) for arm in args.results for path in arm.split(",")]
+    # 같은 파일이 두 번 오면 sample_citations가 멈춘다. dict로 모으면 그 중복이 사라진다.
+    results = [(path, json.loads(Path(path).read_text(encoding="utf-8"))) for path, _ in paths]
+    arm_of = dict(paths)
+    cases = (
+        _cases_with_requirements(Path(args.goldenset), results) if args.requirements_only else None
+    )
     try:
-        items, key = sample_citations(results, seed=args.seed)
+        items, key = sample_citations(
+            results, seed=args.seed, per_case=args.per_case, cases=cases, arm_of=arm_of
+        )
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
     out = Path(args.out_dir)
@@ -743,6 +757,17 @@ def cmd_sample_citations(args: argparse.Namespace) -> None:
     print(
         f"{out / 'citation-sample.yaml'} 저장 ({len(items)}개). key 파일은 채점 전에 열지 않는다."
     )
+
+
+def _cases_with_requirements(goldenset: Path, results: list[tuple[str, dict]]) -> set[str]:
+    """판단 요구 label이 있는 문항. 결과 파일을 만든 golden set과 같은 파일에서 읽는다."""
+    from whatfrom.eval.goldenset import load_goldenset
+
+    digest = _goldenset_sha256(goldenset)
+    different = [path for path, doc in results if doc["meta"].get("goldenset_sha256") != digest]
+    if different:
+        raise SystemExit(f"결과 파일의 golden set이 {goldenset}와 다르다: {', '.join(different)}")
+    return {case.id for case in load_goldenset(goldenset).cases if case.requirements}
 
 
 def cmd_score_citations(args: argparse.Namespace) -> None:
@@ -866,9 +891,25 @@ def build_parser() -> argparse.ArgumentParser:
     p_sample = eval_sub.add_parser(
         "sample-citations", help="draw blind citation samples from eval results"
     )
-    p_sample.add_argument("results", nargs="+", metavar="RESULT_JSON")
+    p_sample.add_argument(
+        "results",
+        nargs="+",
+        metavar="RESULT_JSON",
+        help="인자 하나가 한 안이다. 쉼표로 이은 결과 파일들은 앞 파일부터 채워 한 안으로 묶는다",
+    )
     p_sample.add_argument("--out-dir", required=True)
     p_sample.add_argument("--seed", type=int, default=0)
+    p_sample.add_argument("--per-case", type=int, default=2, help="문항당 최대 진술 수")
+    p_sample.add_argument(
+        "--requirements-only",
+        action="store_true",
+        help="판단 요구 label이 있는 문항의 진술만 뽑는다",
+    )
+    p_sample.add_argument(
+        "--goldenset",
+        default="eval/goldenset.yaml",
+        help="--requirements-only가 판단 요구를 읽는 golden set. 결과 파일과 같아야 한다",
+    )
     p_sample.set_defaults(func=cmd_sample_citations)
     p_score = eval_sub.add_parser("score-citations", help="score a filled citation sample")
     p_score.add_argument("sample", metavar="SAMPLE_YAML")

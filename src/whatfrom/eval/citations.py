@@ -1,14 +1,15 @@
 # src/whatfrom/eval/citations.py
-"""인용이 주장에 맞게 붙었는지 표본으로 검토하는 도구 (design §10).
+"""인용이 진술에 맞게 붙었는지 표본으로 검토하는 도구 (design §10).
 
-eval 결과 파일에서 검증을 통과한 인용이 붙은 주장을 뽑아, 어느 설정의 결과인지 가린
-YAML 표본과 원래 위치를 담은 key를 만든다. 표본의 verdict와 candidate_ok를 채우면
-key와 대조해 안(결과 파일)마다 인용 뒷받침률과 후보 정보 오류를 낸다.
+eval 결과 파일에서 검증을 통과한 인용이 붙은 진술(단일 선택의 주장, 판정 단계의 판정 칸)을
+뽑아, 어느 설정의 결과인지 가린 YAML 표본과 원래 위치를 담은 key를 만든다. 표본의 verdict와
+candidate_ok를 채우면 key와 대조해 안마다 인용 뒷받침률과 후보 정보 오류를 낸다.
 """
 
 import hashlib
 import json
 import random
+from collections import Counter
 from dataclasses import dataclass, field
 
 import yaml
@@ -104,14 +105,22 @@ GUIDE = """\
 """
 
 
+# advisor.build_prompt가 후보 목록 앞에 다는 제목. 단일 선택과 판정 단계가 다르다.
+# eval은 recommend를 import하지 않아(계층 규칙) 문구를 여기 다시 적는다.
+CANDIDATE_HEADINGS = ("Candidates (choose exactly one):", "Candidates (judge every one):")
+
+
 def _prompt_parts(case: dict) -> tuple[str, list[str]]:
     """LLM에게 넘긴 prompt에서 질문과 후보 줄을 꺼낸다.
 
     후보 정보는 지금 DB가 아니라 그 실행에서 실제로 넘긴 값과 대조해야 한다. 결과 파일에는
     그 값이 advise_prompt로만 남아 있어 advisor.build_prompt의 형식을 읽는다.
     """
-    prompt = case.get("advise_prompt")
-    head, marker, rest = (prompt or "").partition("\n\nCandidates (choose exactly one):\n")
+    prompt = case.get("advise_prompt") or ""
+    for heading in CANDIDATE_HEADINGS:
+        head, marker, rest = prompt.partition(f"\n\n{heading}\n")
+        if marker:
+            break
     if not head.startswith("Requirement: ") or not marker:
         raise ValueError(f"{case['case_id']}: 결과 파일에 LLM에게 넘긴 prompt가 없다")
     candidates = rest.split("\n\n", 1)[0].splitlines()
@@ -120,68 +129,109 @@ def _prompt_parts(case: dict) -> tuple[str, list[str]]:
     return question, [line.removeprefix("- ") for line in candidates]
 
 
-def _claims(document: dict) -> list[dict]:
-    """결과 파일 하나에서 검증을 통과한 인용이 하나 이상 붙은 주장을 모은다.
+def _verified_citations(case: dict, citations: list[dict]) -> list[dict]:
+    """검증을 통과한 인용만, 근거 번호를 repository와 section 제목으로 풀어 돌려준다.
 
-    지금의 주장은 단일 선택의 주장이고, 그 주장이 가리키는 이미지는 추천 이미지다.
-    한 주장의 인용은 함께 본다. 인용 두 개를 합쳐야 성립하는 주장이 있기 때문이다.
+    글자 그대로 검증에 실패한 인용은 인용 검증 통과율이 이미 센다.
     """
-    claims = []
-    for case in document.get("cases", []):
-        recommendation = case.get("recommendation")
-        if recommendation is None:
+    evidence = {e["number"]: e for e in case.get("evidence") or []}
+    verified = []
+    for citation in citations:
+        if not citation["verified"]:
             continue
-        evidence = {e["number"]: e for e in case.get("evidence") or []}
-        for index, claim in enumerate(recommendation["claims"]):
-            citations = []
-            for citation in claim["citations"]:
-                # 글자 그대로 검증에 실패한 인용은 인용 검증 통과율이 이미 센다.
-                if not citation["verified"]:
-                    continue
-                source = evidence.get(citation["evidence"])
-                # 검증을 통과한 인용은 그 요청의 근거에서 나왔다. 없으면 결과 파일이 깨졌다.
-                if source is None:
-                    raise ValueError(
-                        f"{case['case_id']}: 검증을 통과한 인용의 근거 {citation['evidence']}번이 "
-                        "결과 파일에 없다"
-                    )
-                citations.append(
-                    {
-                        "quote": citation["quote"],
-                        "evidence": f"{source['repository']} — {source['section_title']}",
-                    }
-                )
-            if not citations:
+        source = evidence.get(citation["evidence"])
+        # 검증을 통과한 인용은 그 요청의 근거에서 나왔다. 없으면 결과 파일이 깨졌다.
+        if source is None:
+            raise ValueError(
+                f"{case['case_id']}: 검증을 통과한 인용의 근거 {citation['evidence']}번이 "
+                "결과 파일에 없다"
+            )
+        verified.append(
+            {
+                "quote": citation["quote"],
+                "evidence": f"{source['repository']} — {source['section_title']}",
+            }
+        )
+    return verified
+
+
+def _statements(document: dict) -> list[dict]:
+    """결과 파일 하나에서 검증을 통과한 인용이 하나 이상 붙은 진술을 모은다.
+
+    진술은 단일 선택의 주장이나 판정 단계의 판정 칸이다. 한 진술의 인용은 함께 본다.
+    인용 두 개를 합쳐야 성립하는 진술이 있기 때문이다. locator는 key에 남길 진술의 위치다.
+    """
+    statements = []
+    for case in document.get("cases", []):
+        for locator, image, text, citations in _case_statements(case):
+            verified = _verified_citations(case, citations)
+            if not verified:
                 continue
             question, candidates = _prompt_parts(case)
-            claims.append(
+            statements.append(
                 {
                     "case_id": case["case_id"],
-                    "claim": index,
+                    "locator": locator,
                     "item": {
                         "question": question,
-                        "image": recommendation["image"],
-                        "statement": claim["text"],
-                        "citations": citations,
+                        "image": image,
+                        "statement": text,
+                        "citations": verified,
                         "candidates": candidates,
                     },
                 }
             )
-    return claims
+    return statements
 
 
-def _choose(claims: list[dict], rng: random.Random) -> list[dict]:
-    """문항당 최대 PER_CASE개를 고른 뒤, 그중 최대 PER_ARM개를 고른다.
+VERDICT_WORDS = {"satisfied": "만족한다", "violated": "어긴다"}
 
-    한 문항이 주장을 많이 내도 표본을 독차지하지 못하게 한다.
+
+def _case_statements(case: dict) -> list[tuple[dict, str, str, list[dict]]]:
+    """문항 하나의 (위치, 이미지, 진술 문장, 인용) 목록.
+
+    주장이 가리키는 이미지는 추천 이미지다. 판정 칸은 만족과 불만족만 진술이 되고, 그 칸의
+    후보를 가리킨다. 알 수 없음 칸은 판정하지 않은 것이고, 버린 판정은 비교표에 없다.
+    """
+    found = []
+    recommendation = case.get("recommendation")
+    if recommendation is not None:
+        for index, claim in enumerate(recommendation["claims"]):
+            found.append(
+                ({"claim": index}, recommendation["image"], claim["text"], claim["citations"])
+            )
+    judgments = case.get("judgments")
+    if judgments is not None:
+        for cell in judgments["judgments"]:
+            if cell["verdict"] not in VERDICT_WORDS:
+                continue
+            requirement = judgments["requirements"][cell["requirement"] - 1]
+            text = f"{cell['candidate']}가 요구 '{requirement}'를 {VERDICT_WORDS[cell['verdict']]}"
+            locator = {"candidate": cell["candidate"], "requirement": cell["requirement"]}
+            found.append((locator, cell["candidate"], text, cell["citations"]))
+    return found
+
+
+def _choose(
+    statements: list[dict],
+    rng: random.Random,
+    per_case: int,
+    limit: int,
+    taken: Counter[str],
+) -> list[dict]:
+    """문항당 최대 per_case개를 고른 뒤, 그중 최대 limit개를 고른다.
+
+    한 문항이 진술을 많이 내도 표본을 독차지하지 못하게 한다. taken은 같은 안의 앞 결과
+    파일에서 이미 고른 문항별 수다. 문항당 상한은 묶은 안 전체에 적용한다.
     """
     by_case: dict[str, list[dict]] = {}
-    for claim in claims:
-        by_case.setdefault(claim["case_id"], []).append(claim)
+    for statement in statements:
+        by_case.setdefault(statement["case_id"], []).append(statement)
     chosen = []
     for case_id in sorted(by_case):
-        chosen += rng.sample(by_case[case_id], min(PER_CASE, len(by_case[case_id])))
-    return rng.sample(chosen, min(PER_ARM, len(chosen)))
+        room = max(per_case - taken[case_id], 0)
+        chosen += rng.sample(by_case[case_id], min(room, len(by_case[case_id])))
+    return rng.sample(chosen, min(limit, len(chosen)))
 
 
 def _digest(item: dict) -> str:
@@ -191,35 +241,62 @@ def _digest(item: dict) -> str:
     return hashlib.sha256(encoded.encode()).hexdigest()
 
 
-def sample_citations(results: list[tuple[str, dict]], seed: int) -> tuple[list[dict], dict]:
+def sample_citations(
+    results: list[tuple[str, dict]],
+    seed: int,
+    per_case: int = PER_CASE,
+    cases: set[str] | None = None,
+    arm_of: dict[str, str] | None = None,
+) -> tuple[list[dict], dict]:
     """(결과 파일 이름, 결과 문서) 목록에서 표본 항목과 key를 만든다. 같은 seed면 같은 표본이다.
 
     항목에는 결과 파일 이름이 들어가지 않는다. 순서를 섞고 익명 id를 붙여 검토하는 쪽이
-    어느 안의 주장인지 모르게 한다. 원래 위치는 key에만 남긴다.
+    어느 안의 진술인지 모르게 한다. 원래 위치는 key에만 남긴다.
+
+    cases를 주면 그 문항의 진술만 뽑는다. arm_of는 결과 파일을 안으로 묶는다. 같은 안의
+    파일은 results 순서대로, 앞 파일에서 먼저 뽑고 PER_ARM개가 안 되면 다음 파일에서 채운다.
+    주지 않으면 결과 파일 하나가 한 안이다.
     """
     names = [name for name, _ in results]
     repeated = sorted({name for name in names if names.count(name) > 1})
     if repeated:
         # 이름이 겹치면 채점 집계에서 두 안이 하나로 합쳐진다.
-        raise ValueError(f"안 이름이 겹친다: {', '.join(repeated)}")
+        raise ValueError(f"결과 파일 이름이 겹친다: {', '.join(repeated)}")
+    arm_of = arm_of or {}
+    arms: dict[str, list[tuple[str, dict]]] = {}
+    for name, document in results:
+        arms.setdefault(arm_of.get(name, name), []).append((name, document))
+
     rng = random.Random(seed)
-    drawn = [
-        (name, claim) for name, document in results for claim in _choose(_claims(document), rng)
-    ]
+    drawn = []
+    for arm, sources in arms.items():
+        taken: Counter[str] = Counter()
+        for source, document in sources:
+            room = PER_ARM - sum(taken.values())
+            if room == 0:
+                break
+            statements = [
+                st for st in _statements(document) if cases is None or st["case_id"] in cases
+            ]
+            chosen = _choose(statements, rng, per_case, room, taken)
+            taken.update(st["case_id"] for st in chosen)
+            drawn += [(arm, source, st) for st in chosen]
     rng.shuffle(drawn)
 
     items: list[dict] = []
     entries: dict[str, dict] = {}
-    for index, (name, claim) in enumerate(drawn, start=1):
-        item = {"id": f"c{index:03d}", **claim["item"], "verdict": None, "candidate_ok": None}
+    for index, (arm, source, statement) in enumerate(drawn, start=1):
+        item = {"id": f"c{index:03d}", **statement["item"], "verdict": None, "candidate_ok": None}
         items.append(item)
+        # 묶은 파일들에서 같은 문항, 같은 위치가 나와도 source로 가른다.
         entries[item["id"]] = {
-            "arm": name,
-            "case_id": claim["case_id"],
-            "claim": claim["claim"],
+            "arm": arm,
+            "source": source,
+            "case_id": statement["case_id"],
+            **statement["locator"],
             "hash": _digest(item),
         }
-    return items, {"seed": seed, "arms": names, "items": entries}
+    return items, {"seed": seed, "arms": list(arms), "items": entries}
 
 
 def dump_sample(items: list[dict]) -> str:

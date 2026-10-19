@@ -1212,6 +1212,233 @@ def test_citation_samples_are_drawn_from_a_real_result_and_scored(
     assert "1/1 100.0% 합격" in printed
 
 
+def test_citation_samples_read_judgment_cells_as_statements(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, capsys
+) -> None:
+    """판정 칸은 "후보가 요구를 만족한다/어긴다"는 진술이다. 단일 선택의 주장과 같이 채점한다."""
+    _judge_run(tmp_path, monkeypatch, session, "satisfied")
+    result = next((tmp_path / "results").glob("*.json"))
+    out = tmp_path / "sample"
+
+    _cli("eval", "sample-citations", str(result), "--out-dir", str(out))
+
+    [item] = yaml.safe_load((out / "citation-sample.yaml").read_text(encoding="utf-8"))
+    assert item["statement"] == f"python:3.13-slim가 요구 '{NODE_GYP}'를 만족한다"
+    assert item["image"] == "python:3.13-slim"
+    assert [c["quote"] for c in item["citations"]] == ["python slim image."]
+    assert item["question"] == "ARM64에서 도는 python 이미지"
+    assert [line.split(" | ")[0] for line in item["candidates"]] == ["python:3.13-slim"]
+    key = json.loads((out / "citation-key.json").read_text(encoding="utf-8"))
+    [entry] = key["items"].values()
+    assert (entry["source"], entry["candidate"], entry["requirement"]) == (
+        str(result),
+        "python:3.13-slim",
+        1,
+    )
+    filled = (out / "citation-sample.yaml").read_text(encoding="utf-8")
+    (out / "citation-sample.yaml").write_text(
+        filled.replace("verdict: null", "verdict: supported").replace(
+            "candidate_ok: null", "candidate_ok: not_applicable"
+        ),
+        encoding="utf-8",
+    )
+    capsys.readouterr()
+
+    _cli(
+        "eval", "score-citations", str(out / "citation-sample.yaml"), str(out / "citation-key.json")
+    )
+
+    assert "1/1 100.0% 합격" in capsys.readouterr().out
+
+
+def test_unknown_judgment_cells_are_not_sampled(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    _judge_run(tmp_path, monkeypatch, session, "unknown")
+    result = next((tmp_path / "results").glob("*.json"))
+    out = tmp_path / "sample"
+
+    _cli("eval", "sample-citations", str(result), "--out-dir", str(out))
+
+    assert yaml.safe_load((out / "citation-sample.yaml").read_text(encoding="utf-8")) == []
+
+
+def _claims_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session: Session,
+    claims: int,
+    name: str,
+    goldenset: str = LABEL_GOLDENSET,
+    seeded: bool = False,
+) -> Path:
+    """검증되는 인용이 붙은 주장 claims개를 내는 단일 선택 실행의 결과 파일을 name으로 옮긴다.
+
+    seeded면 앞선 실행이 이미 테스트 DB를 채웠다. 두 번째 실행은 provider만 바꾼다.
+    """
+    recommendation = Recommendation(
+        image="python:3.13-slim",
+        claims=[
+            Claim(text=f"주장 {i}", citations=[Citation(evidence=1, quote="python slim image.")])
+            for i in range(claims)
+        ],
+    )
+    provider = FakeLLMProvider(recommendation=recommendation)
+    if seeded:
+        monkeypatch.setattr(cli, "get_provider", lambda *_args, **_kwargs: provider)
+        path = tmp_path / "goldenset.yaml"
+        path.write_text(goldenset, encoding="utf-8")
+        run_document(
+            path,
+            tmp_path / "results",
+            retrieval_only=False,
+            llm_provider="openai_compatible",
+            label_plans=True,
+        )
+    else:
+        _run_label_plans(tmp_path, monkeypatch, session, provider, goldenset=goldenset)
+    return next((tmp_path / "results").glob("*.json")).rename(tmp_path / name)
+
+
+def _sampled(out: Path) -> tuple[list[dict], list[dict]]:
+    items = yaml.safe_load((out / "citation-sample.yaml").read_text(encoding="utf-8"))
+    key = json.loads((out / "citation-key.json").read_text(encoding="utf-8"))
+    return items, list(key["items"].values())
+
+
+def test_the_per_case_limit_is_an_option_that_defaults_to_two(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    result = _claims_result(tmp_path, monkeypatch, session, 3, "single.json")
+
+    _cli("eval", "sample-citations", str(result), "--out-dir", str(tmp_path / "two"))
+    _cli(
+        "eval",
+        "sample-citations",
+        str(result),
+        "--out-dir",
+        str(tmp_path / "three"),
+        "--per-case",
+        "3",
+    )
+
+    assert len(_sampled(tmp_path / "two")[0]) == 2
+    assert len(_sampled(tmp_path / "three")[0]) == 3
+
+
+def test_samples_can_be_limited_to_cases_with_requirements(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """두 안의 표본이 같은 문항에서 나오게 한다. 판정 단계는 요구 없는 문항에서 진술이 없다."""
+    goldenset = _two_group_goldenset()
+    result = _claims_result(tmp_path, monkeypatch, session, 1, "single.json", goldenset)
+    path = tmp_path / "goldenset.yaml"
+
+    _cli(
+        "eval",
+        "sample-citations",
+        str(result),
+        "--out-dir",
+        str(tmp_path / "sample"),
+        "--requirements-only",
+        "--goldenset",
+        str(path),
+    )
+
+    _items, entries = _sampled(tmp_path / "sample")
+    assert [e["case_id"] for e in entries] == ["python-arm64"]
+
+
+def test_requirements_only_stops_on_a_different_goldenset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    result = _claims_result(tmp_path, monkeypatch, session, 1, "single.json")
+    other = tmp_path / "other.yaml"
+    other.write_text(_two_group_goldenset(), encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="golden set"):
+        _cli(
+            "eval",
+            "sample-citations",
+            str(result),
+            "--out-dir",
+            str(tmp_path / "sample"),
+            "--requirements-only",
+            "--goldenset",
+            str(other),
+        )
+
+
+def test_pooled_results_fill_one_arm_in_order_and_keep_each_source(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """1회차로 50개를 못 채우면 2회차로 채운다. 문항당 상한은 묶은 안 전체에 적용한다."""
+    first = _claims_result(tmp_path, monkeypatch, session, 2, "r1.json")
+    second = _claims_result(tmp_path, monkeypatch, session, 3, "r2.json", seeded=True)
+    arm = f"{first},{second}"
+
+    _cli(
+        "eval",
+        "sample-citations",
+        arm,
+        "--out-dir",
+        str(tmp_path / "sample"),
+        "--per-case",
+        "3",
+    )
+
+    _items, entries = _sampled(tmp_path / "sample")
+    assert sorted((e["source"], e["claim"]) for e in entries)[:2] == [
+        (str(first), 0),
+        (str(first), 1),
+    ]
+    assert [e["source"] for e in entries].count(str(second)) == 1
+    assert {e["arm"] for e in entries} == {arm}
+
+
+def test_one_sample_draws_from_a_single_choice_and_a_judge_result(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """M3는 두 안의 진술을 한 표본에 섞어, 어느 안인지 모른 채 채점한다."""
+    _judge_run(tmp_path, monkeypatch, session, "satisfied")
+    judge = next((tmp_path / "results").glob("*.json")).rename(tmp_path / "judge-arm.json")
+    single = _claims_result(tmp_path, monkeypatch, session, 1, "single-arm.json", seeded=True)
+    out = tmp_path / "sample"
+
+    _cli("eval", "sample-citations", str(single), str(judge), "--out-dir", str(out))
+
+    items, entries = _sampled(out)
+    assert sorted(item["statement"] for item in items) == [
+        f"python:3.13-slim가 요구 '{NODE_GYP}'를 만족한다",
+        "주장 0",
+    ]
+    assert sorted(e["arm"] for e in entries) == sorted([str(single), str(judge)])
+    text = (out / "citation-sample.yaml").read_text(encoding="utf-8")
+    assert "single-arm" not in text and "judge-arm" not in text
+
+
+@pytest.mark.parametrize(
+    "arms",
+    [["{r}", "{r}"], ["{other}", "{r},{r}"], ["{r}", "{other},{r}"]],
+    ids=["two-arms", "within-a-pool", "across-arms"],
+)
+def test_a_result_file_given_twice_stops_the_sampling(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, arms
+) -> None:
+    """같은 결과 파일이 두 번 오면 두 안의 집계가 조용히 합쳐지거나 한 안이 사라진다."""
+    result = _claims_result(tmp_path, monkeypatch, session, 1, "r.json")
+    other = _claims_result(tmp_path, monkeypatch, session, 1, "other.json", seeded=True)
+
+    with pytest.raises(SystemExit, match="r.json"):
+        _cli(
+            "eval",
+            "sample-citations",
+            *[a.format(r=result, other=other) for a in arms],
+            "--out-dir",
+            str(tmp_path / "sample"),
+        )
+
+
 def test_scoring_a_damaged_sample_stops_with_the_problems(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
 ) -> None:
