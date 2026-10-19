@@ -8,7 +8,7 @@ spec: `.scratch/m3-review-structure/spec.md` (측정 절차, 고르는 기준, �
 
 **Status:** ready-for-human
 
-- [ ] 측정 전에 `eval/experiments/<날짜>-m3-review-structure/README.md`에 조건과 고르는 기준을 적고 커밋한다.
+- [x] 측정 전에 `eval/experiments/<날짜>-m3-review-structure/README.md`에 조건과 고르는 기준을 적고 커밋한다.
 - [ ] label 고정 입력, luna-none, V2 첫 측정과 같은 embedder로 두 안을 같은 날(KST)에 2회씩 돌린다. 회차마다 단일 선택부터 돌린다.
 - [ ] 실제 API를 부르기 전에 사전 확인을 한다. 판정 칸이 가장 많은 문항으로 판정 단계를 한 번 불러, 응답의 `finish_reason`이 잘림이 아닌지 직접 본다.
 - [ ] 네 실행 모두 40문항(요구 있는 20문항 포함)을 재고 건너뛴 문항이 0이다. 아니면 그 실행을 무효로 둔다.
