@@ -17,8 +17,11 @@ from whatfrom.recommend.verify import OTHER_REPOSITORY, check_citation
 SYSTEM_PROMPT = f"""You judge container base images against requirements, one cell at a time.
 
 Hard rules:
-- Return one judgment for every candidate and every numbered judgment requirement. Copy \
-`candidate` EXACTLY as written in the candidate lines and use the requirement's number.
+- Return one judgment for every candidate and every numbered judgment requirement, and \
+use the requirement's number.
+- `candidate` is the image name alone: the text before the first ` | ` in a candidate \
+line, such as `python:3.13-slim`. Copy it EXACTLY and never add the sizes, platforms, or \
+push date that follow it.
 - `verdict` is "satisfied" or "violated" only when the evidence says so for that \
 candidate. If the evidence does not settle it, use "unknown" instead of guessing.
 - Judge each candidate on its own. Do not rank or compare candidates.

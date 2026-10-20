@@ -99,3 +99,26 @@ WHATFROM_RECOMMEND_LLM_EXTRA_BODY='{"reasoning_effort": "none"}'
 | --- | --- | --- | --- | --- |
 | `temurin-jdk-build-stage` | 20 × 2 | `stop` | 40 | 2,102 / 1,028 |
 | `python-latest-stable` | 20 × 2 | `stop` | 40 | 3,473 / 4,478 |
+
+## 무효 실행: 판정 단계 1회차 (2026-10-20 10:59 UTC)
+
+판정 단계 prompt의 결함으로 구조 비교에 쓸 수 없어 무효로 둔다. 결과는 `results/invalid/judge-r1-candidate-line/`에 남긴다.
+
+- 8개 문항에서 LLM이 `candidate`에 이미지 이름 대신 후보 줄 전체(`python:3.14 | 360-2527 MB across … | pushed: …`)를 넣었다.
+- 서버가 이 판정 167개를 "후보 목록에 없는 후보"로 버렸고, 같은 수의 칸이 빠진 칸(알 수 없음)이 되었다. 판단 요구가 있는 문항의 추천 정확도는 3/20이었다.
+- prompt가 "Copy `candidate` EXACTLY as written in the candidate lines"라 줄 전체로 읽힐 여지가 있었다. 단일 선택 prompt는 "Pick `image` EXACTLY as written in one of the candidate lines"라 같은 문제가 없었다.
+- 사전 확인은 칸 수만 세고 후보 이름이 맞는지 보지 않아 이 결함을 놓쳤다. `python-latest-stable`도 사전 확인 때 40칸을 냈지만, 1회차에서는 40칸이 모두 버려졌다.
+
+prompt를 "`candidate`는 후보 줄의 첫 ` | ` 앞 이미지 이름만"으로 고쳤다. 같은 시점의 단일 선택 1회차(`results/single-r1/`)는 이 결함과 무관하다.
+
+## 사전 확인 다시 (2026-10-20 22:20 UTC)
+
+고친 prompt로 판정 단계를 다시 불렀다. 사전 확인은 서버 정규화까지 돌려 버린 판정과 빠진 칸도 센다(`precheck.py`).
+1회차에서 판정이 모두 버려진 문항 셋을 더했다.
+
+| 문항 | 후보 × 판단 요구 | `finish_reason` | 낸 칸 | 버린 판정 | 빠진 칸 | 입력 / 출력 token |
+| --- | --- | --- | --- | --- | --- | --- |
+| `temurin-jdk-build-stage` | 20 × 2 | `stop` | 40 | 0 | 0 | 2,143 / 1,002 |
+| `python-latest-stable` | 20 × 2 | `stop` | 40 | 0 | 0 | 3,514 / 2,122 |
+| `python-ml-torch` | 20 × 1 | `stop` | 20 | 0 | 0 | 2,410 / 946 |
+| `node-lts-prod` | 20 × 1 | `stop` | 20 | 0 | 0 | 1,834 / 470 |

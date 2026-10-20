@@ -263,3 +263,15 @@ def test_a_citation_from_another_repository_makes_the_cell_unknown():
     )
     # 근거 1은 node 문서다. python 후보가 인용하면 다른 repository다.
     assert cells[("python:3.13", 1)].problem == "other repository"
+
+
+def test_the_system_prompt_asks_for_the_image_name_alone_as_the_candidate():
+    """M3 1회차에서 LLM이 후보 줄 전체를 candidate에 넣어 판정 167칸이 버려졌다."""
+    table = JudgmentTable(judgments=[_cell(c.image, 1, "satisfied") for c in CANDIDATES])
+    provider = FakeLLMProvider(judgments=table)
+
+    _judge(provider, [NODE_GYP])
+
+    [(system, prompt)] = provider.judge_calls
+    assert "- node:24 | " in prompt
+    assert "image name" in system and "before the first ` | `" in system
