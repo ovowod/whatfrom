@@ -42,14 +42,14 @@ WHATFROM_RECOMMEND_LLM_EXTRA_BODY='{"reasoning_effort": "none"}'
 2. **측정.** 측정하는 동안 수집과 색인을 돌리지 않는다. 회차마다 아래 순서로 돌린다.
 
    ```bash
-   uv run python -m whatfrom.cli eval --label-plans --review single --results-dir eval/experiments/2026-10-20-m3-review-structure/results/single-r1
+   uv run python -m whatfrom.cli eval --label-plans --review single --embedder openai_compatible --llm-provider openai_compatible --results-dir eval/experiments/2026-10-20-m3-review-structure/results/single-r1
    ```
 
    ```bash
-   uv run python -m whatfrom.cli eval --label-plans --review judge --results-dir eval/experiments/2026-10-20-m3-review-structure/results/judge-r1
+   uv run python -m whatfrom.cli eval --label-plans --review judge --embedder openai_compatible --llm-provider openai_compatible --results-dir eval/experiments/2026-10-20-m3-review-structure/results/judge-r1
    ```
 
-   2회차는 `-r2` directory로 같은 두 명령을 돌린다.
+   `--embedder`와 `--llm-provider`의 기본값은 `fake`라서 꼭 준다. 2회차는 `-r2` directory로 같은 두 명령을 돌린다.
 3. **유효성 확인.** 아래 중 하나라도 어긋나면 그 실행을 무효로 두고 다시 잰다.
    - 네 실행 모두 40문항을 재고 건너뛴 문항이 0이다.
    - 네 실행의 문항별 후보 목록과 근거 목록(번호, repository, section)이 같다.
@@ -90,3 +90,12 @@ WHATFROM_RECOMMEND_LLM_EXTRA_BODY='{"reasoning_effort": "none"}'
 - 판정 칸 진술은 고정 형식("…가 요구 '…'를 만족한다")이라, 이름을 가려도 형식으로 안을 알아볼 수 있다. 채점 기준이 "진술에 쓰인 문서 사실이 인용으로 확인되는가"라서 편향 위험은 작다고 본다.
 - 20%p 기준은 독립 표본을 가정한 오차다. 한 문항에서 여러 진술을 뽑으므로 실제 오차는 더 클 수 있다.
 - 단일 선택의 prompt가 V2 첫 측정과 다르다(판단 요구와 인용 지시). V2의 인용 뒷받침률 60.5%와 직접 비교하지 않는다.
+
+## 사전 확인 결과 (2026-10-20)
+
+판정 칸이 가장 많은 두 문항으로 판정 단계를 한 번씩 불렀다. 둘 다 잘리지 않았고, 40칸을 모두 냈다.
+
+| 문항 | 후보 × 판단 요구 | `finish_reason` | 낸 칸 | 입력 / 출력 token |
+| --- | --- | --- | --- | --- |
+| `temurin-jdk-build-stage` | 20 × 2 | `stop` | 40 | 2,102 / 1,028 |
+| `python-latest-stable` | 20 × 2 | `stop` | 40 | 3,473 / 4,478 |
