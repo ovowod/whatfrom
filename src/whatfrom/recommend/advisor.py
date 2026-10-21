@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from whatfrom.core.contracts import Candidate, NumberedEvidence, Platform, Recommendation
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.recommend.llm import LLMProvider
@@ -11,9 +13,10 @@ complete, or modify a tag. Never combine parts of two candidates.
 - Explain the choice as `claims`, one statement per claim. Base every claim only on the \
 evidence provided. If the evidence does not settle the question, say so in a claim \
 instead of guessing.
-- When a sentence in the evidence backs a claim, add it to that claim's `citations`. A \
-citation gives the evidence number shown in brackets and a `quote` copied character for \
-character from that evidence. Never paraphrase, translate, or shorten a quote into \
+- For every documented fact a statement relies on, cite the sentence in the evidence \
+that states it. If a fact needs more than one sentence, cite each of them.
+- A citation gives the evidence number shown in brackets and a `quote` copied character \
+for character from that evidence. Never paraphrase, translate, or shorten a quote into \
 something the evidence does not contain. Leave `citations` empty rather than invent one.
 - Write claims in Korean, except for image names and tags. Keep quotes in the \
 evidence's original language."""
@@ -36,10 +39,29 @@ def _format_platforms(platforms: list[Platform]) -> str:
     return f"{span} across {', '.join(names)}"
 
 
+def format_requirements(requirements: Sequence[str]) -> list[str]:
+    """판단 요구에 1부터 번호를 붙인다.
+
+    빈 목록은 없다고 적는다. 줄을 아예 빼면 LLM이 요구를 빠뜨린 것으로 읽을 수 있다.
+    """
+    if not requirements:
+        return ["Judgment requirements: none"]
+    lines = ["Judgment requirements:"]
+    lines += [f"{number}. {text}" for number, text in enumerate(requirements, start=1)]
+    return lines
+
+
 def build_prompt(
-    question: str, candidates: list[Candidate], evidence: list[NumberedEvidence]
+    question: str,
+    candidates: list[Candidate],
+    evidence: list[NumberedEvidence],
+    requirements: Sequence[str] = (),
 ) -> str:
-    """evidence는 응답에 싣는 그 근거다. 같은 목록을 보여 줘야 인용 번호가 응답과 맞는다."""
+    """evidence는 응답에 싣는 그 근거다. 같은 목록을 보여 줘야 인용 번호가 응답과 맞는다.
+
+    질문과 후보 줄의 형식은 인용 표본 도구가 결과 파일의 prompt에서 다시 읽는다. 판단 요구는
+    그 형식을 건드리지 않도록 후보 목록 뒤에 둔다.
+    """
     lines = [f"Requirement: {question}", "", "Candidates (choose exactly one):"]
     for candidate in candidates:
         pushed = candidate.last_pushed_at.date() if candidate.last_pushed_at else "unknown"
@@ -47,6 +69,7 @@ def build_prompt(
             f"- {candidate.image} | {_format_platforms(candidate.platforms)} | pushed: {pushed}"
         )
 
+    lines += ["", *format_requirements(requirements)]
     lines += ["", "Evidence from the official README:"]
     for item in evidence:
         lines += [f"[{item.number}] {item.repository} — {item.section_title}", item.content, ""]
@@ -58,7 +81,10 @@ def advise(
     question: str,
     candidates: list[Candidate],
     evidence: list[NumberedEvidence],
+    requirements: Sequence[str] = (),
 ) -> Recommendation:
     if not candidates:
         raise RemoteCallError("no candidates to choose from")
-    return provider.recommend(SYSTEM_PROMPT, build_prompt(question, candidates, evidence))
+    return provider.recommend(
+        SYSTEM_PROMPT, build_prompt(question, candidates, evidence, requirements)
+    )

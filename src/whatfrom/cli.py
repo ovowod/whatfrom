@@ -248,6 +248,7 @@ def timed_recommendation(
     provider: LLMProvider,
     question: str,
     call_log: list[LLMCall] | None = None,
+    requirements: Sequence[str] = (),
 ) -> tuple[RecommendResponse, RunTrace]:
     """추천 경로를 한 번 돌리며 전체·단계별 시간과 LLM #2의 입력을 남긴다.
 
@@ -260,7 +261,9 @@ def timed_recommendation(
     timed_embedder = Timed(embedder, ["embed"])
     timed_provider = Timed(provider, ["plan", "recommend"])
     start = time.perf_counter()
-    response = recommend_for_question(open_session, timed_embedder, timed_provider, question)
+    response = recommend_for_question(
+        open_session, timed_embedder, timed_provider, question, requirements
+    )
     total = time.perf_counter() - start
     advise = timed_provider.calls.get("recommend")
     return response, RunTrace(
@@ -268,7 +271,7 @@ def timed_recommendation(
         seconds_embedding=timed_embedder.seconds.get("embed"),
         seconds_plan=timed_provider.seconds.get("plan"),
         seconds_advise=timed_provider.seconds.get("recommend"),
-        # recommend(system, prompt)의 두 번째 인자가 LLM #2에 보낸 프롬프트다.
+        # recommend(system, prompt)의 두 번째 인자가 LLM #2에 보낸 prompt다.
         advise_prompt=advise[0][1] if advise else None,
         llm_calls=[asdict(call) for call in log[already:]],
     )
@@ -323,7 +326,11 @@ def cmd_eval(args: argparse.Namespace) -> None:
                 case_provider = FixedPlanProvider(fixed_plans[case.id], provider)
             else:
                 case_provider = FixedPlanProvider(fixed_plans[case.id], SkipRecommend())
-            scores.append(_score_case(case, open_session, embedder, case_provider, call_log))
+            # 판단 요구는 label 고정 입력만 넘긴다. 다른 mode에는 판단 요구를 뽑는 단계가 없다.
+            requirements = case.requirements if args.label_plans else ()
+            scores.append(
+                _score_case(case, open_session, embedder, case_provider, call_log, requirements)
+            )
 
     meta = _eval_meta(args, mode, goldenset, started_at)
     out = results_dir / f"{started_at.strftime('%Y-%m-%dT%H-%M-%S')}.json"
@@ -419,13 +426,18 @@ def _label_plans(measured: list) -> dict[str, dict]:
     }
 
 
+def _goldenset_sha256(path: Path) -> str:
+    """결과 meta에 남기는 golden set 파일 hash. 두 결과가 같은 golden set으로 잰 것인지 본다."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def _load_fixed_plans(path: Path, goldenset: Path, measured: list) -> dict[str, dict | None]:
     """--plans 결과 파일에서 문항별 검색 조건을 읽는다. 비교할 수 없는 파일이면 멈춘다."""
     document = json.loads(path.read_text(encoding="utf-8"))
     meta = document.get("meta", {})
     if meta.get("mode") != "full":
         raise SystemExit(f"--plans에는 전체 모드(full) 결과가 필요하다: {path}")
-    if meta.get("goldenset_sha256") != hashlib.sha256(goldenset.read_bytes()).hexdigest():
+    if meta.get("goldenset_sha256") != _goldenset_sha256(goldenset):
         raise SystemExit(f"--plans 결과의 golden set이 지금 golden set과 다르다: {path}")
     plans = {case["case_id"]: case.get("plan") for case in document.get("cases", [])}
     missing = [case.id for case in measured if case.id not in plans]
@@ -465,6 +477,7 @@ def _score_case(
     embedder: Embedder,
     provider: LLMProvider | None,
     call_log: list[LLMCall],
+    requirements: Sequence[str] = (),
 ):
     """문항 하나를 채점한다. provider가 None이면 검색 지표만 잰다."""
     from whatfrom.eval.scoring import score_full, score_retrieval
@@ -487,7 +500,7 @@ def _score_case(
     # 추천 응답의 evidence에는 후보 선택에서 제외된 문서가 없을 수 있다.
     # 추천 경로도 별도로 실행하므로 전체 모드는 질문을 두 번 임베딩한다.
     response, trace = timed_recommendation(
-        open_session, embedder, provider, case.question, call_log
+        open_session, embedder, provider, case.question, call_log, requirements
     )
 
     exists: bool | None = None
@@ -527,7 +540,7 @@ def _eval_meta(
         "goldenset_version": goldenset.version,
         # 버전 번호를 유지한 채 라벨을 수정할 수 있으므로 파일 해시도 기록한다.
         # 해시가 다르면 두 실행이 사용한 golden set 내용이 달랐다는 뜻이다.
-        "goldenset_sha256": hashlib.sha256(Path(args.goldenset).read_bytes()).hexdigest(),
+        "goldenset_sha256": _goldenset_sha256(Path(args.goldenset)),
         # golden set이 인용한 출처를 마지막으로 확인한 날. latest·LTS·최신 패치 주장은
         # 시간이 지나면 낡는다. 언제 기준의 라벨인지 결과에 남긴다.
         "goldenset_verified_on": (
@@ -598,6 +611,7 @@ def _report_eval(
         aggregate_recommendation,
         aggregate_retrieval,
         constant_baseline,
+        metric_groups,
         random_baseline,
         render_summary,
         result_document,
@@ -617,6 +631,8 @@ def _report_eval(
     # 후보 기록만으로 계산하므로 후보가 있는 모드만 구한다.
     random = random_baseline(scores) if mode.has_candidates else None
     top = top_candidate_baseline(scores) if mode.has_candidates else None
+    # 검토 단계를 부른 실행만 묶음으로 나눈다. 묶음별 지표가 모두 검토 단계의 결과를 쓴다.
+    groups = metric_groups(scores) if mode.calls_recommend else None
 
     print()
     # 실패 목록은 추천 결과를 보여 준다. 추천이 없는 모드에는 놓일 자리가 없다.
@@ -632,12 +648,13 @@ def _report_eval(
             baseline,
             random,
             top,
+            groups,
         )
     )
 
     out.write_text(
         json.dumps(
-            result_document(metrics, scores, skipped, meta, baseline, random, top),
+            result_document(metrics, scores, skipped, meta, baseline, random, top, groups),
             ensure_ascii=False,
             indent=2,
         ),
@@ -681,10 +698,19 @@ def cmd_sample_citations(args: argparse.Namespace) -> None:
     # eval과 같은 이유로 PyYAML을 쓰는 모듈은 여기서 가져온다.
     from whatfrom.eval.citations import dump_sample, sample_citations
 
-    # 안 이름은 넘겨받은 경로 그대로다. 파일 이름만 쓰면 다른 directory의 같은 이름이 겹친다.
-    results = [(path, json.loads(Path(path).read_text(encoding="utf-8"))) for path in args.results]
+    # 인자 하나가 한 안이다. 쉼표로 이은 결과 파일들은 한 안으로 묶는다(1·2회차).
+    # 안 이름은 넘겨받은 인자 그대로다. 파일 이름만 쓰면 다른 directory의 같은 이름이 겹친다.
+    paths = [(path, arm) for arm in args.results for path in arm.split(",")]
+    # 같은 파일이 두 번 오면 sample_citations가 멈춘다. dict로 모으면 그 중복이 사라진다.
+    results = [(path, json.loads(Path(path).read_text(encoding="utf-8"))) for path, _ in paths]
+    arm_of = dict(paths)
+    cases = (
+        _cases_with_requirements(Path(args.goldenset), results) if args.requirements_only else None
+    )
     try:
-        items, key = sample_citations(results, seed=args.seed)
+        items, key = sample_citations(
+            results, seed=args.seed, per_case=args.per_case, cases=cases, arm_of=arm_of
+        )
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
     out = Path(args.out_dir)
@@ -696,6 +722,17 @@ def cmd_sample_citations(args: argparse.Namespace) -> None:
     print(
         f"{out / 'citation-sample.yaml'} 저장 ({len(items)}개). key 파일은 채점 전에 열지 않는다."
     )
+
+
+def _cases_with_requirements(goldenset: Path, results: list[tuple[str, dict]]) -> set[str]:
+    """판단 요구 label이 있는 문항. 결과 파일을 만든 golden set과 같은 파일에서 읽는다."""
+    from whatfrom.eval.goldenset import load_goldenset
+
+    digest = _goldenset_sha256(goldenset)
+    different = [path for path, doc in results if doc["meta"].get("goldenset_sha256") != digest]
+    if different:
+        raise SystemExit(f"결과 파일의 golden set이 {goldenset}와 다르다: {', '.join(different)}")
+    return {case.id for case in load_goldenset(goldenset).cases if case.requirements}
 
 
 def cmd_score_citations(args: argparse.Namespace) -> None:
@@ -813,9 +850,25 @@ def build_parser() -> argparse.ArgumentParser:
     p_sample = eval_sub.add_parser(
         "sample-citations", help="draw blind citation samples from eval results"
     )
-    p_sample.add_argument("results", nargs="+", metavar="RESULT_JSON")
+    p_sample.add_argument(
+        "results",
+        nargs="+",
+        metavar="RESULT_JSON",
+        help="인자 하나가 한 안이다. 쉼표로 이은 결과 파일들은 앞 파일부터 채워 한 안으로 묶는다",
+    )
     p_sample.add_argument("--out-dir", required=True)
     p_sample.add_argument("--seed", type=int, default=0)
+    p_sample.add_argument("--per-case", type=int, default=2, help="문항당 최대 진술 수")
+    p_sample.add_argument(
+        "--requirements-only",
+        action="store_true",
+        help="판단 요구 label이 있는 문항의 진술만 뽑는다",
+    )
+    p_sample.add_argument(
+        "--goldenset",
+        default="eval/goldenset.yaml",
+        help="--requirements-only가 판단 요구를 읽는 golden set. 결과 파일과 같아야 한다",
+    )
     p_sample.set_defaults(func=cmd_sample_citations)
     p_score = eval_sub.add_parser("score-citations", help="score a filled citation sample")
     p_score.add_argument("sample", metavar="SAMPLE_YAML")

@@ -1,0 +1,511 @@
+{
+  "seed": 0,
+  "arms": [
+    "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+    "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json"
+  ],
+  "items": {
+    "c001": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "python-scientific-stack",
+      "claim": 0,
+      "hash": "a9751bb97d46fd0827d96046e08619923cfe77eb4da2c398efe36eababd71dba"
+    },
+    "c002": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "temurin-jdk-build-stage",
+      "candidate": "eclipse-temurin:25-jre",
+      "requirement": 1,
+      "hash": "fb12bad6551e536eb0c72b2c10fd92eb456895f88951ad4e3c833cde8ef0d6b9"
+    },
+    "c003": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "node-arm64-graviton",
+      "candidate": "node:22-slim",
+      "requirement": 1,
+      "hash": "96b1db44bcab74f2ed3cd8c335f175cc0657d85de86e84d3ccc0db20d48bc46e"
+    },
+    "c004": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "golang-cgo-sqlite",
+      "candidate": "golang:1.27-alpine3.23",
+      "requirement": 1,
+      "hash": "fda9c961aa986ff345233df9922dc30cdd1c28a3bccc2208e7443c4b57c4f4d3"
+    },
+    "c005": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "redis-persistence-docs",
+      "candidate": "redis:6",
+      "requirement": 1,
+      "hash": "6bf1d1ab6f9ac4d40239221e9a190b89dde6907abb84822d351ceb53aad6c406"
+    },
+    "c006": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "postgres-postgis-extension",
+      "claim": 1,
+      "hash": "878798ab9793b310f72c9a09810a0a0ad7de52dcaab5296f044f6460d3048b16"
+    },
+    "c007": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "postgres-postgis-extension",
+      "claim": 0,
+      "hash": "6aa8a771c4b911af31afe32d37dee49d7a4c046157d5be3d87c6d765a5a84961"
+    },
+    "c008": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "python-latest-stable",
+      "claim": 0,
+      "hash": "697aed7c422b22eb00e0ff3e29256f33438713b871c87f0ed41abc5b6962a6bc"
+    },
+    "c009": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "node-arm64-graviton",
+      "claim": 1,
+      "hash": "54e8ec328fd9ab8a336c07bd31387d57e2db3c9f7e1de89eaf7c9fa34b936399"
+    },
+    "c010": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "python-latest-stable",
+      "candidate": "python:3.14-alpine",
+      "requirement": 2,
+      "hash": "d70dd5f585cc86f7f8c63a9af3d63d12e4606f227a201962e8fcad0690cc581f"
+    },
+    "c011": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "golang-cross-compile-arm64",
+      "candidate": "golang:1.26-alpine3.23",
+      "requirement": 1,
+      "hash": "e9aec6d824faf94783174e73fd649f92103d0a034bf87ad60b265db50281500e"
+    },
+    "c012": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "golang-cross-compile-arm64",
+      "claim": 2,
+      "hash": "03f59da006f46f33c532f28af9f68e7b28268a2c025a22fcc3b44ea0d035a2e1"
+    },
+    "c013": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "python-fastapi-prod",
+      "claim": 2,
+      "hash": "a928d02797589b122a4ab9b6d0821bc0506f22592a019030d303d6d07962a26e"
+    },
+    "c014": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "golang-cross-compile-arm64",
+      "candidate": "golang:1.27-alpine",
+      "requirement": 1,
+      "hash": "def4990c87146c1129e425a4dbef177fbf028cc341d4e23772ae1cb214f0dace"
+    },
+    "c015": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "python-latest-stable",
+      "claim": 0,
+      "hash": "980b3aa936f3b7f6a31a8a7b198625f838827ef057087c0ed8b9115e8a076bdd"
+    },
+    "c016": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "debian-slim-runtime",
+      "candidate": "debian:11-slim",
+      "requirement": 1,
+      "hash": "926959f0397c69799a25f05415035bf94ff05322e1e298be40b2b29111e0f34b"
+    },
+    "c017": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "postgres-postgis-extension",
+      "candidate": "postgres:17-alpine",
+      "requirement": 1,
+      "hash": "18bd0080d5427877d6c2f577f500086e2bedb78dd662c012f009eef6dde739e2"
+    },
+    "c018": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "nginx-stable-branch",
+      "candidate": "nginx:1.30-alpine-perl",
+      "requirement": 1,
+      "hash": "9f2311764115ad6ba37228d3ca7d1ac8f3c1c7343d44ee5d626dfd89e4501eb7"
+    },
+    "c019": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "golang-cross-compile-arm64",
+      "claim": 0,
+      "hash": "ae20cbf793f0876a755609fc2a1f001eb1b98b5f26039d77d28b5fa09d642945"
+    },
+    "c020": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "python-latest-stable",
+      "candidate": "python:3.11-bookworm",
+      "requirement": 2,
+      "hash": "65968f415dfb5623ea62944ba69059668c8c8d679faebc97ae18409c41e2de20"
+    },
+    "c021": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "debian-slim-runtime",
+      "claim": 1,
+      "hash": "39d7dafe965db8929725d78f4f6cbf48e4f2b05f2dd2e9df44c3906a01f8c3af"
+    },
+    "c022": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "golang-cgo-sqlite",
+      "candidate": "golang:1.26-alpine3.23",
+      "requirement": 1,
+      "hash": "138ec6f175a5188191146554de618be45c728836f10f4c94b0b17e8c92ed0b54"
+    },
+    "c023": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "temurin-jdk-build-stage",
+      "claim": 2,
+      "hash": "b83369b2a24c69e71e0e669c9fff8523c291c03236dd8ac02f643232633140da"
+    },
+    "c024": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "golang-cgo-sqlite",
+      "claim": 1,
+      "hash": "f40f14d51fb23b9e0e859f4194723b18bab7ff5c471634209b826ec7cb0c1e8a"
+    },
+    "c025": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "alpine-static-binary",
+      "claim": 1,
+      "hash": "dafc3b264459cc559823cb547e05dbe4fbe736deaa2eb8cb0c38a6fe5536979c"
+    },
+    "c026": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "alpine-static-binary",
+      "claim": 2,
+      "hash": "0c3800ad40adf760ead57b37d97f0d3b30759d157de08589f2c8ec8ad81128cc"
+    },
+    "c027": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "ubuntu-lts-base",
+      "claim": 0,
+      "hash": "86522557478516d9e3ba2e480bb3cdf5713397e2a3c808fd9a6ef219e69a0a81"
+    },
+    "c028": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "python-ml-torch",
+      "claim": 0,
+      "hash": "ece286bfc34ba1626b35bcd9f8405a390a45b0f3447f545aea5cc923eef4acdd"
+    },
+    "c029": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "golang-cross-compile-arm64",
+      "candidate": "golang:1.26-alpine",
+      "requirement": 1,
+      "hash": "baea062970bbe8c885e3ad4086ed88bbe831da2307f2f912316cf053c4db0e90"
+    },
+    "c030": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "temurin-jdk-build-stage",
+      "claim": 1,
+      "hash": "9a1fff2945d6d9b5c2f1602d5de20cd899e3063b927ce58875bf3f675fdc19dd"
+    },
+    "c031": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "python-numpy-arm64",
+      "claim": 1,
+      "hash": "626c23390966a35a30dd250044694b7a7af85974e1557c9e43fd9d964ca177a5"
+    },
+    "c032": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "nginx-stable-branch",
+      "candidate": "nginx:1.30-alpine-slim",
+      "requirement": 1,
+      "hash": "36cf542d72edbdb791919cb898df0284ff427d6b4eddc601d042c93e315e537a"
+    },
+    "c033": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "golang-cgo-sqlite",
+      "claim": 2,
+      "hash": "b0c20bf90e9272d5c8d8c795a7bcd6bae840c48c6534b49175c2b25125917ed1"
+    },
+    "c034": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "case_id": "debian-slim-runtime",
+      "candidate": "debian:11-slim",
+      "requirement": 1,
+      "hash": "dbc3701e71deec4cba03fe5be32c08699c3c577614578d88d870a30babf40a31"
+    },
+    "c035": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "debian-slim-runtime",
+      "candidate": "debian:11",
+      "requirement": 1,
+      "hash": "f2f350adacc5b65fd2106089ac44b978acb1b62a2afeb247122041924e8dea33"
+    },
+    "c036": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "redis-persistence-docs",
+      "candidate": "redis:7",
+      "requirement": 1,
+      "hash": "30b648309d4213fbfe90709d291cfbac353328ccbfd7d8ead4f05d0bf112957d"
+    },
+    "c037": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "node-lts-prod",
+      "claim": 1,
+      "hash": "02954a51c8493b01db54dfece5d9d485c675cfbe651d8e06146801c3e97b6de7"
+    },
+    "c038": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "golang-cgo-sqlite",
+      "candidate": "golang:1.26-alpine",
+      "requirement": 1,
+      "hash": "41b8e4442ae3e80934b4230fa336f51279de8c755846267362d8f8a69f242ed9"
+    },
+    "c039": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "temurin-jdk-build-stage",
+      "candidate": "eclipse-temurin:26-jre",
+      "requirement": 1,
+      "hash": "c55ce7d24243e5b7dd78775f6278465f50b422d2ade203d02c79679c2a0a029d"
+    },
+    "c040": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "nginx-stable-branch",
+      "candidate": "nginx:1.31-alpine-perl",
+      "requirement": 1,
+      "hash": "82d095ad6e3869c911b952eded4a49080adb2b78804f74668b8aaecad3da44b7"
+    },
+    "c041": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "python-fastapi-prod",
+      "claim": 1,
+      "hash": "6b3c9c32003101e01b9ace0e31ad6a503eb9681659b23db76723e6a6d00452b0"
+    },
+    "c042": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "python-musl-explained",
+      "claim": 3,
+      "hash": "8193fd29b8ddf6ba11cb0f4563e82f1d736e613cf3028f3565143b8a4cdf09a6"
+    },
+    "c043": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "node-arm64-graviton",
+      "claim": 2,
+      "hash": "d65d0fc19d749748ff920f6079531e71f2e0d0c1fe28412b707a195f5b9305c0"
+    },
+    "c044": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "alpine-static-binary",
+      "claim": 1,
+      "hash": "fe36b30cfa2dc8e291aab6602ea23d6ab8a21f39bdef745f89b6e6504c4cfe66"
+    },
+    "c045": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "postgres-postgis-extension",
+      "candidate": "postgres:18-alpine",
+      "requirement": 1,
+      "hash": "45d5392022441fdf82aff67717e2317397a7aaef5c623a0ae579d3459b28c8a1"
+    },
+    "c046": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "nginx-stable-branch",
+      "claim": 0,
+      "hash": "fea19803f4a35deae02096e072000528910d4b388a0772d6b497f0f93999fe23"
+    },
+    "c047": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "node-arm64-graviton",
+      "candidate": "node:24",
+      "requirement": 1,
+      "hash": "b888e96d602b7de961efeedc952dc4e54ded3bb5529d3e550e297a755d5cfe75"
+    },
+    "c048": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "node-lts-prod",
+      "claim": 1,
+      "hash": "ff67786fa74c27e84022ad8aaf0fe08b637787bb217d9bb4d67fda5c3d7277d1"
+    },
+    "c049": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "node-arm64-graviton",
+      "candidate": "node:24-trixie-slim",
+      "requirement": 1,
+      "hash": "dcd1cd3ddb7e20bb78a8582a996ae75663115debf8863d845b3bdb60099c048b"
+    },
+    "c050": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "python-musl-explained",
+      "claim": 1,
+      "hash": "92d556b6cb38c036ab2e5ca315a89194a501957b0e6ee2c546ba89d8b277746d"
+    },
+    "c051": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "python-latest-stable",
+      "claim": 1,
+      "hash": "15bd8b954225b5ffa83be43832827907e50ee1736a8edd5468e52f9709285556"
+    },
+    "c052": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "python-latest-stable",
+      "candidate": "python:3.13-slim",
+      "requirement": 1,
+      "hash": "73150875b1478e2950d4ca78f8c3b8baa939107eb91a7f696980226cb6904070"
+    },
+    "c053": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "redis-persistence-docs",
+      "claim": 0,
+      "hash": "915dd3e2f30ce1aa6371ec475d204abcb336f7a60fb0642b58d93a73a0412258"
+    },
+    "c054": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "nginx-stable-branch",
+      "claim": 1,
+      "hash": "22c32e1b9d7ea97fee62d39a04243fee6ac607c579bc68e47075ddd3712d1bd5"
+    },
+    "c055": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "python-musl-explained",
+      "claim": 0,
+      "hash": "39fbead557f846a290ec4098d16f3f5ec32c68ec2736544685c973fce4fe5474"
+    },
+    "c056": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "postgres-postgis-extension",
+      "claim": 1,
+      "hash": "c3e32f8a7c7b0a05c5b5c79cc8b7ffd4bfbb93869efcf52cc9878a77d7f54bb0"
+    },
+    "c057": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "debian-slim-runtime",
+      "claim": 1,
+      "hash": "b67e14660e4358a30ba4541f85891d14b0ad64797bd09d815afa4d97f1267cc1"
+    },
+    "c058": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "golang-cross-compile-arm64",
+      "claim": 1,
+      "hash": "96873446552c91989a4b7a8aec6f40a6b14d5432fcccb44961968b9bf06e6d9e"
+    },
+    "c059": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "redis-persistence-docs",
+      "claim": 0,
+      "hash": "4aac3541e2156f56b951456c64478c775bc4341aab90a2438ab2fb35d41ed964"
+    },
+    "c060": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "python-numpy-arm64",
+      "claim": 2,
+      "hash": "a77b4c4c54ccefe8283746c2d5a2d0915d7758a2a61c2f1c2437448ac06654f4"
+    },
+    "c061": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "temurin-jdk-build-stage",
+      "candidate": "eclipse-temurin:21-jre",
+      "requirement": 1,
+      "hash": "f54a172687ab031889449d2520f078fceb492c228b131fb3020ec93899d1b8aa"
+    },
+    "c062": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "node-native-addon",
+      "claim": 2,
+      "hash": "292c55de133102adb2d1d5e17c7942ce3d21c17c1705f81ff5a024d069b65184"
+    },
+    "c063": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "python-ml-torch",
+      "claim": 1,
+      "hash": "e255ec7dfe858a8dc1130db62ab6b9651d5675f1f4a9828d76e59d9e7fe9a702"
+    },
+    "c064": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "case_id": "temurin-jdk-build-stage",
+      "claim": 1,
+      "hash": "81dcc6fbdb4a4d2138cf6c68fc26865060acafea8dfaac39b966582a696c4118"
+    },
+    "c065": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "redis-persistence-docs",
+      "claim": 1,
+      "hash": "043b9b6b77b5ee46e857bb3e015b4cb0e41ad0f3b4e9002bcb3968491afd4f56"
+    },
+    "c066": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json,eval/experiments/2026-10-20-m3-review-structure/results/judge-r2/2026-10-21T12-30-07.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/judge-r1/2026-10-20T22-22-16.json",
+      "case_id": "redis-persistence-docs",
+      "candidate": "redis:8",
+      "requirement": 1,
+      "hash": "8c90b762dd543e5b8b1ce54f99c91ae20b52f742db053ef4910816ea478ac38a"
+    },
+    "c067": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "nginx-stable-branch",
+      "claim": 1,
+      "hash": "b4c4747c65d8fb0861a2fe371f67fcdba0c62e728fccff2392c6faf0d87bcc3d"
+    },
+    "c068": {
+      "arm": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json,eval/experiments/2026-10-20-m3-review-structure/results/single-r2/2026-10-21T12-27-12.json",
+      "source": "eval/experiments/2026-10-20-m3-review-structure/results/single-r1/2026-10-20T22-19-09.json",
+      "case_id": "node-arm64-graviton",
+      "claim": 2,
+      "hash": "c7e602ff91db0fb8e5e8168f7d40742f157c8cb928ca9def18ed7d3510b382df"
+    }
+  }
+}

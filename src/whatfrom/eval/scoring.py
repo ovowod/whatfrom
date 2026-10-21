@@ -200,6 +200,8 @@ class CaseScore:
     # 불만족 판정을 하나 이상 받은 후보. 판정이 없는 실행(단일 선택)이면 None이고,
     # 오답 적발률과 오판정률의 분모에서 빠진다.
     unsatisfied_candidates: list[str] | None = None
+    # 문항에 판단 요구 label이 있는가. 지표를 묶음으로 나눌 때 쓴다.
+    has_requirements: bool = False
     # 응답의 번호 붙은 근거. 인용의 근거 번호를 repository와 section으로 풀 때 쓴다.
     # 본문은 크기 때문에 남기지 않는다.
     evidence: list[dict] = field(default_factory=list)
@@ -333,5 +335,6 @@ def score_full(
             response.recommended.model_dump(mode="json") if response.recommended else None
         ),
         recommendation=recommendation.model_dump(mode="json") if recommendation else None,
+        has_requirements=bool(case.requirements),
         evidence=[e.model_dump(exclude={"content"}) for e in response.evidence],
     )

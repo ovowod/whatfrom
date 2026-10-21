@@ -149,6 +149,26 @@ def aggregate_recommendation(scores: list[CaseScore]) -> list[Metric]:
     ]
 
 
+# 판단 요구 label이 있는 문항과 없는 문항.
+_GROUPS = {"요구 있음": True, "요구 없음": False}
+
+
+def metric_groups(scores: list[CaseScore]) -> dict[str, list[Metric]]:
+    """추천 정확도, 검색 1위 대조군, 인용 검증 통과율을 묶음별로 낸다.
+
+    묶음에 문항이 없으면 0%가 아니라 미측정이다(--tags로 한쪽만 남긴 실행).
+    """
+    groups = {}
+    for name, has_requirements in _GROUPS.items():
+        subset = [s for s in scores if s.has_requirements is has_requirements]
+        groups[name] = [
+            Metric("추천 정확도", sum(s.accurate for s in subset), len(subset)),
+            Metric("검색 1위 대조군", sum(s.top_candidate_accepted for s in subset), len(subset)),
+            _citation_pass_rate(subset),
+        ]
+    return groups
+
+
 def _citation_pass_rate(scores: list[CaseScore]) -> Metric:
     """주장들에 붙은 인용 전체 중 글자 그대로 검증을 통과한 비율. 인용이 없으면 미측정이다."""
     citations = [
@@ -231,6 +251,15 @@ def _format_metric(metric: Metric) -> str:
     return f"  {_pad(metric.label, _LABEL_WIDTH)} {fraction:>7}   {metric.ratio:6.1%}"
 
 
+def _format_group(name: str, metrics: list[Metric]) -> str:
+    """묶음 하나를 한 줄로. 문항 수는 추천 정확도의 분모다."""
+    parts = [
+        f"{m.label} {m.hits}/{m.total} {m.ratio:.1%}" if m.ratio is not None else f"{m.label} 0/0 —"
+        for m in metrics
+    ]
+    return f"  {name} {metrics[0].total}문항 — " + " · ".join(parts)
+
+
 def _format_baseline(baseline: ConstantBaseline) -> str:
     """여섯 지표와 섞이지 않게 들여쓰기와 머리표를 다르게 준다."""
     if baseline.image is None or baseline.ratio is None:
@@ -296,6 +325,7 @@ def render_summary(
     baseline: ConstantBaseline | None = None,
     random: RandomBaseline | None = None,
     top: TopCandidateBaseline | None = None,
+    groups: dict[str, list[Metric]] | None = None,
 ) -> str:
     by_id = {case.id: case for case in cases}
     missing_repos = sorted({repo for s in skipped for repo in s.missing})
@@ -320,6 +350,9 @@ def render_summary(
         headline += f" · {tag_filtered}문항 태그 필터 제외"
     lines += [headline, ""]
     lines += [_format_metric(m) for m in metrics]
+    if groups is not None:
+        lines += ["", "판단 요구 묶음:"]
+        lines += [_format_group(name, group) for name, group in groups.items()]
     # 후보만 있으면 계산되므로 고정답 대조군과 달리 검색 전용 모드에도 나온다.
     if random is not None:
         lines += ["", _format_random_baseline(random)]
@@ -374,6 +407,7 @@ def result_document(
     baseline: ConstantBaseline | None = None,
     random: RandomBaseline | None = None,
     top: TopCandidateBaseline | None = None,
+    groups: dict[str, list[Metric]] | None = None,
 ) -> dict:
     """저장용 JSON. 실행 메타가 없으면 나중에 점수를 비교할 수 없다."""
     document: dict = {
@@ -389,4 +423,8 @@ def result_document(
         document["random_baseline"] = asdict(random)
     if top is not None:
         document["top_candidate_baseline"] = asdict(top) | {"ratio": top.ratio}
+    if groups is not None:
+        document["metric_groups"] = {
+            name: [asdict(m) | {"ratio": m.ratio} for m in group] for name, group in groups.items()
+        }
     return document

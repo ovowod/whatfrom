@@ -3,12 +3,13 @@
 
 eval 결과 파일에서 검증을 통과한 인용이 붙은 주장을 뽑아, 어느 설정의 결과인지 가린
 YAML 표본과 원래 위치를 담은 key를 만든다. 표본의 verdict와 candidate_ok를 채우면
-key와 대조해 안(결과 파일)마다 인용 뒷받침률과 후보 정보 오류를 낸다.
+key와 대조해 안마다 인용 뒷받침률과 후보 정보 오류를 낸다.
 """
 
 import hashlib
 import json
 import random
+from collections import Counter
 from dataclasses import dataclass, field
 
 import yaml
@@ -41,7 +42,10 @@ GUIDE = """\
 #          예: "3.12로 고정해야 한다", "arm64에서만 돈다", "확장은 안 쓴다"
 #   후보   candidates 줄로 알 수 있는 내용. 크기(MB), 아키텍처, pushed 날짜, 후보끼리의 비교
 #          ("가장 작다", "모든 후보가 arm64를 지원한다").
-#          태그 이름이 후보에 있다는 것만으로는 후보 사실이 아니다.
+#          태그 이름이 후보에 있다는 것만으로는 후보 사실이 아니다. 다만 "후보 목록에 X가 있다",
+#          "패치 버전 태그는 후보에 없다"처럼 후보 목록에 무엇이 있거나 없다고 명시한 부분은
+#          후보 사실이다. 같은 문장의 그 태그에 관한 다른 내용(예: 1.30은 stable 브랜치다)은
+#          문서 사실로 따로 본다.
 #   문서   그 밖에 이미지나 소프트웨어에 관한 사실. 예: "slim에는 컴파일 도구가 없다",
 #          "alpine은 musl libc를 쓴다", "18부터 볼륨 경로가 바뀌었다",
 #          "24.04와 noble은 같은 태그다".
@@ -59,12 +63,24 @@ GUIDE = """\
 #               (예: 사실은 alpine-slim에 관한 것인데 quote는 slim 절) / 사실의 일부만 담는다
 #               (예: 사실은 "X이고 Y다"인데 quote에는 X만 있다)
 #               / quote가 태그 목록뿐이라 그 사실을 말하지 않는다
+# 태그 목록 quote는 이렇게 본다.
+#   - 태그 이름에 적힌 표시는 그 태그에 대한 사실로 확인된다.
+#     예: `3.15-rc`는 RC다. `stable`과 같은 줄의 `1.30`은 stable 브랜치다.
+#   - 표시가 없다는 것으로 상태를 추론한 사실은 확인 안 됨이다.
+#     예: rc가 붙지 않았으니 정식 릴리스다.
+#   - "최신", "가장 높은 버전" 같은 비교는 인용된 줄만으로는 확인 안 됨이다.
+#     인용 밖에 더 높은 버전이 없다는 것을 그 줄들이 말하지 않는다.
+#   - 지원 태그 목록에 있다는 것은 "지원된다"까지만 확인된다. "안정"은 따로 확인한다.
 # 모든 문서 사실이 확인됨                           → supported
 # 하나라도 확인 안 됨                               → unsupported
 # quote가 잘려 뜻이 둘로 읽히는 등, 확인됨인지 아닌지 정말 정할 수 없을 때만 → unclear
 #   (unclear가 표본의 10%를 넘으면 합격 여부가 보류된다. 망설여지면 unsupported 쪽으로 정한다.)
 # 조건, 후보, 결론, 모름은 verdict에서 보지 않는다. 다만:
 #   - 결론이 statement에 없는 사실에 기대면 그 사실도 문서 사실로 보고 확인한다.
+#     결론이나 다른 사실이 성립하려면 반드시 참이어야 하는 사실만 이렇게 본다.
+#     있으면 더 설득력 있는 배경 지식은 채점하지 않는다.
+#     예: "빌드 안정성을 우선하면 alpine보다 slim이 적절하다"는 slim에 그 문제가 없다는
+#     사실이 있어야 성립하므로, 그것도 확인한다.
 #     예: "기본 이미지를 쓰세요"의 이유로 "기본 이미지에는 빌드 도구가 있다"가 필요하다면
 #     그것도 확인한다.
 #   - 결론이 확인된 사실, 조건, 후보 정보로 이어지면 결론 자체는 문서에 쓰여 있지 않아도 된다.
@@ -120,68 +136,84 @@ def _prompt_parts(case: dict) -> tuple[str, list[str]]:
     return question, [line.removeprefix("- ") for line in candidates]
 
 
-def _claims(document: dict) -> list[dict]:
+def _verified_citations(case: dict, citations: list[dict]) -> list[dict]:
+    """검증을 통과한 인용만, 근거 번호를 repository와 section 제목으로 풀어 돌려준다.
+
+    글자 그대로 검증에 실패한 인용은 인용 검증 통과율이 이미 센다.
+    """
+    evidence = {e["number"]: e for e in case.get("evidence") or []}
+    verified = []
+    for citation in citations:
+        if not citation["verified"]:
+            continue
+        source = evidence.get(citation["evidence"])
+        # 검증을 통과한 인용은 그 요청의 근거에서 나왔다. 없으면 결과 파일이 깨졌다.
+        if source is None:
+            raise ValueError(
+                f"{case['case_id']}: 검증을 통과한 인용의 근거 {citation['evidence']}번이 "
+                "결과 파일에 없다"
+            )
+        verified.append(
+            {
+                "quote": citation["quote"],
+                "evidence": f"{source['repository']} — {source['section_title']}",
+            }
+        )
+    return verified
+
+
+def _statements(document: dict) -> list[dict]:
     """결과 파일 하나에서 검증을 통과한 인용이 하나 이상 붙은 주장을 모은다.
 
-    지금의 주장은 단일 선택의 주장이고, 그 주장이 가리키는 이미지는 추천 이미지다.
-    한 주장의 인용은 함께 본다. 인용 두 개를 합쳐야 성립하는 주장이 있기 때문이다.
+    주장이 가리키는 이미지는 추천 이미지다. 한 주장의 인용은 함께 본다. 인용 두 개를 합쳐야
+    성립하는 주장이 있기 때문이다. locator는 key에 남길 주장의 위치다.
     """
-    claims = []
+    statements = []
     for case in document.get("cases", []):
         recommendation = case.get("recommendation")
         if recommendation is None:
             continue
-        evidence = {e["number"]: e for e in case.get("evidence") or []}
         for index, claim in enumerate(recommendation["claims"]):
-            citations = []
-            for citation in claim["citations"]:
-                # 글자 그대로 검증에 실패한 인용은 인용 검증 통과율이 이미 센다.
-                if not citation["verified"]:
-                    continue
-                source = evidence.get(citation["evidence"])
-                # 검증을 통과한 인용은 그 요청의 근거에서 나왔다. 없으면 결과 파일이 깨졌다.
-                if source is None:
-                    raise ValueError(
-                        f"{case['case_id']}: 검증을 통과한 인용의 근거 {citation['evidence']}번이 "
-                        "결과 파일에 없다"
-                    )
-                citations.append(
-                    {
-                        "quote": citation["quote"],
-                        "evidence": f"{source['repository']} — {source['section_title']}",
-                    }
-                )
-            if not citations:
+            verified = _verified_citations(case, claim["citations"])
+            if not verified:
                 continue
             question, candidates = _prompt_parts(case)
-            claims.append(
+            statements.append(
                 {
                     "case_id": case["case_id"],
-                    "claim": index,
+                    "locator": {"claim": index},
                     "item": {
                         "question": question,
                         "image": recommendation["image"],
                         "statement": claim["text"],
-                        "citations": citations,
+                        "citations": verified,
                         "candidates": candidates,
                     },
                 }
             )
-    return claims
+    return statements
 
 
-def _choose(claims: list[dict], rng: random.Random) -> list[dict]:
-    """문항당 최대 PER_CASE개를 고른 뒤, 그중 최대 PER_ARM개를 고른다.
+def _choose(
+    statements: list[dict],
+    rng: random.Random,
+    per_case: int,
+    limit: int,
+    taken: Counter[str],
+) -> list[dict]:
+    """문항당 최대 per_case개를 고른 뒤, 그중 최대 limit개를 고른다.
 
-    한 문항이 주장을 많이 내도 표본을 독차지하지 못하게 한다.
+    한 문항이 진술을 많이 내도 표본을 독차지하지 못하게 한다. taken은 같은 안의 앞 결과
+    파일에서 이미 고른 문항별 수다. 문항당 상한은 묶은 안 전체에 적용한다.
     """
     by_case: dict[str, list[dict]] = {}
-    for claim in claims:
-        by_case.setdefault(claim["case_id"], []).append(claim)
+    for statement in statements:
+        by_case.setdefault(statement["case_id"], []).append(statement)
     chosen = []
     for case_id in sorted(by_case):
-        chosen += rng.sample(by_case[case_id], min(PER_CASE, len(by_case[case_id])))
-    return rng.sample(chosen, min(PER_ARM, len(chosen)))
+        room = max(per_case - taken[case_id], 0)
+        chosen += rng.sample(by_case[case_id], min(room, len(by_case[case_id])))
+    return rng.sample(chosen, min(limit, len(chosen)))
 
 
 def _digest(item: dict) -> str:
@@ -191,35 +223,62 @@ def _digest(item: dict) -> str:
     return hashlib.sha256(encoded.encode()).hexdigest()
 
 
-def sample_citations(results: list[tuple[str, dict]], seed: int) -> tuple[list[dict], dict]:
+def sample_citations(
+    results: list[tuple[str, dict]],
+    seed: int,
+    per_case: int = PER_CASE,
+    cases: set[str] | None = None,
+    arm_of: dict[str, str] | None = None,
+) -> tuple[list[dict], dict]:
     """(결과 파일 이름, 결과 문서) 목록에서 표본 항목과 key를 만든다. 같은 seed면 같은 표본이다.
 
     항목에는 결과 파일 이름이 들어가지 않는다. 순서를 섞고 익명 id를 붙여 검토하는 쪽이
-    어느 안의 주장인지 모르게 한다. 원래 위치는 key에만 남긴다.
+    어느 안의 진술인지 모르게 한다. 원래 위치는 key에만 남긴다.
+
+    cases를 주면 그 문항의 진술만 뽑는다. arm_of는 결과 파일을 안으로 묶는다. 같은 안의
+    파일은 results 순서대로, 앞 파일에서 먼저 뽑고 PER_ARM개가 안 되면 다음 파일에서 채운다.
+    주지 않으면 결과 파일 하나가 한 안이다.
     """
     names = [name for name, _ in results]
     repeated = sorted({name for name in names if names.count(name) > 1})
     if repeated:
         # 이름이 겹치면 채점 집계에서 두 안이 하나로 합쳐진다.
-        raise ValueError(f"안 이름이 겹친다: {', '.join(repeated)}")
+        raise ValueError(f"결과 파일 이름이 겹친다: {', '.join(repeated)}")
+    arm_of = arm_of or {}
+    arms: dict[str, list[tuple[str, dict]]] = {}
+    for name, document in results:
+        arms.setdefault(arm_of.get(name, name), []).append((name, document))
+
     rng = random.Random(seed)
-    drawn = [
-        (name, claim) for name, document in results for claim in _choose(_claims(document), rng)
-    ]
+    drawn = []
+    for arm, sources in arms.items():
+        taken: Counter[str] = Counter()
+        for source, document in sources:
+            room = PER_ARM - sum(taken.values())
+            if room == 0:
+                break
+            statements = [
+                st for st in _statements(document) if cases is None or st["case_id"] in cases
+            ]
+            chosen = _choose(statements, rng, per_case, room, taken)
+            taken.update(st["case_id"] for st in chosen)
+            drawn += [(arm, source, st) for st in chosen]
     rng.shuffle(drawn)
 
     items: list[dict] = []
     entries: dict[str, dict] = {}
-    for index, (name, claim) in enumerate(drawn, start=1):
-        item = {"id": f"c{index:03d}", **claim["item"], "verdict": None, "candidate_ok": None}
+    for index, (arm, source, statement) in enumerate(drawn, start=1):
+        item = {"id": f"c{index:03d}", **statement["item"], "verdict": None, "candidate_ok": None}
         items.append(item)
+        # 묶은 파일들에서 같은 문항, 같은 위치가 나와도 source로 가른다.
         entries[item["id"]] = {
-            "arm": name,
-            "case_id": claim["case_id"],
-            "claim": claim["claim"],
+            "arm": arm,
+            "source": source,
+            "case_id": statement["case_id"],
+            **statement["locator"],
             "hash": _digest(item),
         }
-    return items, {"seed": seed, "arms": names, "items": entries}
+    return items, {"seed": seed, "arms": list(arms), "items": entries}
 
 
 def dump_sample(items: list[dict]) -> str:

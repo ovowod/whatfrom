@@ -18,6 +18,7 @@ from pathlib import Path
 
 import httpx2
 import pytest
+import yaml
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
@@ -26,7 +27,12 @@ from whatfrom.cli import accepted_digests, cmd_eval, indexed_repositories
 from whatfrom.collect.hub import TagRow, VariantRow
 from whatfrom.collect.store import upsert_tags
 from whatfrom.core.config import Settings
-from whatfrom.core.contracts import Citation, Claim, Recommendation, SearchPlan
+from whatfrom.core.contracts import (
+    Citation,
+    Claim,
+    Recommendation,
+    SearchPlan,
+)
 from whatfrom.core.embed import FakeEmbedder
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.core.models import Document, DocumentChunk, ImageTag, Repository
@@ -740,6 +746,130 @@ def test_label_plans_stop_on_a_case_with_several_repositories(
     assert provider.calls == []
 
 
+NODE_GYP = "node-gyp must compile native addons without extra packages"
+
+
+def test_label_plans_pass_the_case_requirements_to_the_review_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """M3의 두 안이 같은 판단 요구를 받아야 차이가 구조에서 온다고 말할 수 있다."""
+    goldenset = LABEL_GOLDENSET.replace("requirements: []", f'requirements: ["{NODE_GYP}"]', 1)
+
+    document = _run_label_plans(
+        tmp_path, monkeypatch, session, _plan_must_not_be_called(), goldenset=goldenset
+    )
+
+    assert NODE_GYP in document["cases"][0]["advise_prompt"]
+
+
+def test_citation_samples_read_a_prompt_that_carries_requirements(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """판단 요구는 번호를 달고 실리되, 표본 도구가 읽는 질문과 후보 줄은 그대로다."""
+    musl = "musl-based images must not be used"
+    goldenset = LABEL_GOLDENSET.replace(
+        "requirements: []", f'requirements: ["{NODE_GYP}", "{musl}"]', 1
+    )
+    recommendation = Recommendation(
+        image="python:3.13-slim",
+        claims=[
+            Claim(text="slim이다", citations=[Citation(evidence=1, quote="python slim image.")])
+        ],
+    )
+    document = _run_label_plans(
+        tmp_path,
+        monkeypatch,
+        session,
+        FakeLLMProvider(recommendation=recommendation),
+        goldenset=goldenset,
+    )
+    prompt = document["cases"][0]["advise_prompt"]
+    assert f"1. {NODE_GYP}" in prompt
+    assert f"2. {musl}" in prompt
+    result = next((tmp_path / "results").glob("*.json"))
+    out = tmp_path / "sample"
+
+    _cli("eval", "sample-citations", str(result), "--out-dir", str(out))
+
+    [item] = yaml.safe_load((out / "citation-sample.yaml").read_text(encoding="utf-8"))
+    assert item["question"] == "ARM64에서 도는 python 이미지"
+    assert [line.split(" | ")[0] for line in item["candidates"]] == ["python:3.13-slim"]
+
+
+NO_REQUIREMENTS = "Judgment requirements: none"
+
+
+def test_a_case_without_requirements_says_so_in_the_review_prompt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """빈 목록을 누락으로 읽지 않도록 요구가 없다고 적는다."""
+    document = _run_label_plans(tmp_path, monkeypatch, session, _plan_must_not_be_called())
+
+    assert NO_REQUIREMENTS in document["cases"][0]["advise_prompt"]
+
+
+def test_fixed_plans_pass_no_requirements_to_the_review_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """판단 요구는 label 고정 입력에서만 온다. 다른 mode에는 판단 요구를 뽑는 단계가 없다."""
+    plans = _full_run(tmp_path, monkeypatch, session)
+
+    document = _run_fixed(tmp_path, monkeypatch, plans, _plan_must_not_be_called())
+
+    assert NO_REQUIREMENTS in document["cases"][0]["advise_prompt"]
+
+
+def _two_group_goldenset() -> str:
+    """판단 요구가 있는 문항(python-arm64)과 없는 문항(python-plain)을 하나씩 둔다."""
+    python_case = LABEL_GOLDENSET[LABEL_GOLDENSET.index("  - id: python-arm64") :]
+    python_case = python_case[: python_case.index("  - id: not-indexed")]
+    with_requirement = LABEL_GOLDENSET.replace(
+        "requirements: []", f'requirements: ["{NODE_GYP}"]', 1
+    )
+    return with_requirement + python_case.replace("python-arm64", "python-plain")
+
+
+def _groups(document: dict) -> dict[str, dict[str, tuple[int, int]]]:
+    return {
+        group: {m["label"]: (m["hits"], m["total"]) for m in metrics}
+        for group, metrics in document["metric_groups"].items()
+    }
+
+
+def test_metrics_split_into_cases_with_and_without_requirements(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, capsys
+) -> None:
+    """판단 요구 label이 있는 문항과 없는 문항의 성적을 따로 본다."""
+    recommendation = Recommendation(
+        image="python:3.13-slim",
+        claims=[
+            Claim(text="slim이다", citations=[Citation(evidence=1, quote="python slim image.")])
+        ],
+    )
+
+    document = _run_label_plans(
+        tmp_path,
+        monkeypatch,
+        session,
+        FakeLLMProvider(recommendation=recommendation),
+        goldenset=_two_group_goldenset(),
+    )
+
+    group = {"추천 정확도": (1, 1), "검색 1위 대조군": (1, 1), "인용 검증 통과율": (1, 1)}
+    assert _groups(document) == {"요구 있음": group, "요구 없음": group}
+    printed = capsys.readouterr().out
+    assert "요구 있음 1문항" in printed and "요구 없음 1문항" in printed
+
+
+def test_an_empty_group_is_unmeasured(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """label 고정 입력의 golden set에는 판단 요구가 있는 문항이 없다."""
+    document = _run_label_plans(tmp_path, monkeypatch, session, _plan_must_not_be_called())
+
+    assert {m["ratio"] for m in document["metric_groups"]["요구 있음"]} == {None}
+
+
 def test_no_recommend_needs_label_plans() -> None:
     parsed = cli.build_parser().parse_args(["eval", "--label-plans", "--no-recommend"])
     assert parsed.label_plans and parsed.no_recommend
@@ -821,6 +951,161 @@ def test_citation_samples_are_drawn_from_a_real_result_and_scored(
     printed = capsys.readouterr().out
     assert f"{result.name}" in printed
     assert "1/1 100.0% 합격" in printed
+
+
+def _claims_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session: Session,
+    claims: int,
+    name: str,
+    goldenset: str = LABEL_GOLDENSET,
+    seeded: bool = False,
+) -> Path:
+    """검증되는 인용이 붙은 주장 claims개를 내는 단일 선택 실행의 결과 파일을 name으로 옮긴다.
+
+    seeded면 앞선 실행이 이미 테스트 DB를 채웠다. 두 번째 실행은 provider만 바꾼다.
+    """
+    recommendation = Recommendation(
+        image="python:3.13-slim",
+        claims=[
+            Claim(text=f"주장 {i}", citations=[Citation(evidence=1, quote="python slim image.")])
+            for i in range(claims)
+        ],
+    )
+    provider = FakeLLMProvider(recommendation=recommendation)
+    if seeded:
+        monkeypatch.setattr(cli, "get_provider", lambda *_args, **_kwargs: provider)
+        path = tmp_path / "goldenset.yaml"
+        path.write_text(goldenset, encoding="utf-8")
+        run_document(
+            path,
+            tmp_path / "results",
+            retrieval_only=False,
+            llm_provider="openai_compatible",
+            label_plans=True,
+        )
+    else:
+        _run_label_plans(tmp_path, monkeypatch, session, provider, goldenset=goldenset)
+    return next((tmp_path / "results").glob("*.json")).rename(tmp_path / name)
+
+
+def _sampled(out: Path) -> tuple[list[dict], list[dict]]:
+    items = yaml.safe_load((out / "citation-sample.yaml").read_text(encoding="utf-8"))
+    key = json.loads((out / "citation-key.json").read_text(encoding="utf-8"))
+    return items, list(key["items"].values())
+
+
+def test_the_per_case_limit_is_an_option_that_defaults_to_two(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    result = _claims_result(tmp_path, monkeypatch, session, 3, "single.json")
+
+    _cli("eval", "sample-citations", str(result), "--out-dir", str(tmp_path / "two"))
+    _cli(
+        "eval",
+        "sample-citations",
+        str(result),
+        "--out-dir",
+        str(tmp_path / "three"),
+        "--per-case",
+        "3",
+    )
+
+    assert len(_sampled(tmp_path / "two")[0]) == 2
+    assert len(_sampled(tmp_path / "three")[0]) == 3
+
+
+def test_samples_can_be_limited_to_cases_with_requirements(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """두 안의 표본이 같은 문항에서 나오게 한다."""
+    goldenset = _two_group_goldenset()
+    result = _claims_result(tmp_path, monkeypatch, session, 1, "single.json", goldenset)
+    path = tmp_path / "goldenset.yaml"
+
+    _cli(
+        "eval",
+        "sample-citations",
+        str(result),
+        "--out-dir",
+        str(tmp_path / "sample"),
+        "--requirements-only",
+        "--goldenset",
+        str(path),
+    )
+
+    _items, entries = _sampled(tmp_path / "sample")
+    assert [e["case_id"] for e in entries] == ["python-arm64"]
+
+
+def test_requirements_only_stops_on_a_different_goldenset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    result = _claims_result(tmp_path, monkeypatch, session, 1, "single.json")
+    other = tmp_path / "other.yaml"
+    other.write_text(_two_group_goldenset(), encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="golden set"):
+        _cli(
+            "eval",
+            "sample-citations",
+            str(result),
+            "--out-dir",
+            str(tmp_path / "sample"),
+            "--requirements-only",
+            "--goldenset",
+            str(other),
+        )
+
+
+def test_pooled_results_fill_one_arm_in_order_and_keep_each_source(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
+) -> None:
+    """1회차로 50개를 못 채우면 2회차로 채운다. 문항당 상한은 묶은 안 전체에 적용한다."""
+    first = _claims_result(tmp_path, monkeypatch, session, 2, "r1.json")
+    second = _claims_result(tmp_path, monkeypatch, session, 3, "r2.json", seeded=True)
+    arm = f"{first},{second}"
+
+    _cli(
+        "eval",
+        "sample-citations",
+        arm,
+        "--out-dir",
+        str(tmp_path / "sample"),
+        "--per-case",
+        "3",
+    )
+
+    _items, entries = _sampled(tmp_path / "sample")
+    assert sorted((e["source"], e["claim"]) for e in entries)[:2] == [
+        (str(first), 0),
+        (str(first), 1),
+    ]
+    assert [e["source"] for e in entries].count(str(second)) == 1
+    assert {e["arm"] for e in entries} == {arm}
+
+
+@pytest.mark.parametrize(
+    "arms",
+    [["{r}", "{r}"], ["{other}", "{r},{r}"], ["{r}", "{other},{r}"]],
+    ids=["two-arms", "within-a-pool", "across-arms"],
+)
+def test_a_result_file_given_twice_stops_the_sampling(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, arms
+) -> None:
+    """같은 결과 파일이 두 번 오면 두 안의 집계가 조용히 합쳐지거나 한 안이 사라진다."""
+    result = _claims_result(tmp_path, monkeypatch, session, 1, "r.json")
+    other = _claims_result(tmp_path, monkeypatch, session, 1, "other.json", seeded=True)
+
+    with pytest.raises(SystemExit, match="r.json"):
+        _cli(
+            "eval",
+            "sample-citations",
+            *[a.format(r=result, other=other) for a in arms],
+            "--out-dir",
+            str(tmp_path / "sample"),
+        )
 
 
 def test_scoring_a_damaged_sample_stops_with_the_problems(
