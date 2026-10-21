@@ -4,7 +4,7 @@ import httpx2
 import pytest
 
 from whatfrom.core.config import Settings
-from whatfrom.core.contracts import JudgmentTable, Recommendation, SearchPlan
+from whatfrom.core.contracts import Recommendation, SearchPlan
 from whatfrom.core.httpclient import RemoteCallError
 from whatfrom.recommend.llm import (
     AnthropicProvider,
@@ -536,71 +536,3 @@ def test_strict_schema_applies_to_nested_objects_too():
     for obj in objects:
         assert set(obj["required"]) == set(obj["properties"])
         assert obj["additionalProperties"] is False
-
-
-JUDGMENT_CONTENT = (
-    '{"judgments": [{"candidate": "python:3.13-slim", "requirement": 1,'
-    ' "verdict": "satisfied", "citations": [{"evidence": 1, "quote": "q"}]}]}'
-)
-
-
-def test_a_judge_call_sends_the_judgment_schema_and_records_the_judge_stage():
-    """판정 단계도 단일 선택처럼 schema를 강제해 부르고, 호출 기록으로 두 호출을 가른다."""
-    seen: dict = {}
-    calls: list[LLMCall] = []
-
-    def handler(request: httpx2.Request) -> httpx2.Response:
-        seen["body"] = json.loads(request.content)
-        return httpx2.Response(
-            200, json={"choices": [{"message": {"content": JUDGMENT_CONTENT}}], "usage": USAGE}
-        )
-
-    table = _provider(handler, on_call=calls.append).judge("sys", "prompt")
-
-    assert seen["body"]["response_format"]["json_schema"]["name"] == "judgment_table"
-    assert seen["body"]["response_format"]["json_schema"]["schema"] == strict_json_schema(
-        JudgmentTable
-    )
-    [judgment] = table.judgments
-    assert (judgment.candidate, judgment.requirement, judgment.verdict) == (
-        "python:3.13-slim",
-        1,
-        "satisfied",
-    )
-    [call] = calls
-    assert (call.stage, call.ok) == ("judge", True)
-
-
-def test_the_judgment_schema_requires_every_nested_property():
-    schema = strict_json_schema(JudgmentTable)
-
-    for obj in [schema, *schema["$defs"].values()]:
-        assert set(obj["required"]) == set(obj["properties"])
-        assert obj["additionalProperties"] is False
-
-
-def test_a_judge_call_goes_to_the_review_stage_settings():
-    """판정 단계는 단계 설정을 새로 만들지 않고 검토 단계(recommend) 설정을 쓴다."""
-    seen: list = []
-
-    def reply(body: dict) -> dict:
-        return _anthropic_reply(JUDGMENT_CONTENT)
-
-    table = _anthropic_staged(_anthropic_config(), seen, reply).judge("system", "user")
-
-    [call] = seen
-    assert call["url"] == "http://anthropic.invalid/v1/messages"
-    assert call["body"]["output_config"]["format"]["schema"] == strict_json_schema(JudgmentTable)
-    assert table.judgments[0].verdict == "satisfied"
-
-
-def test_the_fake_provider_returns_its_judgments_or_fails():
-    table = JudgmentTable(judgments=[])
-    fake = FakeLLMProvider(judgments=table)
-
-    assert fake.judge("s", "p") is table
-    assert fake.judge_calls == [("s", "p")]
-    with pytest.raises(RemoteCallError):
-        FakeLLMProvider(judge_error=RemoteCallError("down")).judge("s", "p")
-    with pytest.raises(RemoteCallError):
-        FakeLLMProvider().judge("s", "p")

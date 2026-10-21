@@ -162,22 +162,13 @@ def make_response(
     candidates: list[Candidate],
     notes: list[str] | None = None,
 ) -> RecommendResponse:
-    """API처럼 추천과 그 출처(recommended)를 함께 싣는다."""
     recommendation = None if image is None else CheckedRecommendation(image=image)
-    recommended = (
-        None
-        if image is None
-        else RecommendedImage(
-            image=image, digest=None, source_url="https://hub.docker.com/_/python", collected_at=NOW
-        )
-    )
     return RecommendResponse(
         question="질문",
         recommendation=recommendation,
         candidates=candidates,
         degraded=recommendation is None,
         notes=notes or [],
-        recommended=recommended,
     )
 
 

@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 if TYPE_CHECKING:
     from whatfrom.eval.goldenset import GoldenCase, GoldenSet
 
-from whatfrom.api import REVIEWS, Review, recommend_for_question, repository_names
+from whatfrom.api import recommend_for_question, repository_names
 from whatfrom.collect import docs
 from whatfrom.collect.derive import DeriveOutcome, derive_repository
 from whatfrom.collect.hub import HubClient, parse_repository
@@ -31,7 +31,6 @@ from whatfrom.collect.sync import (
 )
 from whatfrom.core.config import settings
 from whatfrom.core.contracts import (
-    JudgmentTable,
     Recommendation,
     RecommendResponse,
     SearchPlan,
@@ -250,7 +249,6 @@ def timed_recommendation(
     question: str,
     call_log: list[LLMCall] | None = None,
     requirements: Sequence[str] = (),
-    review: Review = "single",
 ) -> tuple[RecommendResponse, RunTrace]:
     """추천 경로를 한 번 돌리며 전체·단계별 시간과 LLM #2의 입력을 남긴다.
 
@@ -261,26 +259,19 @@ def timed_recommendation(
     log = call_log if call_log is not None else []
     already = len(log)
     timed_embedder = Timed(embedder, ["embed"])
-    timed_provider = Timed(provider, ["plan", "recommend", "judge"])
+    timed_provider = Timed(provider, ["plan", "recommend"])
     start = time.perf_counter()
     response = recommend_for_question(
-        open_session, timed_embedder, timed_provider, question, requirements, review
+        open_session, timed_embedder, timed_provider, question, requirements
     )
     total = time.perf_counter() - start
-    # 검토 단계는 단일 선택(recommend)이나 판정 단계(judge) 중 하나만 부른다.
-    stage = "judge" if review == "judge" else "recommend"
-    advise = timed_provider.calls.get(stage)
-    seconds_advise = timed_provider.seconds.get(stage)
-    # 판단 요구가 없는 문항은 판정 단계까지 와도 LLM을 부르지 않는다. 묶음별 지연에서
-    # 빠지지 않도록 None(부르지 않은 단계) 대신 0초로 둔다.
-    if seconds_advise is None and response.judgments is not None:
-        seconds_advise = 0.0
+    advise = timed_provider.calls.get("recommend")
     return response, RunTrace(
         seconds_total=total,
         seconds_embedding=timed_embedder.seconds.get("embed"),
         seconds_plan=timed_provider.seconds.get("plan"),
-        seconds_advise=seconds_advise,
-        # recommend·judge(system, prompt)의 두 번째 인자가 LLM #2에 보낸 prompt다.
+        seconds_advise=timed_provider.seconds.get("recommend"),
+        # recommend(system, prompt)의 두 번째 인자가 LLM #2에 보낸 prompt다.
         advise_prompt=advise[0][1] if advise else None,
         llm_calls=[asdict(call) for call in log[already:]],
     )
@@ -338,9 +329,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
             # 판단 요구는 label 고정 입력만 넘긴다. 다른 mode에는 판단 요구를 뽑는 단계가 없다.
             requirements = case.requirements if args.label_plans else ()
             scores.append(
-                _score_case(
-                    case, open_session, embedder, case_provider, call_log, requirements, args.review
-                )
+                _score_case(case, open_session, embedder, case_provider, call_log, requirements)
             )
 
     meta = _eval_meta(args, mode, goldenset, started_at)
@@ -382,9 +371,6 @@ EVAL_MODES = {
 def _eval_mode(args: argparse.Namespace) -> EvalMode:
     if args.no_recommend and not args.label_plans:
         raise SystemExit("--no-recommend는 --label-plans와 함께 쓴다")
-    # 판단 요구는 golden set label에서만 온다. 판단 요구를 뽑는 단계는 아직 없다.
-    if args.review == "judge" and (not args.label_plans or args.no_recommend):
-        raise SystemExit("--review judge는 검토 단계를 부르는 --label-plans에서만 쓴다")
     if args.label_plans:
         return EVAL_MODES["label-plans-retrieval" if args.no_recommend else "label-plans"]
     if args.retrieval_only:
@@ -415,9 +401,6 @@ class FixedPlanProvider:
     def recommend(self, system: str, prompt: str) -> Recommendation:
         return self._inner.recommend(system, prompt)
 
-    def judge(self, system: str, prompt: str) -> JudgmentTable:
-        return self._inner.judge(system, prompt)
-
 
 class SkipRecommend:
     """검토 단계를 실패로 돌려, 운영 경로의 저하 응답으로 후보와 근거만 얻는다(--no-recommend)."""
@@ -426,9 +409,6 @@ class SkipRecommend:
         raise RemoteCallError("검색 조건은 FixedPlanProvider가 준다")
 
     def recommend(self, system: str, prompt: str) -> Recommendation:
-        raise RemoteCallError("검토 단계를 부르지 않는 실행이다")
-
-    def judge(self, system: str, prompt: str) -> JudgmentTable:
         raise RemoteCallError("검토 단계를 부르지 않는 실행이다")
 
 
@@ -498,7 +478,6 @@ def _score_case(
     provider: LLMProvider | None,
     call_log: list[LLMCall],
     requirements: Sequence[str] = (),
-    review: Review = "single",
 ):
     """문항 하나를 채점한다. provider가 None이면 검색 지표만 잰다."""
     from whatfrom.eval.scoring import score_full, score_retrieval
@@ -521,24 +500,16 @@ def _score_case(
     # 추천 응답의 evidence에는 후보 선택에서 제외된 문서가 없을 수 있다.
     # 추천 경로도 별도로 실행하므로 전체 모드는 질문을 두 번 임베딩한다.
     response, trace = timed_recommendation(
-        open_session, embedder, provider, case.question, call_log, requirements, review
+        open_session, embedder, provider, case.question, call_log, requirements
     )
 
     exists: bool | None = None
-    # 단일 선택이든 판정 단계든 추천은 recommended에 있다.
-    if response.recommended is not None:
+    if response.recommendation is not None:
         with open_session() as session:
-            exists = image_exists(session, response.recommended.image)
+            exists = image_exists(session, response.recommendation.image)
     with open_session() as session:
         digests = accepted_digests(session, case.accept)
-    # 판정 단계는 후보와 판단 요구가 있을 때만 LLM을 부른다. 불렀는데 후보 비교표가 없으면
-    # 판정 호출이 실패한 것이다.
-    attempted = review == "judge" and bool(requirements) and bool(response.candidates)
-    return replace(
-        score_full(case, response, sections, exists, digests),
-        trace=trace,
-        judge_failed=response.judgments is None if attempted else None,
-    )
+    return replace(score_full(case, response, sections, exists, digests), trace=trace)
 
 
 def _eval_meta(
@@ -565,8 +536,6 @@ def _eval_meta(
         "tags": args.tags or None,
         # 검색 조건을 고정한 결과 파일. 두 실행이 같은 입력을 받았는지 확인하는 근거다.
         "plans_from": Path(args.plans).name if args.plans else None,
-        # 검토 단계의 방식. M3에서 두 안의 결과 파일을 가른다.
-        "review": args.review if mode.calls_recommend else None,
         "case_interval_seconds": args.case_interval_seconds,
         "goldenset_version": goldenset.version,
         # 버전 번호를 유지한 채 라벨을 수정할 수 있으므로 파일 해시도 기록한다.
@@ -649,13 +618,9 @@ def _report_eval(
         top_candidate_baseline,
     )
 
-    # 판정 단계는 label 고정 입력에서만 돌아 조건 추출 지표와 함께 나오지 않는다.
-    judged = meta["review"] == "judge"
     # 부른 단계의 지표만 낸다. 검색 조건을 고정한 실행의 추출 지표는 이번 실행의 것이 아니다.
     if mode.calls_recommend:
-        metrics = (
-            aggregate_full(scores) if mode.calls_plan else aggregate_recommendation(scores, judged)
-        )
+        metrics = aggregate_full(scores) if mode.calls_plan else aggregate_recommendation(scores)
     elif mode.has_candidates:
         metrics = aggregate_retrieval(scores)
     else:
@@ -667,7 +632,7 @@ def _report_eval(
     random = random_baseline(scores) if mode.has_candidates else None
     top = top_candidate_baseline(scores) if mode.has_candidates else None
     # 검토 단계를 부른 실행만 묶음으로 나눈다. 묶음별 지표가 모두 검토 단계의 결과를 쓴다.
-    groups = metric_groups(scores, judged) if mode.calls_recommend else None
+    groups = metric_groups(scores) if mode.calls_recommend else None
 
     print()
     # 실패 목록은 추천 결과를 보여 준다. 추천이 없는 모드에는 놓일 자리가 없다.
@@ -869,12 +834,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-recommend",
         action="store_true",
         help="--label-plans에서 검토 단계를 부르지 않고 후보와 검색 지표만 잰다",
-    )
-    p_eval.add_argument(
-        "--review",
-        choices=REVIEWS,
-        default="single",
-        help="검토 단계의 방식. judge(판정 단계)는 --label-plans에서만 쓴다",
     )
     p_eval.add_argument(
         "--case-interval-seconds",

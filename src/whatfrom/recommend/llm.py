@@ -8,7 +8,7 @@ import httpx2
 from pydantic import BaseModel, ValidationError
 
 from whatfrom.core.config import DEFAULT_LLM_API, LLMApi, Settings, settings
-from whatfrom.core.contracts import JudgmentTable, Recommendation, SearchPlan
+from whatfrom.core.contracts import Recommendation, SearchPlan
 from whatfrom.core.httpclient import RemoteCallError, post_json
 
 
@@ -41,8 +41,6 @@ class LLMProvider(Protocol):
 
     def plan(self, system: str, prompt: str) -> SearchPlan: ...
 
-    def judge(self, system: str, prompt: str) -> JudgmentTable: ...
-
 
 class FakeLLMProvider:
     """CI용. 네트워크도 API 키도 쓰지 않는다.
@@ -52,7 +50,7 @@ class FakeLLMProvider:
 
     plan을 주지 않으면 조건이 하나도 없는 SearchPlan을 돌려준다. 조건이 없으면
     후보를 거르지 않으므로, plan을 신경 쓰지 않는 테스트는 예전과 같은 후보를 받는다.
-    plan_error를 주면 검색 조건 추출만 실패한다. judgments와 judge_error는 판정 단계용이다.
+    plan_error를 주면 검색 조건 추출만 실패한다.
     """
 
     def __init__(
@@ -61,18 +59,13 @@ class FakeLLMProvider:
         error: Exception | None = None,
         plan: SearchPlan | None = None,
         plan_error: Exception | None = None,
-        judgments: JudgmentTable | None = None,
-        judge_error: Exception | None = None,
     ) -> None:
         self._recommendation = recommendation
         self._error = error
         self._plan = plan
         self._plan_error = plan_error
-        self._judgments = judgments
-        self._judge_error = judge_error
         self.calls: list[tuple[str, str]] = []
         self.plan_calls: list[tuple[str, str]] = []
-        self.judge_calls: list[tuple[str, str]] = []
 
     def recommend(self, system: str, prompt: str) -> Recommendation:
         self.calls.append((system, prompt))
@@ -88,21 +81,13 @@ class FakeLLMProvider:
             raise self._plan_error
         return self._plan if self._plan is not None else SearchPlan()
 
-    def judge(self, system: str, prompt: str) -> JudgmentTable:
-        self.judge_calls.append((system, prompt))
-        if self._judge_error is not None:
-            raise self._judge_error
-        if self._judgments is None:
-            raise RemoteCallError("FakeLLMProvider has no judgments configured")
-        return self._judgments
-
 
 @dataclass(frozen=True)
 class LLMCall:
     """LLM 호출 하나의 기록. 실패한 호출도 하나 남긴다.
 
-    stage는 "plan"(조건 추출 단계), "recommend"(단일 선택) 또는 "judge"(판정 단계)다.
-    token 수는 응답의 usage에서 읽고, 응답이 없거나 usage가 없으면 None이다.
+    stage는 "plan"(조건 추출 단계) 또는 "recommend"(추천 단계)다. token 수는 응답의
+    usage에서 읽고, 응답이 없거나 usage가 없으면 None이다.
     """
 
     stage: str
@@ -166,9 +151,6 @@ class SchemaLLMProvider(ABC):
 
     def plan(self, system: str, prompt: str) -> SearchPlan:
         return self._complete(system, prompt, SearchPlan, "search_plan", "plan")
-
-    def judge(self, system: str, prompt: str) -> JudgmentTable:
-        return self._complete(system, prompt, JudgmentTable, "judgment_table", "judge")
 
     def _complete(self, system: str, prompt: str, model: type[T], name: str, stage: str) -> T:
         """JSON 스키마를 강제해 부르고, 응답을 model로 다시 검증한다.
@@ -362,10 +344,7 @@ class AnthropicProvider(SchemaLLMProvider):
 
 
 class StagedProvider:
-    """조건 추출 단계와 검토 단계를 각자의 provider로 보낸다.
-
-    판정 단계는 검토 단계의 한 방식이라 검토 단계(recommend) 설정의 provider로 보낸다.
-    """
+    """조건 추출 단계와 추천 단계를 각자의 provider로 보낸다."""
 
     def __init__(self, plan: LLMProvider, recommend: LLMProvider) -> None:
         self._plan = plan
@@ -376,9 +355,6 @@ class StagedProvider:
 
     def plan(self, system: str, prompt: str) -> SearchPlan:
         return self._plan.plan(system, prompt)
-
-    def judge(self, system: str, prompt: str) -> JudgmentTable:
-        return self._recommend.judge(system, prompt)
 
 
 @dataclass(frozen=True)

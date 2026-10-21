@@ -197,21 +197,11 @@ class CaseScore:
     # 응답의 추천: 이미지, 대안, 주장과 인용별 검증 결과. 인용 지표와 인용 표본 검토가
     # 결과 파일만 읽도록 남긴다. 추천이 없으면 None이다.
     recommendation: dict | None = None
-    # 불만족 판정을 하나 이상 받은 후보. 판정하지 않은 문항(단일 선택, 판단 요구 없음,
-    # 판정 실패)이면 None이고, 오답 적발률과 오판정률의 분모에서 빠진다.
+    # 불만족 판정을 하나 이상 받은 후보. 판정이 없는 실행(단일 선택)이면 None이고,
+    # 오답 적발률과 오판정률의 분모에서 빠진다.
     unsatisfied_candidates: list[str] | None = None
-    # 판정 단계의 후보 비교표: 정규화한 칸, 후보별 등급, 추천. 단일 선택이면 None이다.
-    judgments: dict | None = None
-    # 판정 단계에서 미확인 등급의 1위. 판정하지 않았거나 미확인 후보가 없으면 None이다.
-    unconfirmed_top: str | None = None
-    # 추천이 없으면 미확인 1위를 추천으로 보고 채점한 값. 판정 단계의 참고 정확도다.
-    # 단일 선택에서는 미확인 1위가 없어 accurate와 같다.
-    reference_accurate: bool = False
     # 문항에 판단 요구 label이 있는가. 지표를 묶음으로 나눌 때 쓴다.
     has_requirements: bool = False
-    # 판정 호출이 실패했는가. 판정을 시도하지 않은 문항(단일 선택, 판단 요구 없음, 후보 없음)은
-    # None이다. runner가 채운다.
-    judge_failed: bool | None = None
     # 응답의 번호 붙은 근거. 인용의 근거 번호를 repository와 section으로 풀 때 쓴다.
     # 본문은 크기 때문에 남기지 않는다.
     evidence: list[dict] = field(default_factory=list)
@@ -262,29 +252,14 @@ def score_plan(case: GoldenCase, plan: SearchPlan | None, notes: list[str]) -> P
     )
 
 
-def _image_accepted(
-    case: GoldenCase,
-    image: str | None,
-    candidates: list[Candidate],
-    accepted_digests: frozenset[str],
-) -> bool:
-    """추천으로 본 image가 허용 집합에 드는가. 이름이 accept에 있거나 그 후보가 정답과 같다."""
-    if image is None:
-        return False
-    if image in case.accept:
-        return True
-    candidate = next((c for c in candidates if c.image == image), None)
-    return candidate is not None and _is_accepted(case, candidate, accepted_digests)
-
-
 def _sources_ok(response: RecommendResponse) -> bool:
     """출처 URL과 수집 시점이 갖춰졌는가.
 
     추천이 있으면 그 이미지에 대응하는 후보를 본다. 추천이 없으면 반환된 후보
     전부를 본다 — 저하되어 표만 받은 사용자도 출처는 받은 것이기 때문이다.
     """
-    if response.recommended is not None:
-        targets = [c for c in response.candidates if c.image == response.recommended.image]
+    if response.recommendation is not None:
+        targets = [c for c in response.candidates if c.image == response.recommendation.image]
     else:
         targets = list(response.candidates)
 
@@ -308,9 +283,7 @@ def score_full(
     """
     retrieval = score_retrieval(case, response.candidates, sections, accepted_digests)
     recommendation = response.recommendation
-    # 단일 선택은 LLM이 고른 후보, 판정 단계는 서버가 순위로 고른 후보다. 둘 다 여기에 담긴다.
-    image = response.recommended.image if response.recommended is not None else None
-    judged = response.judgments
+    image = recommendation.image if recommendation is not None else None
 
     recommended = (
         next((c for c in response.candidates if c.image == image), None)
@@ -319,12 +292,8 @@ def score_full(
     )
 
     by_name = image is not None and image in case.accept
-    accurate = _image_accepted(case, image, response.candidates, accepted_digests)
-
-    unconfirmed = (
-        next((c.image for c in judged.ranking if c.grade == "unconfirmed"), None)
-        if judged is not None
-        else None
+    accurate = by_name or (
+        recommended is not None and _is_accepted(case, recommended, accepted_digests)
     )
 
     extraction = score_plan(case, response.plan, response.notes)
@@ -356,7 +325,7 @@ def score_full(
         rejected_candidates=retrieval.rejected_candidates,
         accepted_candidates=retrieval.accepted_candidates,
         # 추천을 못 한 사유는 API가 맨 뒤에 붙인다. 앞에는 검색 단계의 알림이 올 수 있다.
-        degraded_note=response.notes[-1] if image is None and response.notes else None,
+        degraded_note=response.notes[-1] if recommendation is None and response.notes else None,
         plan=extraction.plan,
         repository_extracted=extraction.repository_extracted,
         plan_fields=extraction.plan_fields,
@@ -366,16 +335,6 @@ def score_full(
             response.recommended.model_dump(mode="json") if response.recommended else None
         ),
         recommendation=recommendation.model_dump(mode="json") if recommendation else None,
-        unsatisfied_candidates=(
-            [c.image for c in judged.ranking if c.grade == "violated"]
-            if judged is not None and judged.requirements
-            else None
-        ),
-        judgments=judged.model_dump(mode="json") if judged is not None else None,
-        unconfirmed_top=unconfirmed,
-        reference_accurate=_image_accepted(
-            case, image or unconfirmed, response.candidates, accepted_digests
-        ),
         has_requirements=bool(case.requirements),
         evidence=[e.model_dump(exclude={"content"}) for e in response.evidence],
     )

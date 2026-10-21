@@ -30,8 +30,6 @@ from whatfrom.core.config import Settings
 from whatfrom.core.contracts import (
     Citation,
     Claim,
-    Judgment,
-    JudgmentTable,
     Recommendation,
     SearchPlan,
 )
@@ -80,7 +78,6 @@ def run_document(
     case_interval_seconds: float = 0.0,
     label_plans: bool = False,
     no_recommend: bool = False,
-    review: str = "single",
 ) -> dict:
     args = argparse.Namespace(
         goldenset=str(goldenset),
@@ -91,7 +88,6 @@ def run_document(
         plans=plans,
         label_plans=label_plans,
         no_recommend=no_recommend,
-        review=review,
         embedder="fake",
         llm_provider=llm_provider,
         database_url="",
@@ -678,7 +674,6 @@ def _run_label_plans(
     provider,
     no_recommend: bool = False,
     goldenset: str = LABEL_GOLDENSET,
-    review: str = "single",
 ) -> dict:
     _use_test_session(monkeypatch, session, provider)
     path = tmp_path / "goldenset.yaml"
@@ -690,7 +685,6 @@ def _run_label_plans(
         llm_provider="openai_compatible",
         label_plans=True,
         no_recommend=no_recommend,
-        review=review,
     )
 
 
@@ -825,130 +819,6 @@ def test_fixed_plans_pass_no_requirements_to_the_review_stage(
     assert NO_REQUIREMENTS in document["cases"][0]["advise_prompt"]
 
 
-def _judge_run(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, verdict: str
-) -> tuple[dict, FakeLLMProvider]:
-    """판단 요구 하나가 있는 문항을 판정 단계로 돌린다. 후보는 python:3.13-slim 하나다."""
-    table = JudgmentTable(
-        judgments=[
-            Judgment(
-                candidate="python:3.13-slim",
-                requirement=1,
-                verdict=verdict,
-                citations=[Citation(evidence=1, quote="python slim image.")],
-            )
-        ]
-    )
-    provider = FakeLLMProvider(
-        judgments=table,
-        error=RemoteCallError("single choice must not be called"),
-        plan_error=RemoteCallError("plan must not be called"),
-    )
-    goldenset = LABEL_GOLDENSET.replace("requirements: []", f'requirements: ["{NODE_GYP}"]', 1)
-    document = _run_label_plans(
-        tmp_path, monkeypatch, session, provider, goldenset=goldenset, review="judge"
-    )
-    return document, provider
-
-
-def test_a_judge_run_recommends_the_confirmed_candidate_and_records_the_table(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
-) -> None:
-    document, provider = _judge_run(tmp_path, monkeypatch, session, "satisfied")
-
-    assert provider.calls == []
-    assert len(provider.judge_calls) == 1
-    assert document["meta"]["review"] == "judge"
-    [case] = document["cases"]
-    assert case["recommended_image"] == "python:3.13-slim"
-    assert case["accurate"] is True
-    assert case["recommended"]["digest"] is not None
-    assert case["recommendation"] is None
-    [cell] = case["judgments"]["judgments"]
-    assert (cell["verdict"], cell["citations"][0]["verified"]) == ("satisfied", True)
-    assert case["judgments"]["ranking"] == [
-        {"image": "python:3.13-slim", "grade": "confirmed", "satisfied": 1}
-    ]
-    assert case["unsatisfied_candidates"] == []
-    assert NODE_GYP in case["advise_prompt"]
-    assert case["seconds_advise"] is not None
-    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
-    assert metrics["오판정률"] == (0, 1)
-    # server가 고른 추천도 runner가 DB에서 실재를 따로 확인한다.
-    assert metrics["태그 실재율"] == (1, 1)
-
-
-def test_a_judge_run_counts_a_violated_accepted_candidate_as_a_misjudgment(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
-) -> None:
-    """확인됨 후보가 없으면 추천도 없고, 오답으로 센다."""
-    document, _provider = _judge_run(tmp_path, monkeypatch, session, "violated")
-
-    [case] = document["cases"]
-    assert case["recommended_image"] is None
-    assert case["accurate"] is False
-    assert case["unsatisfied_candidates"] == ["python:3.13-slim"]
-    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
-    assert metrics["오판정률"] == (1, 1)
-    assert metrics["추천 정확도"] == (0, 1)
-
-
-def test_a_judge_run_detects_an_explicit_wrong_answer_it_judged_violated(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
-) -> None:
-    """명시적 오답 후보가 불만족 판정을 받으면 오답 적발률이 센다."""
-    goldenset = LABEL_GOLDENSET.replace("requirements: []", f'requirements: ["{NODE_GYP}"]', 1)
-    goldenset = goldenset.replace(
-        "accept: [python:3.13-slim]", "accept: [python:3.13]\n    reject: [python:3.13-slim]", 1
-    )
-    table = JudgmentTable(
-        judgments=[
-            Judgment(
-                candidate="python:3.13-slim",
-                requirement=1,
-                verdict="violated",
-                citations=[Citation(evidence=1, quote="python slim image.")],
-            )
-        ]
-    )
-
-    document = _run_label_plans(
-        tmp_path,
-        monkeypatch,
-        session,
-        FakeLLMProvider(judgments=table),
-        goldenset=goldenset,
-        review="judge",
-    )
-
-    [case] = document["cases"]
-    assert case["rejected_candidates"] == ["python:3.13-slim"]
-    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
-    assert metrics["오답 적발률"] == (1, 1)
-
-
-def test_a_failed_judge_call_degrades_the_case_and_counts_as_a_judge_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
-) -> None:
-    """판정하지 못한 문항은 오답이지만, 오답 적발률과 오판정률의 분모에서는 빠진다."""
-    goldenset = LABEL_GOLDENSET.replace("requirements: []", f'requirements: ["{NODE_GYP}"]', 1)
-    provider = FakeLLMProvider(judge_error=RemoteCallError("judge down"))
-
-    document = _run_label_plans(
-        tmp_path, monkeypatch, session, provider, goldenset=goldenset, review="judge"
-    )
-
-    assert len(provider.judge_calls) == 1
-    [case] = document["cases"]
-    assert case["recommended_image"] is None
-    assert case["accurate"] is False
-    assert "판정에 실패" in case["degraded_note"]
-    assert case["unsatisfied_candidates"] is None
-    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
-    assert metrics["판정 실패 문항"] == (1, 1)
-    assert metrics["오판정률"] == (0, 0)
-
-
 def _two_group_goldenset() -> str:
     """판단 요구가 있는 문항(python-arm64)과 없는 문항(python-plain)을 하나씩 둔다."""
     python_case = LABEL_GOLDENSET[LABEL_GOLDENSET.index("  - id: python-arm64") :]
@@ -957,72 +827,6 @@ def _two_group_goldenset() -> str:
         "requirements: []", f'requirements: ["{NODE_GYP}"]', 1
     )
     return with_requirement + python_case.replace("python-arm64", "python-plain")
-
-
-DUPLICATED_CELL = JudgmentTable(
-    judgments=[
-        Judgment(
-            candidate="python:3.13-slim",
-            requirement=1,
-            verdict="satisfied",
-            citations=[Citation(evidence=1, quote="python slim image.")],
-        ),
-        Judgment(
-            candidate="python:3.13-slim",
-            requirement=1,
-            verdict="satisfied",
-            citations=[Citation(evidence=1, quote="not in the evidence")],
-        ),
-    ]
-)
-
-
-def test_a_judge_run_counts_the_citations_of_every_kept_judgment(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
-) -> None:
-    """중복 칸을 어떻게 합치든 값이 같도록, LLM이 낸 판정 중 버리지 않은 것의 인용을 센다."""
-    document = _run_label_plans(
-        tmp_path,
-        monkeypatch,
-        session,
-        FakeLLMProvider(judgments=DUPLICATED_CELL),
-        goldenset=_two_group_goldenset(),
-        review="judge",
-    )
-
-    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
-    assert metrics["인용 검증 통과율"] == (1, 2)
-
-
-def test_a_judge_run_scores_the_unconfirmed_top_as_a_reference(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
-) -> None:
-    """정확도가 낮을 때 원인이 판정 품질인지 "확인됨만 추천" 규칙인지 가른다."""
-    document = _run_label_plans(
-        tmp_path,
-        monkeypatch,
-        session,
-        FakeLLMProvider(judgments=DUPLICATED_CELL),
-        goldenset=_two_group_goldenset(),
-        review="judge",
-    )
-
-    cases = {c["case_id"]: c for c in document["cases"]}
-    judged = cases["python-arm64"]
-    assert judged["recommended_image"] is None
-    assert judged["unconfirmed_top"] == "python:3.13-slim"
-    assert judged["reference_accurate"] is True
-    metrics = {m["label"]: (m["hits"], m["total"]) for m in document["metrics"]}
-    assert metrics["추천 정확도"] == (1, 2)
-    assert metrics["참고 정확도"] == (2, 2)
-
-
-def test_a_single_choice_run_reports_no_reference_accuracy(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
-) -> None:
-    document = _run_label_plans(tmp_path, monkeypatch, session, _plan_must_not_be_called())
-
-    assert "참고 정확도" not in {m["label"] for m in document["metrics"]}
 
 
 def _groups(document: dict) -> dict[str, dict[str, tuple[int, int]]]:
@@ -1035,7 +839,7 @@ def _groups(document: dict) -> dict[str, dict[str, tuple[int, int]]]:
 def test_metrics_split_into_cases_with_and_without_requirements(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, capsys
 ) -> None:
-    """판정 단계가 요구 없는 문항에서 검색 1위에 묶이는 효과를 따로 본다. 두 방식 모두 낸다."""
+    """판단 요구 label이 있는 문항과 없는 문항의 성적을 따로 본다."""
     recommendation = Recommendation(
         image="python:3.13-slim",
         claims=[
@@ -1057,76 +861,13 @@ def test_metrics_split_into_cases_with_and_without_requirements(
     assert "요구 있음 1문항" in printed and "요구 없음 1문항" in printed
 
 
-def test_a_judge_run_adds_the_reference_accuracy_to_each_group(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, capsys
-) -> None:
-    document = _run_label_plans(
-        tmp_path,
-        monkeypatch,
-        session,
-        FakeLLMProvider(judgments=DUPLICATED_CELL),
-        goldenset=_two_group_goldenset(),
-        review="judge",
-    )
-
-    groups = _groups(document)
-    assert groups["요구 있음"] == {
-        "추천 정확도": (0, 1),
-        "참고 정확도": (1, 1),
-        "검색 1위 대조군": (1, 1),
-        "인용 검증 통과율": (1, 2),
-    }
-    assert groups["요구 없음"]["참고 정확도"] == (1, 1)
-    assert groups["요구 없음"]["인용 검증 통과율"] == (0, 0)
-    printed = capsys.readouterr().out
-    assert (
-        "요구 있음 1문항 — 추천 정확도 0/1 0.0% · 참고 정확도 1/1 100.0% · "
-        "검색 1위 대조군 1/1 100.0% · 인용 검증 통과율 1/2 50.0%"
-    ) in printed
-
-
 def test_an_empty_group_is_unmeasured(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
 ) -> None:
-    document, _provider = _judge_run(tmp_path, monkeypatch, session, "satisfied")
+    """label 고정 입력의 golden set에는 판단 요구가 있는 문항이 없다."""
+    document = _run_label_plans(tmp_path, monkeypatch, session, _plan_must_not_be_called())
 
-    assert {m["ratio"] for m in document["metric_groups"]["요구 없음"]} == {None}
-
-
-def test_a_judge_run_skips_the_llm_for_a_case_without_requirements(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
-) -> None:
-    """판정하지 않은 문항은 오답 적발률과 오판정률의 분모에서 빠진다."""
-    provider = FakeLLMProvider(
-        judge_error=RemoteCallError("judge must not be called"),
-        error=RemoteCallError("single choice must not be called"),
-    )
-
-    document = _run_label_plans(tmp_path, monkeypatch, session, provider, review="judge")
-
-    assert provider.judge_calls == []
-    [case] = document["cases"]
-    assert case["recommended_image"] == "python:3.13-slim"
-    assert case["unsatisfied_candidates"] is None
-    assert case["llm_calls"] == []
-    # 묶음별 지연을 잴 때 빠지지 않도록, 부르지 않은 판정 단계는 0초로 남는다.
-    assert case["seconds_advise"] == 0.0
-    metrics = {m["label"]: m for m in document["metrics"]}
-    assert metrics["오판정률"]["total"] == 0
-
-
-@pytest.mark.parametrize(
-    "argv",
-    [
-        ["eval", "--review", "judge"],
-        ["eval", "--label-plans", "--no-recommend", "--review", "judge"],
-    ],
-    ids=["full-mode", "no-recommend"],
-)
-def test_the_judge_review_needs_label_plans_that_call_the_review_stage(argv) -> None:
-    """판단 요구는 golden set label에서만 온다."""
-    with pytest.raises(SystemExit, match="--review judge"):
-        cli._eval_mode(cli.build_parser().parse_args(argv))
+    assert {m["ratio"] for m in document["metric_groups"]["요구 있음"]} == {None}
 
 
 def test_no_recommend_needs_label_plans() -> None:
@@ -1212,57 +953,6 @@ def test_citation_samples_are_drawn_from_a_real_result_and_scored(
     assert "1/1 100.0% 합격" in printed
 
 
-def test_citation_samples_read_judgment_cells_as_statements(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session, capsys
-) -> None:
-    """판정 칸은 "후보가 요구를 만족한다/어긴다"는 진술이다. 단일 선택의 주장과 같이 채점한다."""
-    _judge_run(tmp_path, monkeypatch, session, "satisfied")
-    result = next((tmp_path / "results").glob("*.json"))
-    out = tmp_path / "sample"
-
-    _cli("eval", "sample-citations", str(result), "--out-dir", str(out))
-
-    [item] = yaml.safe_load((out / "citation-sample.yaml").read_text(encoding="utf-8"))
-    assert item["statement"] == f"python:3.13-slim가 요구 '{NODE_GYP}'를 만족한다"
-    assert item["image"] == "python:3.13-slim"
-    assert [c["quote"] for c in item["citations"]] == ["python slim image."]
-    assert item["question"] == "ARM64에서 도는 python 이미지"
-    assert [line.split(" | ")[0] for line in item["candidates"]] == ["python:3.13-slim"]
-    key = json.loads((out / "citation-key.json").read_text(encoding="utf-8"))
-    [entry] = key["items"].values()
-    assert (entry["source"], entry["candidate"], entry["requirement"]) == (
-        str(result),
-        "python:3.13-slim",
-        1,
-    )
-    filled = (out / "citation-sample.yaml").read_text(encoding="utf-8")
-    (out / "citation-sample.yaml").write_text(
-        filled.replace("verdict: null", "verdict: supported").replace(
-            "candidate_ok: null", "candidate_ok: not_applicable"
-        ),
-        encoding="utf-8",
-    )
-    capsys.readouterr()
-
-    _cli(
-        "eval", "score-citations", str(out / "citation-sample.yaml"), str(out / "citation-key.json")
-    )
-
-    assert "1/1 100.0% 합격" in capsys.readouterr().out
-
-
-def test_unknown_judgment_cells_are_not_sampled(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
-) -> None:
-    _judge_run(tmp_path, monkeypatch, session, "unknown")
-    result = next((tmp_path / "results").glob("*.json"))
-    out = tmp_path / "sample"
-
-    _cli("eval", "sample-citations", str(result), "--out-dir", str(out))
-
-    assert yaml.safe_load((out / "citation-sample.yaml").read_text(encoding="utf-8")) == []
-
-
 def _claims_result(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1329,7 +1019,7 @@ def test_the_per_case_limit_is_an_option_that_defaults_to_two(
 def test_samples_can_be_limited_to_cases_with_requirements(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
 ) -> None:
-    """두 안의 표본이 같은 문항에서 나오게 한다. 판정 단계는 요구 없는 문항에서 진술이 없다."""
+    """두 안의 표본이 같은 문항에서 나오게 한다."""
     goldenset = _two_group_goldenset()
     result = _claims_result(tmp_path, monkeypatch, session, 1, "single.json", goldenset)
     path = tmp_path / "goldenset.yaml"
@@ -1394,27 +1084,6 @@ def test_pooled_results_fill_one_arm_in_order_and_keep_each_source(
     ]
     assert [e["source"] for e in entries].count(str(second)) == 1
     assert {e["arm"] for e in entries} == {arm}
-
-
-def test_one_sample_draws_from_a_single_choice_and_a_judge_result(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: Session
-) -> None:
-    """M3는 두 안의 진술을 한 표본에 섞어, 어느 안인지 모른 채 채점한다."""
-    _judge_run(tmp_path, monkeypatch, session, "satisfied")
-    judge = next((tmp_path / "results").glob("*.json")).rename(tmp_path / "judge-arm.json")
-    single = _claims_result(tmp_path, monkeypatch, session, 1, "single-arm.json", seeded=True)
-    out = tmp_path / "sample"
-
-    _cli("eval", "sample-citations", str(single), str(judge), "--out-dir", str(out))
-
-    items, entries = _sampled(out)
-    assert sorted(item["statement"] for item in items) == [
-        f"python:3.13-slim가 요구 '{NODE_GYP}'를 만족한다",
-        "주장 0",
-    ]
-    assert sorted(e["arm"] for e in entries) == sorted([str(single), str(judge)])
-    text = (out / "citation-sample.yaml").read_text(encoding="utf-8")
-    assert "single-arm" not in text and "judge-arm" not in text
 
 
 @pytest.mark.parametrize(

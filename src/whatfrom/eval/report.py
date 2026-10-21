@@ -117,14 +117,10 @@ def aggregate_full(scores: list[CaseScore]) -> list[Metric]:
     return aggregate_recommendation(scores) + aggregate_plan(scores)
 
 
-def aggregate_recommendation(scores: list[CaseScore], judged: bool = False) -> list[Metric]:
-    """추천 단계까지 돈 실행의 지표. 조건 추출 지표는 aggregate_plan이 맡는다.
-
-    judged는 판정 단계로 돈 실행인가다. 그때만 참고 정확도를 낸다.
-    """
+def aggregate_recommendation(scores: list[CaseScore]) -> list[Metric]:
+    """추천 단계까지 돈 실행의 지표. 조건 추출 지표는 aggregate_plan이 맡는다."""
     return [
         Metric("추천 정확도", sum(s.accurate for s in scores), len(scores)),
-        *([_reference_accuracy(scores)] if judged else []),
         Metric("후보 포함률", sum(s.candidate_hit for s in scores), len(scores)),
         Metric(
             "태그 실재율",
@@ -153,12 +149,12 @@ def aggregate_recommendation(scores: list[CaseScore], judged: bool = False) -> l
     ]
 
 
-# 판단 요구 label이 있는 문항과 없는 문항. 판정 단계는 요구가 없으면 검색 1위를 추천한다.
+# 판단 요구 label이 있는 문항과 없는 문항.
 _GROUPS = {"요구 있음": True, "요구 없음": False}
 
 
-def metric_groups(scores: list[CaseScore], judged: bool) -> dict[str, list[Metric]]:
-    """추천 정확도, 검색 1위 대조군, 인용 검증 통과율(판정 단계면 참고 정확도도)을 묶음별로 낸다.
+def metric_groups(scores: list[CaseScore]) -> dict[str, list[Metric]]:
+    """추천 정확도, 검색 1위 대조군, 인용 검증 통과율을 묶음별로 낸다.
 
     묶음에 문항이 없으면 0%가 아니라 미측정이다(--tags로 한쪽만 남긴 실행).
     """
@@ -167,25 +163,14 @@ def metric_groups(scores: list[CaseScore], judged: bool) -> dict[str, list[Metri
         subset = [s for s in scores if s.has_requirements is has_requirements]
         groups[name] = [
             Metric("추천 정확도", sum(s.accurate for s in subset), len(subset)),
-            *([_reference_accuracy(subset)] if judged else []),
             Metric("검색 1위 대조군", sum(s.top_candidate_accepted for s in subset), len(subset)),
             _citation_pass_rate(subset),
         ]
     return groups
 
 
-def _reference_accuracy(scores: list[CaseScore]) -> Metric:
-    """추천이 없으면 미확인 1위를 추천으로 본 정확도. 판정 실패 문항은 오답이다."""
-    return Metric("참고 정확도", sum(s.reference_accurate for s in scores), len(scores))
-
-
 def _citation_pass_rate(scores: list[CaseScore]) -> Metric:
-    """인용 전체 중 글자 그대로 검증을 통과한 비율. 인용이 없으면 미측정이다.
-
-    단일 선택은 주장의 인용을, 판정 단계는 LLM이 낸 판정 중 버리지 않은 것의 인용을 센다.
-    중복 칸 자체에는 인용이 없고 원래 판정들(originals)에 있다. 그래서 칸과 originals를 함께
-    세도 같은 인용을 두 번 세지 않는다.
-    """
+    """주장들에 붙은 인용 전체 중 글자 그대로 검증을 통과한 비율. 인용이 없으면 미측정이다."""
     citations = [
         citation["verified"]
         for s in scores
@@ -193,23 +178,12 @@ def _citation_pass_rate(scores: list[CaseScore]) -> Metric:
         for claim in s.recommendation["claims"]
         for citation in claim["citations"]
     ]
-    citations += [
-        citation["verified"]
-        for s in scores
-        if s.judgments is not None
-        for cell in s.judgments["judgments"]
-        for judgment in [cell, *cell["originals"]]
-        for citation in judgment["citations"]
-    ]
     return Metric("인용 검증 통과율", sum(citations), len(citations))
 
 
 def _judgment_metrics(scores: list[CaseScore]) -> list[Metric]:
-    """오답 적발률과 오판정률은 후보 단위로 센다. 판정이 없는 문항은 두 지표의 분모에서
-    빠지므로, 판정이 없는 실행에서는 둘 다 0%가 아니라 미측정이다.
-
-    판정 호출이 실패한 문항도 분모에서 빠진다. 그 수를 옆에 내서 감춰지지 않게 한다.
-    """
+    """후보 단위로 센다. 판정이 없는 문항은 두 지표의 분모에서 빠지므로,
+    판정이 없는 실행에서는 둘 다 0%가 아니라 미측정이다."""
     detected = total_rejected = misjudged = total_accepted = 0
     for s in scores:
         if s.unsatisfied_candidates is None:
@@ -222,11 +196,6 @@ def _judgment_metrics(scores: list[CaseScore]) -> list[Metric]:
     return [
         Metric("오답 적발률", detected, total_rejected),
         Metric("오판정률", misjudged, total_accepted),
-        Metric(
-            "판정 실패 문항",
-            sum(s.judge_failed is True for s in scores),
-            sum(s.judge_failed is not None for s in scores),
-        ),
     ]
 
 

@@ -72,10 +72,6 @@ def _normalized(text: str) -> str:
     return " ".join(text.split())
 
 
-# 인용한 근거가 인용이 받칠 수 있는 repository의 문서가 아니라는 실패 이유.
-OTHER_REPOSITORY = "evidence from another repository"
-
-
 def verify_citation(
     citation: Citation, evidence: Mapping[int, NumberedEvidence], repositories: set[str]
 ) -> str | None:
@@ -94,16 +90,8 @@ def verify_citation(
     if quote not in _normalized(source.content):
         return "quote not in evidence"
     if source.repository not in repositories:
-        return OTHER_REPOSITORY
+        return "evidence from another repository"
     return None
-
-
-def check_citation(
-    citation: Citation, evidence: Mapping[int, NumberedEvidence], repositories: set[str]
-) -> CitationCheck:
-    """인용 하나에 검증 결과를 붙인다. 단일 선택의 주장과 판정 단계의 칸이 함께 쓴다."""
-    problem = verify_citation(citation, evidence, repositories)
-    return CitationCheck(**citation.model_dump(), verified=problem is None, problem=problem)
 
 
 def check_citations(
@@ -120,9 +108,14 @@ def check_citations(
     claims: list[CheckedClaim] = []
     verified = failed = 0
     for claim in rec.claims:
-        checks = [check_citation(c, by_number, repositories) for c in claim.citations]
-        verified += sum(c.verified for c in checks)
-        failed += sum(not c.verified for c in checks)
+        checks: list[CitationCheck] = []
+        for citation in claim.citations:
+            problem = verify_citation(citation, by_number, repositories)
+            verified += problem is None
+            failed += problem is not None
+            checks.append(
+                CitationCheck(**citation.model_dump(), verified=problem is None, problem=problem)
+            )
         claims.append(CheckedClaim(text=claim.text, citations=checks))
     checked = CheckedRecommendation(
         image=rec.image, alternatives=rec.alternatives, claims=claims, verified_citations=verified

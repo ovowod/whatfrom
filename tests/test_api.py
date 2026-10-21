@@ -695,16 +695,3 @@ def test_openapi_documents_the_rejection():
 
     assert "Retry-After" in responses["503"]["headers"]
     assert "200" in responses
-
-
-def test_recommend_keeps_the_judgment_table_out_of_the_response_and_its_schema(session):
-    """판정 단계는 M3 동안 평가에서만 부른다. /recommend의 응답 형식은 그대로다."""
-    _seed(session)
-    client = _client(session, FakeLLMProvider(recommendation=SLIM))
-
-    body = client.post("/recommend", json={"question": QUESTION}).json()
-    schema = client.get("/openapi.json").json()["components"]["schemas"]["RecommendResponse"]
-
-    assert body["recommendation"] is not None
-    assert "judgments" not in body
-    assert "judgments" not in schema["properties"]
