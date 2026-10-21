@@ -1,0 +1,1848 @@
+# 인용 검토 표본: 채점 방법
+#
+# 항목마다 verdict와 candidate_ok 두 칸을 채운다. 아래 값만 쓰고 따옴표는 붙이지 않는다.
+# 판단에는 그 항목의 question, statement, citations, candidates만 쓴다.
+# README를 따로 찾아보거나, 다른 항목의 인용을 빌려 오거나, 아는 지식으로 채우지 않는다.
+#
+# ── 1단계. statement를 사실 단위로 나눈다 ─────────────────────────────
+# 문장 하나에 사실이 여러 개 들어 있을 수 있다.
+# 쉼표, "~이므로", "~지만"으로 이어진 부분을 따로 본다.
+#
+# ── 2단계. 사실마다 출처를 하나로 정한다 ───────────────────────────────
+#   조건   question에 사용자가 적은 내용.
+#          예: "3.12로 고정해야 한다", "arm64에서만 돈다", "확장은 안 쓴다"
+#   후보   candidates 줄로 알 수 있는 내용. 크기(MB), 아키텍처, pushed 날짜, 후보끼리의 비교
+#          ("가장 작다", "모든 후보가 arm64를 지원한다").
+#          태그 이름이 후보에 있다는 것만으로는 후보 사실이 아니다.
+#   문서   그 밖에 이미지나 소프트웨어에 관한 사실. 예: "slim에는 컴파일 도구가 없다",
+#          "alpine은 musl libc를 쓴다", "18부터 볼륨 경로가 바뀌었다",
+#          "24.04와 noble은 같은 태그다".
+#          statement가 "README는 ~라고 한다", "공식 문서에 따르면"이라고 하면
+#          그 내용은 문서 사실이다.
+#   결론   무엇을 고르라는, 권한다는, 적합하다는 판단. 예: "node:24를 쓰세요", "slim이 적절하다"
+#   모름   "근거만으로는 알 수 없다", "확인할 수 없다"처럼 모른다고 말하는 부분
+#
+# ── 3단계. verdict를 정한다 ───────────────────────────────────────────
+# 문서 사실이 하나도 없으면                         → no_doc_fact
+# 문서 사실이 있으면 하나씩 citations와 대조한다.
+#   확인됨      citations의 quote가 그 사실을 직접 말한다. 표현이 달라도 뜻이 같으면 된다.
+#               quote 여러 개를 합쳐서 확인돼도 된다.
+#   확인 안 됨  quote가 주제만 같다 / 다른 변형이나 다른 버전에 관한 문장이다
+#               (예: 사실은 alpine-slim에 관한 것인데 quote는 slim 절) / 사실의 일부만 담는다
+#               (예: 사실은 "X이고 Y다"인데 quote에는 X만 있다)
+#               / quote가 태그 목록뿐이라 그 사실을 말하지 않는다
+# 모든 문서 사실이 확인됨                           → supported
+# 하나라도 확인 안 됨                               → unsupported
+# quote가 잘려 뜻이 둘로 읽히는 등, 확인됨인지 아닌지 정말 정할 수 없을 때만 → unclear
+#   (unclear가 표본의 10%를 넘으면 합격 여부가 보류된다. 망설여지면 unsupported 쪽으로 정한다.)
+# 조건, 후보, 결론, 모름은 verdict에서 보지 않는다. 다만:
+#   - 결론이 statement에 없는 사실에 기대면 그 사실도 문서 사실로 보고 확인한다.
+#     예: "기본 이미지를 쓰세요"의 이유로 "기본 이미지에는 빌드 도구가 있다"가 필요하다면
+#     그것도 확인한다.
+#   - 결론이 확인된 사실, 조건, 후보 정보로 이어지면 결론 자체는 문서에 쓰여 있지 않아도 된다.
+#   - "README는 X라고 하지만 Y는 알 수 없다"면 X만 확인한다.
+#
+# ── 4단계. candidate_ok를 정한다 ──────────────────────────────────────
+# 후보 사실이 하나도 없으면                         → not_applicable
+# 후보 사실을 candidates 줄과 하나씩 대조한다. 지금 DB나 Docker Hub와 대조하지 않는다.
+# 모두 맞으면                                       → match
+# 하나라도 틀리면 (숫자가 다르다, 비교가 틀렸다)     → mismatch
+# candidates로 확인할 수 없으면 (목록에 없는 태그의 크기 등) → unclear
+#
+# ── 예시 ──────────────────────────────────────────────────────────────
+# (1) statement: PostGIS처럼 postgres-contrib에 없는 확장은 Alpine에서 직접 컴파일해야 하므로,
+#                PostGIS에는 기본 Debian 변형이 더 간단하다.
+#     quote: When using the Alpine variants, any postgres extension not listed in postgres-contrib
+#            will need to be compiled in your own image
+#     문서 사실: ① PostGIS는 contrib에 없다  ② contrib에 없는 확장은 Alpine에서 컴파일해야 한다
+#                ③ Debian 변형에서는 설치가 간단하다
+#     ②만 확인됨 → verdict: unsupported, candidate_ok: not_applicable
+# (2) statement: node:24-alpine은 59 MB로 세 후보 중 가장 작지만, musl libc를 써서 호환성 문제가
+#                생길 수 있다.
+#     quote: ... it does use musl libc instead of glibc ...,
+#            so software will often run into issues ...
+#     문서 사실: musl을 써서 호환성 문제 → 확인됨 → verdict: supported
+#     후보 사실: 59 MB, 셋 중 가장 작다 → candidates와 맞으면 match, 아니면 mismatch
+# (3) statement: 태그 7이 패치 버전에 고정되는지는 제공된 근거만으로 확인할 수 없다.
+#     문서 사실 없음(모름만 있음) → verdict: no_doc_fact, candidate_ok: not_applicable
+# (4) statement: nginx:1.31-alpine-slim은 공간 제약이 있을 때 쓰는 변형이다.
+#     quote: (nginx:<version>-slim 절의 문장)
+#     사실은 alpine-slim에 관한 것인데 quote는 slim 절이다 → 확인 안 됨 → verdict: unsupported
+#
+# 값 정리
+#   verdict:      supported | unsupported | unclear | no_doc_fact
+#   candidate_ok: match | mismatch | unclear | not_applicable
+#
+- id: c001
+  question: pandas랑 scipy로 돌리는 야간 배치 작업이야. 매일 새벽에 한 번 도는 거라 이미지가 조금 커도 상관없고, 빌드가 안 깨지는 게 중요해.
+  image: python:3.12
+  statement: 이미지 크기보다 빌드 안정성을 우선하는 조건이므로, alpine 기반 이미지는 피하는 편이 적절합니다.
+  citations:
+  - quote: This variant is useful when final image size being as small as possible is your primary concern.
+    evidence: python — Image Variants > `python:<version>-alpine`
+  - quote: The main caveat to note is that it does use [musl libc](https://musl.libc.org) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), so software will often run into issues depending on the depth of their libc requirements/assumptions.
+    evidence: python — Image Variants > `python:<version>-alpine`
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c002
+  question: Gradle로 컴파일하고 테스트까지 돌리는 빌드 스테이지 이미지를 고르는 중이야. 최종 런타임 스테이지는 따로 둘 거야.
+  image: eclipse-temurin:25-jre
+  statement: eclipse-temurin:25-jre가 요구 'must include a full JDK (javac) to compile and run tests'를 어긴다
+  citations:
+  - quote: This is the defacto image. If you are unsure about what your needs are, you probably want to use this one.
+    evidence: eclipse-temurin — Image Variants > `eclipse-temurin:<version>`
+  candidates:
+  - 'eclipse-temurin:26 | 147-2718 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:25 | 144-2712 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:21 | 211-2839 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:17 | 200-2814 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:11 | 188-2828 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:8 | 115-2649 MB across linux/amd64, linux/arm64, linux/ppc64le, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:26-jre | 116-2562 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:25-jre | 114-2559 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:21-jre | 111-2542 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:17-jre | 103-2533 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:11-jre | 103-2533 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:8-jre | 102-2530 MB across linux/amd64, linux/arm64, linux/ppc64le, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:26-jammy | 135-145 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:25-jammy | 132-143 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:21-jammy | 196-216 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:17-jammy | 184-203 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:11-jammy | 171-192 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:8-jammy | 98-105 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'eclipse-temurin:26-noble | 137-145 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'eclipse-temurin:25-noble | 135-143 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  verdict: null
+  candidate_ok: null
+- id: c003
+  question: Node.js 서비스를 AWS Graviton 노드풀에만 배포할 거라 arm64에서만 돌면 돼. 크기 때문에 alpine으로 가려고 했는데 괜찮을까?
+  image: node:22-slim
+  statement: node:22-slim가 요구 'must use a Node.js build that is officially supported on arm64, not an experimental musl build'를 만족한다
+  citations:
+  - quote: '[`22-bookworm-slim`, `22-slim`, `22.23-bookworm-slim`, `22.23-slim`, `22.23.3-bookworm-slim`, `22.23.3-slim`, `jod-bookworm-slim`, `jod-slim`](https://github.com/nodejs/docker-node/blob/81f419144a1251854c6d9afb09eaa39928e724e8/22/bookworm-slim/Dockerfile)'
+    evidence: node — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'node:26 | 417-451 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24 | 401-427 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22 | 356-425 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-slim | 88-94 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24-slim | 81-88 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22-slim | 70-87 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-alpine | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm | 404-429 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie | 412-449 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-trixie | 411-448 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-08-25'
+  - 'node:26-bullseye | 377-386 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:24-bullseye | 374-383 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:22-bullseye | 337-382 MB across linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'node:26-alpine3.23 | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine3.23 | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine3.23 | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm-slim | 83-89 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie-slim | 85-92 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  verdict: null
+  candidate_ok: null
+- id: c004
+  question: mattn/go-sqlite3를 쓰고 있어서 CGO_ENABLED=1로 빌드해야 해. 리눅스 컨테이너로 배포하는데 빌드 이미지 뭘로 잡아야 해?
+  image: golang:1.27-alpine3.23
+  statement: golang:1.27-alpine3.23가 요구 'must be a Linux image'를 만족한다
+  citations:
+  - quote: This image is based on the popular [Alpine Linux project](https://alpinelinux.org), available in [the `alpine` official image](https://hub.docker.com/_/alpine).
+    evidence: golang — Image Variants > `golang:<version>-alpine`
+  candidates:
+  - 'golang:1.27 | 275-2583 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.26 | 271-2579 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.25 | 264-2555 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-08-19'
+  - 'golang:1.27-alpine | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-trixie | 275-344 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-trixie | 271-340 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-trixie | 264-330 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-bookworm | 262-307 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.26-bookworm | 258-303 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.25-bookworm | 251-297 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-19'
+  - 'golang:1.27-alpine3.23 | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine3.23 | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine3.23 | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  verdict: null
+  candidate_ok: null
+- id: c005
+  question: 큐 대기열을 redis에 넣고 있는데 컨테이너 재시작하면 다 날아가. 데이터가 남게 하려면 어떻게 띄워야 해?
+  image: redis:6
+  statement: redis:6가 요구 'must support persisting data to a volume so it survives container restarts'를 만족한다
+  citations:
+  - quote: If persistence is enabled, data is stored in the `VOLUME /data`, which can be used with `--volumes-from some-volume-container` or `-v /docker/host/dir:/data` (see [docs.docker volumes](https://docs.docker.com/engine/tutorials/dockervolumes/)).
+    evidence: redis — How to use this image > Start with persistent storage
+  candidates:
+  - 'redis:8 | 40-55 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-27'
+  - 'redis:7 | 39-49 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'redis:6 | 34-43 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'redis:8-alpine | 18-39 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  - 'redis:7-alpine | 16-17 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  - 'redis:6-alpine | 11-12 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  verdict: null
+  candidate_ok: null
+- id: c006
+  question: 지도 서비스라 PostGIS를 써야 해. 이미지 크기 줄이려고 alpine 태그를 보고 있었는데 그렇게 가도 괜찮아?
+  image: postgres:16
+  statement: Alpine에서도 PostGIS 사용이 불가능하다고 단정할 수는 없지만, `postgres-contrib`에 포함되지 않은 확장은 직접 이미지에서 컴파일해야 합니다. 제공된 근거는 PostGIS가 해당 목록에 있는지 밝히지 않으므로, Alpine 선택이 간단한 설치로 끝날지는 판단할 수 없습니다.
+  citations:
+  - quote: When using the Alpine variants, any postgres extension not listed in [postgres-contrib](https://www.postgresql.org/docs/14/contrib.html) will need to be compiled in your own image (again, see [github.com/postgis/docker-postgis](https://github.com/postgis/docker-postgis/blob/81a0b55/14-3.2/alpine/Dockerfile) for a concrete example).
+    evidence: postgres — How to extend this image > Additional Extensions
+  candidates:
+  - 'postgres:18 | 88-177 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:17 | 87-176 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:16 | 87-175 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:15 | 85-173 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-28'
+  - 'postgres:14 | 84-172 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-27'
+  - 'postgres:18-alpine | 110-127 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-15'
+  - 'postgres:17-alpine | 107-124 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:16-alpine | 106-123 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:15-alpine | 105-122 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:14-alpine | 105-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:18-bookworm | 83-170 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:17-bookworm | 83-169 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:16-bookworm | 82-168 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:15-bookworm | 81-166 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:14-bookworm | 80-165 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:18-alpine3.23 | 109-126 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:17-alpine3.23 | 107-123 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:16-alpine3.23 | 105-122 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:15-alpine3.23 | 105-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:14-alpine3.23 | 104-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  verdict: null
+  candidate_ok: null
+- id: c007
+  question: 지도 서비스라 PostGIS를 써야 해. 이미지 크기 줄이려고 alpine 태그를 보고 있었는데 그렇게 가도 괜찮아?
+  image: postgres:16
+  statement: PostGIS가 필수라면 기본 이미지에 바로 포함된다고 확인된 후보는 없습니다. 기본 Debian 계열에서는 PostGIS 같은 추가 확장을 관련 패키지를 설치해 추가할 수 있습니다.
+  citations:
+  - quote: When using the default (Debian-based) variants, installing additional extensions (such as PostGIS) should be as simple as installing the relevant packages (see [github.com/postgis/docker-postgis](https://github.com/postgis/docker-postgis/blob/81a0b55/14-3.2/Dockerfile) for a concrete example).
+    evidence: postgres — How to extend this image > Additional Extensions
+  candidates:
+  - 'postgres:18 | 88-177 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:17 | 87-176 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:16 | 87-175 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:15 | 85-173 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-28'
+  - 'postgres:14 | 84-172 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-27'
+  - 'postgres:18-alpine | 110-127 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-15'
+  - 'postgres:17-alpine | 107-124 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:16-alpine | 106-123 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:15-alpine | 105-122 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:14-alpine | 105-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:18-bookworm | 83-170 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:17-bookworm | 83-169 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:16-bookworm | 82-168 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:15-bookworm | 81-166 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:14-bookworm | 80-165 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:18-alpine3.23 | 109-126 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:17-alpine3.23 | 107-123 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:16-alpine3.23 | 105-122 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:15-alpine3.23 | 105-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:14-alpine3.23 | 104-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  verdict: null
+  candidate_ok: null
+- id: c008
+  question: 새로 시작하는 프로젝트라 파이썬 최신 안정 버전으로 가고 싶어. 베타나 RC 말고 정식 릴리스여야 하고, 태그도 버전이 드러나게 박아두고 싶어.
+  image: python:3.14
+  statement: 후보 중 최신 정식 Python 릴리스 계열은 3.14입니다. 공식 README는 3.14.7을 정식 버전 태그로 나열하고, 3.15.0rc2는 RC로 별도 표시합니다.
+  citations:
+  - quote: '`3.15.0rc2`, `3.15-rc`:'
+    evidence: python — Supported tags and respective `Dockerfile` links > Shared Tags
+  - quote: '`3.14.7`, `3.14`, `3`, `latest`:'
+    evidence: python — Supported tags and respective `Dockerfile` links > Shared Tags
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c009
+  question: Node.js 서비스를 AWS Graviton 노드풀에만 배포할 거라 arm64에서만 돌면 돼. 크기 때문에 alpine으로 가려고 했는데 괜찮을까?
+  image: node:24-alpine
+  statement: 다만 공식 README의 지원 태그 목록은 Alpine 태그를 보여줄 뿐, Alpine이 arm64에서 공식 지원되는지 또는 musl 빌드가 실험적인지 판단할 근거는 제공하지 않습니다. 따라서 ‘실험적 musl 빌드가 아닌 공식 지원 arm64 빌드’라는 요구를 충족한다고 확인할 수 없습니다.
+  citations:
+  - quote: '-  [`24-alpine`, `24-alpine3.24`, `24.21-alpine`, `24.21-alpine3.24`, `24.21.0-alpine`, `24.21.0-alpine3.24`, `krypton-alpine`, `krypton-alpine3.24`, `lts-alpine`, `lts-alpine3.24`](https://github.com/nodejs/docker-node/blob/93a7bafc324a85ac1ee461604cff87cffacb6d7a/24/alpine3.24/Dockerfile)'
+    evidence: node — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'node:26 | 417-451 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24 | 401-427 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22 | 356-425 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-slim | 88-94 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24-slim | 81-88 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22-slim | 70-87 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-alpine | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm | 404-429 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie | 412-449 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-trixie | 411-448 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-08-25'
+  - 'node:26-bullseye | 377-386 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:24-bullseye | 374-383 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:22-bullseye | 337-382 MB across linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'node:26-alpine3.23 | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine3.23 | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine3.23 | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm-slim | 83-89 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie-slim | 85-92 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  verdict: null
+  candidate_ok: null
+- id: c010
+  question: 새로 시작하는 프로젝트라 파이썬 최신 안정 버전으로 가고 싶어. 베타나 RC 말고 정식 릴리스여야 하고, 태그도 버전이 드러나게 박아두고 싶어.
+  image: python:3.14-alpine
+  statement: python:3.14-alpine가 요구 'must be the newest final Python release line'를 만족한다
+  citations:
+  - quote: '`3.14.7`, `3.14`, `3`, `latest`:'
+    evidence: python — Supported tags and respective `Dockerfile` links > Shared Tags
+  - quote: '`3.15.0rc2`, `3.15-rc`:'
+    evidence: python — Supported tags and respective `Dockerfile` links > Shared Tags
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c011
+  question: 개발은 x86 리눅스에서 하는데 배포는 Graviton arm64야. cgo 안 쓰는 순수 Go 코드인데 arm64용 바이너리를 만들려면 빌드 이미지도 arm64로 받아야 해?
+  image: golang:1.26-alpine3.23
+  statement: golang:1.26-alpine3.23가 요구 'must be a Linux image'를 만족한다
+  citations:
+  - quote: This image is based on the popular [Alpine Linux project](https://alpinelinux.org), available in [the `alpine` official image](https://hub.docker.com/_/alpine).
+    evidence: golang — Image Variants > `golang:<version>-alpine`
+  candidates:
+  - 'golang:1.27 | 275-2583 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.26 | 271-2579 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.25 | 264-2555 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-08-19'
+  - 'golang:1.27-alpine | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-trixie | 275-344 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-trixie | 271-340 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-trixie | 264-330 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-bookworm | 262-307 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.26-bookworm | 258-303 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.25-bookworm | 251-297 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-19'
+  - 'golang:1.27-alpine3.23 | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine3.23 | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine3.23 | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  verdict: null
+  candidate_ok: null
+- id: c012
+  question: 개발은 x86 리눅스에서 하는데 배포는 Graviton arm64야. cgo 안 쓰는 순수 Go 코드인데 arm64용 바이너리를 만들려면 빌드 이미지도 arm64로 받아야 해?
+  image: golang:1.27
+  statement: 후보 중 golang:1.27을 권장합니다. 후보 정보상 linux/amd64와 linux/arm64를 모두 제공하며, README는 golang 이미지의 교차 컴파일 사용 예를 제시합니다.
+  citations:
+  - quote: '[`amd64`](https://hub.docker.com/r/amd64/golang/), [`arm32v6`](https://hub.docker.com/r/arm32v6/golang/), [`arm32v7`](https://hub.docker.com/r/arm32v7/golang/), [`arm64v8`](https://hub.docker.com/r/arm64v8/golang/), [`i386`](https://hub.docker.com/r/i386/golang/), [`ppc64le`](https://hub.docker.com/r/ppc64le/golang/), [`riscv64`](https://hub.docker.com/r/riscv64/golang/), [`s390x`](https://hub.docker.com/r/s390x/golang/), [`windows-amd64`](https://hub.docker.com/r/winamd64/golang/)'
+    evidence: golang — Quick reference (cont.)
+  candidates:
+  - 'golang:1.27 | 275-2583 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.26 | 271-2579 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.25 | 264-2555 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-08-19'
+  - 'golang:1.27-alpine | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-trixie | 275-344 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-trixie | 271-340 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-trixie | 264-330 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-bookworm | 262-307 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.26-bookworm | 258-303 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.25-bookworm | 251-297 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-19'
+  - 'golang:1.27-alpine3.23 | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine3.23 | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine3.23 | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  verdict: null
+  candidate_ok: null
+- id: c013
+  question: FastAPI로 만든 사내 API를 쿠버네티스에 처음 올리려고 해. 특별한 제약은 없고 프로덕션에서 무난하게 굴러가면 좋겠어. 베이스 이미지 뭘로 시작하는 게 좋을까?
+  image: python:3.12-slim
+  statement: '`alpine` 변형은 이미지 크기를 가능한 한 작게 하는 것이 우선일 때 유용하지만, musl libc를 사용해 libc 요구사항이나 가정에 따라 소프트웨어가 문제를 겪을 수 있습니다.'
+  citations:
+  - quote: This variant is useful when final image size being as small as possible is your primary concern.
+    evidence: python — Image Variants > `python:<version>-alpine`
+  - quote: The main caveat to note is that it does use [musl libc](https://musl.libc.org) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), so software will often run into issues depending on the depth of their libc requirements/assumptions.
+    evidence: python — Image Variants > `python:<version>-alpine`
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c014
+  question: 개발은 x86 리눅스에서 하는데 배포는 Graviton arm64야. cgo 안 쓰는 순수 Go 코드인데 arm64용 바이너리를 만들려면 빌드 이미지도 arm64로 받아야 해?
+  image: golang:1.27-alpine
+  statement: golang:1.27-alpine가 요구 'must be a Linux image'를 만족한다
+  citations:
+  - quote: This image is based on the popular [Alpine Linux project](https://alpinelinux.org), available in [the `alpine` official image](https://hub.docker.com/_/alpine).
+    evidence: golang — Image Variants > `golang:<version>-alpine`
+  candidates:
+  - 'golang:1.27 | 275-2583 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.26 | 271-2579 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.25 | 264-2555 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-08-19'
+  - 'golang:1.27-alpine | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-trixie | 275-344 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-trixie | 271-340 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-trixie | 264-330 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-bookworm | 262-307 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.26-bookworm | 258-303 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.25-bookworm | 251-297 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-19'
+  - 'golang:1.27-alpine3.23 | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine3.23 | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine3.23 | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  verdict: null
+  candidate_ok: null
+- id: c015
+  question: 새로 시작하는 프로젝트라 파이썬 최신 안정 버전으로 가고 싶어. 베타나 RC 말고 정식 릴리스여야 하고, 태그도 버전이 드러나게 박아두고 싶어.
+  image: python:3.14
+  statement: 후보 중 최신 정식 릴리스 라인은 Python 3.14이며, `python:3.14`는 베타나 RC가 아닌 정식 버전을 가리킵니다.
+  citations:
+  - quote: '`3.14.7`, `3.14`, `3`, `latest`:'
+    evidence: python — Supported tags and respective `Dockerfile` links > Shared Tags
+  - quote: '`3.15.0rc2`, `3.15-rc`:'
+    evidence: python — Supported tags and respective `Dockerfile` links > Shared Tags
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c016
+  question: Rust로 만든 바이너리 하나만 담는 Debian 기반 런타임 베이스가 필요해. glibc랑 ca-certificates 정도만 있으면 되고 이미지는 작을수록 좋아.
+  image: debian:11-slim
+  statement: debian:11-slim가 요구 'must be a released Debian suite, not testing or sid'를 만족한다
+  citations:
+  - quote: Stable releases are also tagged with their version (ie, `debian:11` is an alias for `debian:bullseye`, `debian:10` is an alias for `debian:buster`, etc).
+    evidence: debian — About this image
+  candidates:
+  - 'debian:13 | 46-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-25'
+  - 'debian:12 | 44-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'debian:11 | 49-55 MB across linux/386, linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'debian:13-slim | 26-34 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-25'
+  - 'debian:12-slim | 24-32 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'debian:11-slim | 26-31 MB across linux/386, linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c017
+  question: 지도 서비스라 PostGIS를 써야 해. 이미지 크기 줄이려고 alpine 태그를 보고 있었는데 그렇게 가도 괜찮아?
+  image: postgres:17-alpine
+  statement: postgres:17-alpine가 요구 'must include the PostGIS extension'를 어긴다
+  citations:
+  - quote: When using the Alpine variants, any postgres extension not listed in [postgres-contrib](https://www.postgresql.org/docs/14/contrib.html) will need to be compiled in your own image (again, see [github.com/postgis/docker-postgis](https://github.com/postgis/docker-postgis/blob/81a0b55/14-3.2/alpine/Dockerfile) for a concrete example).
+    evidence: postgres — How to extend this image > Additional Extensions
+  candidates:
+  - 'postgres:18 | 88-177 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:17 | 87-176 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:16 | 87-175 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:15 | 85-173 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-28'
+  - 'postgres:14 | 84-172 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-27'
+  - 'postgres:18-alpine | 110-127 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-15'
+  - 'postgres:17-alpine | 107-124 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:16-alpine | 106-123 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:15-alpine | 105-122 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:14-alpine | 105-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:18-bookworm | 83-170 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:17-bookworm | 83-169 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:16-bookworm | 82-168 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:15-bookworm | 81-166 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:14-bookworm | 80-165 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:18-alpine3.23 | 109-126 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:17-alpine3.23 | 107-123 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:16-alpine3.23 | 105-122 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:15-alpine3.23 | 105-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:14-alpine3.23 | 104-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  verdict: null
+  candidate_ok: null
+- id: c018
+  question: 사내 규정이 mainline 말고 stable 브랜치만 쓰게 돼 있어. nginx도 stable로 맞춰야 하는데 어떤 태그를 쓰면 돼?
+  image: nginx:1.30-alpine-perl
+  statement: nginx:1.30-alpine-perl가 요구 'must be on the nginx stable branch, not mainline'를 만족한다
+  citations:
+  - quote: '[`1.30.5-alpine-perl`, `stable-alpine-perl`, `1.30-alpine-perl`, `1.30.5-alpine3.24-perl`, `stable-alpine3.24-perl`, `1.30-alpine3.24-perl`](https://github.com/nginx/docker-nginx/blob/a16f1329e13e7273c4103f75d863ca625b75109e/stable/alpine-perl/Dockerfile)'
+    evidence: nginx — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'nginx:1.31 | 61-80 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30 | 60-80 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-otel | 69-70 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.30-otel | 68-70 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.31-perl | 73-93 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-perl | 73-93 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine | 22-29 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine | 22-29 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-otel | 45-46 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-otel | 45-46 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-perl | 32-40 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-perl | 31-39 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-slim | 7-9 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-slim | 7-9 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  verdict: null
+  candidate_ok: null
+- id: c019
+  question: 개발은 x86 리눅스에서 하는데 배포는 Graviton arm64야. cgo 안 쓰는 순수 Go 코드인데 arm64용 바이너리를 만들려면 빌드 이미지도 arm64로 받아야 해?
+  image: golang:1.27
+  statement: 아니요. 제공된 README는 Docker 컨테이너 안에서 대상이 linux/amd64가 아닌 경우에도 GOOS와 GOARCH를 지정해 교차 컴파일할 수 있다고 설명하므로, 개발 머신이나 빌드 컨테이너가 arm64일 필요는 없습니다.
+  citations:
+  - quote: 'If you need to compile your application for a platform other than `linux/amd64` (such as `windows/386`):'
+    evidence: golang — How to use this image > Cross-compile your app inside the Docker container
+  - quote: $ docker run --rm -v "$PWD":/usr/src/myapp -w /usr/src/myapp -e GOOS=windows -e GOARCH=386 golang:1.27 go build -v
+    evidence: golang — How to use this image > Cross-compile your app inside the Docker container
+  candidates:
+  - 'golang:1.27 | 275-2583 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.26 | 271-2579 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.25 | 264-2555 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-08-19'
+  - 'golang:1.27-alpine | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-trixie | 275-344 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-trixie | 271-340 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-trixie | 264-330 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-bookworm | 262-307 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.26-bookworm | 258-303 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.25-bookworm | 251-297 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-19'
+  - 'golang:1.27-alpine3.23 | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine3.23 | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine3.23 | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  verdict: null
+  candidate_ok: null
+- id: c020
+  question: 새로 시작하는 프로젝트라 파이썬 최신 안정 버전으로 가고 싶어. 베타나 RC 말고 정식 릴리스여야 하고, 태그도 버전이 드러나게 박아두고 싶어.
+  image: python:3.11-bookworm
+  statement: python:3.11-bookworm가 요구 'must be the newest final Python release line'를 어긴다
+  citations:
+  - quote: '`3.14.7`, `3.14`, `3`, `latest`:'
+    evidence: python — Supported tags and respective `Dockerfile` links > Shared Tags
+  - quote: '`3.11.16`, `3.11`:'
+    evidence: python — Supported tags and respective `Dockerfile` links > Shared Tags
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c021
+  question: Rust로 만든 바이너리 하나만 담는 Debian 기반 런타임 베이스가 필요해. glibc랑 ca-certificates 정도만 있으면 되고 이미지는 작을수록 좋아.
+  image: debian:12-slim
+  statement: 버전 태그는 안정 릴리스 버전을 가리키는 별칭이라고 README가 설명하므로, `debian:12-slim`은 testing이나 sid가 아닌 릴리스 계열 후보로 선택했습니다.
+  citations:
+  - quote: Stable releases are also tagged with their version (ie, `debian:11` is an alias for `debian:bullseye`, `debian:10` is an alias for `debian:buster`, etc).
+    evidence: debian — About this image
+  candidates:
+  - 'debian:13 | 46-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-25'
+  - 'debian:12 | 44-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'debian:11 | 49-55 MB across linux/386, linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'debian:13-slim | 26-34 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-25'
+  - 'debian:12-slim | 24-32 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'debian:11-slim | 26-31 MB across linux/386, linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c022
+  question: mattn/go-sqlite3를 쓰고 있어서 CGO_ENABLED=1로 빌드해야 해. 리눅스 컨테이너로 배포하는데 빌드 이미지 뭘로 잡아야 해?
+  image: golang:1.26-alpine3.23
+  statement: golang:1.26-alpine3.23가 요구 'must be a Linux image'를 만족한다
+  citations:
+  - quote: This image is based on the popular [Alpine Linux project](https://alpinelinux.org), available in [the `alpine` official image](https://hub.docker.com/_/alpine).
+    evidence: golang — Image Variants > `golang:<version>-alpine`
+  candidates:
+  - 'golang:1.27 | 275-2583 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.26 | 271-2579 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.25 | 264-2555 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-08-19'
+  - 'golang:1.27-alpine | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-trixie | 275-344 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-trixie | 271-340 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-trixie | 264-330 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-bookworm | 262-307 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.26-bookworm | 258-303 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.25-bookworm | 251-297 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-19'
+  - 'golang:1.27-alpine3.23 | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine3.23 | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine3.23 | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  verdict: null
+  candidate_ok: null
+- id: c023
+  question: Gradle로 컴파일하고 테스트까지 돌리는 빌드 스테이지 이미지를 고르는 중이야. 최종 런타임 스테이지는 따로 둘 거야.
+  image: eclipse-temurin:21-jammy
+  statement: 선택한 jammy 태그는 Ubuntu 릴리스 코드명을 포함하며, 추가 패키지를 설치해야 한다면 이를 명시해 릴리스 변경으로 인한 문제를 줄이는 데 도움이 될 수 있습니다.
+  citations:
+  - quote: If your image needs to install any additional packages beyond what comes with the image, you'll likely want to specify one of these explicitly to minimize breakage when there are new releases of Ubuntu.
+    evidence: eclipse-temurin — Image Variants > `eclipse-temurin:<version>`
+  candidates:
+  - 'eclipse-temurin:26 | 147-2718 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:25 | 144-2712 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:21 | 211-2839 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:17 | 200-2814 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:11 | 188-2828 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:8 | 115-2649 MB across linux/amd64, linux/arm64, linux/ppc64le, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:26-jre | 116-2562 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:25-jre | 114-2559 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:21-jre | 111-2542 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:17-jre | 103-2533 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:11-jre | 103-2533 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:8-jre | 102-2530 MB across linux/amd64, linux/arm64, linux/ppc64le, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:26-jammy | 135-145 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:25-jammy | 132-143 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:21-jammy | 196-216 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:17-jammy | 184-203 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:11-jammy | 171-192 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:8-jammy | 98-105 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'eclipse-temurin:26-noble | 137-145 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'eclipse-temurin:25-noble | 135-143 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  verdict: null
+  candidate_ok: null
+- id: c024
+  question: mattn/go-sqlite3를 쓰고 있어서 CGO_ENABLED=1로 빌드해야 해. 리눅스 컨테이너로 배포하는데 빌드 이미지 뭘로 잡아야 해?
+  image: golang:1.27-trixie
+  statement: Alpine 변형은 작지만 musl libc를 사용하며, gcc 같은 도구가 포함되지 않아 CGO 빌드에는 추가 설치가 필요할 수 있습니다.
+  citations:
+  - quote: The main caveat to note is that it does use [musl libc](https://musl.libc.org) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), which can lead to unexpected behavior.
+    evidence: golang — Image Variants > `golang:<version>-alpine`
+  - quote: To minimize image size, additional related tools (such as `git`, `gcc`, or `bash`) are not included in Alpine-based images.
+    evidence: golang — Image Variants > `golang:<version>-alpine`
+  candidates:
+  - 'golang:1.27 | 275-2583 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.26 | 271-2579 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.25 | 264-2555 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-08-19'
+  - 'golang:1.27-alpine | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-trixie | 275-344 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-trixie | 271-340 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-trixie | 264-330 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-bookworm | 262-307 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.26-bookworm | 258-303 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.25-bookworm | 251-297 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-19'
+  - 'golang:1.27-alpine3.23 | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine3.23 | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine3.23 | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  verdict: null
+  candidate_ok: null
+- id: c025
+  question: 정적 링크된 CLI 바이너리 하나에 ca-certificates랑 curl만 얹어서 배포하려고 해. 베이스를 최대한 작게 가져가고 싶은데 어떤 태그를 써야 해?
+  image: alpine:3.24
+  statement: 근거에 나온 공식 지원 태그 목록에는 세 후보가 모두 포함되어 있어, 이 정보만으로는 지원되는 안정 브랜치 조건에서 하나를 더 우선할 수 없습니다.
+  citations:
+  - quote: "- \t[`3.24.2`, `3.24`, `3`, `latest`](https://github.com/alpinelinux/docker-alpine/blob/1c744e2d49059e51b063a11a6e3e18c9ccf04ab8/x86_64/Dockerfile)"
+    evidence: alpine — Supported tags and respective `Dockerfile` links
+  - quote: "- \t[`3.23.6`, `3.23`](https://github.com/alpinelinux/docker-alpine/blob/00d3407329e4c65f237cc1e325a4ab0cb4974df4/x86_64/Dockerfile)"
+    evidence: alpine — Supported tags and respective `Dockerfile` links
+  - quote: "- \t[`3.22.6`, `3.22`](https://github.com/alpinelinux/docker-alpine/blob/32cb3f1f45f4fee15882936c06a264eb9e5130fe/x86_64/Dockerfile)"
+    evidence: alpine — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'alpine:3.24 | 3-4 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-06-16'
+  - 'alpine:3.23 | 3-4 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-06-22'
+  - 'alpine:3.22 | 3-4 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-06-22'
+  verdict: null
+  candidate_ok: null
+- id: c026
+  question: 정적 링크된 CLI 바이너리 하나에 ca-certificates랑 curl만 얹어서 배포하려고 해. 베이스를 최대한 작게 가져가고 싶은데 어떤 태그를 써야 해?
+  image: alpine:3.24
+  statement: 크기 기준으로는 후보 간 차이가 없으므로, 지원되는 안정 브랜치 중 가장 높은 버전인 alpine:3.24를 선택했습니다.
+  citations:
+  - quote: '[`3.24.2`, `3.24`, `3`, `latest`]'
+    evidence: alpine — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'alpine:3.24 | 3-4 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-06-16'
+  - 'alpine:3.23 | 3-4 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-06-22'
+  - 'alpine:3.22 | 3-4 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-06-22'
+  verdict: null
+  candidate_ok: null
+- id: c027
+  question: 벤더가 Ubuntu용 .deb만 주는 모니터링 에이전트를 이미지에 넣어야 해. 프로덕션에서 몇 년 굴릴 거라 오래 지원되는 쪽이면 좋겠어.
+  image: ubuntu:24.04
+  statement: 후보가 모두 Ubuntu 이미지이므로 Ubuntu 기반이 필요한 조건에는 부합하지만, 제공된 근거만으로는 어느 후보가 Ubuntu LTS 릴리스인지 확인할 수 없습니다.
+  citations:
+  - quote: Ubuntu is a Debian-based Linux operating system that runs from the desktop to the cloud, to all your internet connected things.
+    evidence: ubuntu — What is Ubuntu?
+  candidates:
+  - 'ubuntu:26.04 | 39-47 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'ubuntu:24.04 | 27-34 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'ubuntu:22.04 | 27-35 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-09'
+  verdict: null
+  candidate_ok: null
+- id: c028
+  question: torch로 추론하는 서비스야. 모델 가중치까지 넣으면 어차피 이미지가 몇 기가라 크기는 포기했어. pip install torch가 문제없이 되는 베이스면 돼.
+  image: python:3.12
+  statement: 근거에 Alpine 변형이 musl libc를 사용하며 소프트웨어가 libc 요구사항에 따라 문제를 겪을 수 있다고 명시되어 있어, Alpine 계열은 피하는 편이 낫습니다.
+  citations:
+  - quote: The main caveat to note is that it does use [musl libc](https://musl.libc.org) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), so software will often run into issues depending on the depth of their libc requirements/assumptions.
+    evidence: python — Image Variants > `python:<version>-alpine`
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c029
+  question: 개발은 x86 리눅스에서 하는데 배포는 Graviton arm64야. cgo 안 쓰는 순수 Go 코드인데 arm64용 바이너리를 만들려면 빌드 이미지도 arm64로 받아야 해?
+  image: golang:1.26-alpine
+  statement: golang:1.26-alpine가 요구 'must be a Linux image'를 만족한다
+  citations:
+  - quote: This image is based on the popular [Alpine Linux project](https://alpinelinux.org), available in [the `alpine` official image](https://hub.docker.com/_/alpine).
+    evidence: golang — Image Variants > `golang:<version>-alpine`
+  candidates:
+  - 'golang:1.27 | 275-2583 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.26 | 271-2579 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.25 | 264-2555 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-08-19'
+  - 'golang:1.27-alpine | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-trixie | 275-344 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-trixie | 271-340 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-trixie | 264-330 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-bookworm | 262-307 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.26-bookworm | 258-303 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.25-bookworm | 251-297 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-19'
+  - 'golang:1.27-alpine3.23 | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine3.23 | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine3.23 | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  verdict: null
+  candidate_ok: null
+- id: c030
+  question: Gradle로 컴파일하고 테스트까지 돌리는 빌드 스테이지 이미지를 고르는 중이야. 최종 런타임 스테이지는 따로 둘 거야.
+  image: eclipse-temurin:21
+  statement: '`eclipse-temurin:21`은 기본 이미지 변형으로, README는 어떤 용도인지 확실하지 않을 때 이 변형을 사용하라고 설명하며, 다른 이미지를 빌드하기 위한 기반으로도 사용할 수 있다고 설명한다.'
+  citations:
+  - quote: This is the defacto image. If you are unsure about what your needs are, you probably want to use this one.
+    evidence: eclipse-temurin — Image Variants > `eclipse-temurin:<version>`
+  - quote: It is designed to be used both as a throw away container (mount your source code and start the container to start your app), as well as the base to build other images off of.
+    evidence: eclipse-temurin — Image Variants > `eclipse-temurin:<version>`
+  candidates:
+  - 'eclipse-temurin:26 | 147-2718 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:25 | 144-2712 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:21 | 211-2839 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:17 | 200-2814 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:11 | 188-2828 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:8 | 115-2649 MB across linux/amd64, linux/arm64, linux/ppc64le, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:26-jre | 116-2562 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:25-jre | 114-2559 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:21-jre | 111-2542 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:17-jre | 103-2533 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:11-jre | 103-2533 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:8-jre | 102-2530 MB across linux/amd64, linux/arm64, linux/ppc64le, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:26-jammy | 135-145 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:25-jammy | 132-143 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:21-jammy | 196-216 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:17-jammy | 184-203 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:11-jammy | 171-192 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:8-jammy | 98-105 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'eclipse-temurin:26-noble | 137-145 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'eclipse-temurin:25-noble | 135-143 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  verdict: null
+  candidate_ok: null
+- id: c031
+  question: FastAPI 서비스이고 numpy를 사용해. 이미지 크기는 작았으면 좋겠지만 빌드 안정성이 더 중요해. ARM64에서도 실행해야 해.
+  image: python:3.12-slim
+  statement: Alpine은 더 작은 이미지가 장점이지만 musl libc를 사용해 소프트웨어 호환성 문제가 생길 수 있으므로, 빌드 안정성을 우선하면 Alpine 후보보다 slim 후보가 더 적절합니다.
+  citations:
+  - quote: This variant is useful when final image size being as small as possible is your primary concern.
+    evidence: python — Image Variants > `python:<version>-alpine`
+  - quote: The main caveat to note is that it does use [musl libc](https://musl.libc.org) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), so software will often run into issues depending on the depth of their libc requirements/assumptions.
+    evidence: python — Image Variants > `python:<version>-alpine`
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c032
+  question: 사내 규정이 mainline 말고 stable 브랜치만 쓰게 돼 있어. nginx도 stable로 맞춰야 하는데 어떤 태그를 쓰면 돼?
+  image: nginx:1.30-alpine-slim
+  statement: nginx:1.30-alpine-slim가 요구 'must be on the nginx stable branch, not mainline'를 만족한다
+  citations:
+  - quote: '[`1.30.5-alpine-slim`, `stable-alpine-slim`, `1.30-alpine-slim`, `1.30.5-alpine3.24-slim`, `stable-alpine3.24-slim`, `1.30-alpine3.24-slim`](https://github.com/nginx/docker-nginx/blob/ef5a25a6314e652a2dcfbce6074bef729f4d9639/stable/alpine-slim/Dockerfile)'
+    evidence: nginx — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'nginx:1.31 | 61-80 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30 | 60-80 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-otel | 69-70 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.30-otel | 68-70 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.31-perl | 73-93 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-perl | 73-93 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine | 22-29 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine | 22-29 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-otel | 45-46 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-otel | 45-46 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-perl | 32-40 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-perl | 31-39 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-slim | 7-9 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-slim | 7-9 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  verdict: null
+  candidate_ok: null
+- id: c033
+  question: mattn/go-sqlite3를 쓰고 있어서 CGO_ENABLED=1로 빌드해야 해. 리눅스 컨테이너로 배포하는데 빌드 이미지 뭘로 잡아야 해?
+  image: golang:1.27-trixie
+  statement: Alpine 변형은 더 작은 이미지로 이어질 수 있지만, musl libc를 사용하고 `gcc` 같은 도구를 포함하지 않으므로 별도 설치가 필요할 수 있다.
+  citations:
+  - quote: Alpine Linux is much smaller than most distribution base images (~5MB), and thus leads to much slimmer images in general.
+    evidence: golang — Image Variants > `golang:<version>-alpine`
+  - quote: The main caveat to note is that it does use [musl libc](https://musl.libc.org) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), which can lead to unexpected behavior.
+    evidence: golang — Image Variants > `golang:<version>-alpine`
+  - quote: To minimize image size, additional related tools (such as `git`, `gcc`, or `bash`) are not included in Alpine-based images.
+    evidence: golang — Image Variants > `golang:<version>-alpine`
+  candidates:
+  - 'golang:1.27 | 275-2583 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.26 | 271-2579 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.25 | 264-2555 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-08-19'
+  - 'golang:1.27-alpine | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-trixie | 275-344 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-trixie | 271-340 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-trixie | 264-330 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-bookworm | 262-307 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.26-bookworm | 258-303 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.25-bookworm | 251-297 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-19'
+  - 'golang:1.27-alpine3.23 | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine3.23 | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine3.23 | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  verdict: null
+  candidate_ok: null
+- id: c034
+  question: Rust로 만든 바이너리 하나만 담는 Debian 기반 런타임 베이스가 필요해. glibc랑 ca-certificates 정도만 있으면 되고 이미지는 작을수록 좋아.
+  image: debian:11-slim
+  statement: debian:11-slim가 요구 'must be a released Debian suite, not testing or sid'를 만족한다
+  citations:
+  - quote: Stable releases are also tagged with their version (ie, `debian:11` is an alias for `debian:bullseye`, `debian:10` is an alias for `debian:buster`, etc).
+    evidence: debian — About this image
+  candidates:
+  - 'debian:13 | 46-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-25'
+  - 'debian:12 | 44-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'debian:11 | 49-55 MB across linux/386, linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'debian:13-slim | 26-34 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-25'
+  - 'debian:12-slim | 24-32 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'debian:11-slim | 26-31 MB across linux/386, linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c035
+  question: Rust로 만든 바이너리 하나만 담는 Debian 기반 런타임 베이스가 필요해. glibc랑 ca-certificates 정도만 있으면 되고 이미지는 작을수록 좋아.
+  image: debian:11
+  statement: debian:11가 요구 'must be a released Debian suite, not testing or sid'를 만족한다
+  citations:
+  - quote: Stable releases are also tagged with their version (ie, `debian:11` is an alias for `debian:bullseye`, `debian:10` is an alias for `debian:buster`, etc).
+    evidence: debian — About this image
+  candidates:
+  - 'debian:13 | 46-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-25'
+  - 'debian:12 | 44-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'debian:11 | 49-55 MB across linux/386, linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'debian:13-slim | 26-34 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-25'
+  - 'debian:12-slim | 24-32 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'debian:11-slim | 26-31 MB across linux/386, linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c036
+  question: 큐 대기열을 redis에 넣고 있는데 컨테이너 재시작하면 다 날아가. 데이터가 남게 하려면 어떻게 띄워야 해?
+  image: redis:7
+  statement: redis:7가 요구 'must support persisting data to a volume so it survives container restarts'를 만족한다
+  citations:
+  - quote: If persistence is enabled, data is stored in the `VOLUME /data`, which can be used with `--volumes-from some-volume-container` or `-v /docker/host/dir:/data` (see [docs.docker volumes](https://docs.docker.com/engine/tutorials/dockervolumes/)).
+    evidence: redis — How to use this image > Start with persistent storage
+  candidates:
+  - 'redis:8 | 40-55 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-27'
+  - 'redis:7 | 39-49 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'redis:6 | 34-43 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'redis:8-alpine | 18-39 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  - 'redis:7-alpine | 16-17 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  - 'redis:6-alpine | 11-12 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  verdict: null
+  candidate_ok: null
+- id: c037
+  question: Express로 만든 사내 API를 쿠버네티스에 올리려고 해. 특별한 제약은 없고 프로덕션에서 오래 굴릴 거라 안정성이 제일 중요해. 베이스 이미지 뭘로 시작하는 게 좋을까?
+  image: node:24
+  statement: 기본 이미지에는 slim 이미지에 없는 공통 패키지가 포함되며, README는 공간 제약이 없다면 기본 이미지를 강하게 권장합니다. 후보 설명만으로 공간 제약이 없다는 전제에 맞춰 node:24를 선택했습니다.
+  citations:
+  - quote: This image does not contain the common packages contained in the default tag and only contains the minimal packages needed to run `node`.
+    evidence: node — Image Variants > `node:<version>-slim`
+  - quote: Unless you are working in an environment where *only* the `node` image will be deployed and you have space constraints, we highly recommend using the default image of this repository.
+    evidence: node — Image Variants > `node:<version>-slim`
+  candidates:
+  - 'node:26 | 417-451 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24 | 401-427 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22 | 356-425 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-slim | 88-94 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24-slim | 81-88 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22-slim | 70-87 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-alpine | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm | 404-429 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie | 412-449 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-trixie | 411-448 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-08-25'
+  - 'node:26-bullseye | 377-386 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:24-bullseye | 374-383 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:22-bullseye | 337-382 MB across linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'node:26-alpine3.23 | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine3.23 | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine3.23 | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm-slim | 83-89 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie-slim | 85-92 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  verdict: null
+  candidate_ok: null
+- id: c038
+  question: mattn/go-sqlite3를 쓰고 있어서 CGO_ENABLED=1로 빌드해야 해. 리눅스 컨테이너로 배포하는데 빌드 이미지 뭘로 잡아야 해?
+  image: golang:1.26-alpine
+  statement: golang:1.26-alpine가 요구 'must be a Linux image'를 만족한다
+  citations:
+  - quote: This image is based on the popular [Alpine Linux project](https://alpinelinux.org), available in [the `alpine` official image](https://hub.docker.com/_/alpine).
+    evidence: golang — Image Variants > `golang:<version>-alpine`
+  candidates:
+  - 'golang:1.27 | 275-2583 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.26 | 271-2579 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.25 | 264-2555 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-08-19'
+  - 'golang:1.27-alpine | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-trixie | 275-344 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-trixie | 271-340 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-trixie | 264-330 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-bookworm | 262-307 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.26-bookworm | 258-303 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.25-bookworm | 251-297 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-19'
+  - 'golang:1.27-alpine3.23 | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine3.23 | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine3.23 | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  verdict: null
+  candidate_ok: null
+- id: c039
+  question: Gradle로 컴파일하고 테스트까지 돌리는 빌드 스테이지 이미지를 고르는 중이야. 최종 런타임 스테이지는 따로 둘 거야.
+  image: eclipse-temurin:26-jre
+  statement: eclipse-temurin:26-jre가 요구 'must include a full JDK (javac) to compile and run tests'를 어긴다
+  citations:
+  - quote: This is the defacto image. If you are unsure about what your needs are, you probably want to use this one.
+    evidence: eclipse-temurin — Image Variants > `eclipse-temurin:<version>`
+  candidates:
+  - 'eclipse-temurin:26 | 147-2718 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:25 | 144-2712 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:21 | 211-2839 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:17 | 200-2814 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:11 | 188-2828 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:8 | 115-2649 MB across linux/amd64, linux/arm64, linux/ppc64le, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:26-jre | 116-2562 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:25-jre | 114-2559 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:21-jre | 111-2542 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:17-jre | 103-2533 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:11-jre | 103-2533 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:8-jre | 102-2530 MB across linux/amd64, linux/arm64, linux/ppc64le, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:26-jammy | 135-145 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:25-jammy | 132-143 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:21-jammy | 196-216 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:17-jammy | 184-203 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:11-jammy | 171-192 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:8-jammy | 98-105 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'eclipse-temurin:26-noble | 137-145 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'eclipse-temurin:25-noble | 135-143 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  verdict: null
+  candidate_ok: null
+- id: c040
+  question: 사내 규정이 mainline 말고 stable 브랜치만 쓰게 돼 있어. nginx도 stable로 맞춰야 하는데 어떤 태그를 쓰면 돼?
+  image: nginx:1.31-alpine-perl
+  statement: nginx:1.31-alpine-perl가 요구 'must be on the nginx stable branch, not mainline'를 어긴다
+  citations:
+  - quote: '[`1.31.6-alpine-perl`, `mainline-alpine-perl`, `1-alpine-perl`, `1.31-alpine-perl`, `alpine-perl`, `1.31.6-alpine3.24-perl`, `mainline-alpine3.24-perl`, `1-alpine3.24-perl`, `1.31-alpine3.24-perl`, `alpine3.24-perl`](https://github.com/nginx/docker-nginx/blob/a16f1329e13e7273c4103f75d863ca625b75109e/mainline/alpine-perl/Dockerfile)'
+    evidence: nginx — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'nginx:1.31 | 61-80 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30 | 60-80 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-otel | 69-70 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.30-otel | 68-70 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.31-perl | 73-93 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-perl | 73-93 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine | 22-29 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine | 22-29 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-otel | 45-46 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-otel | 45-46 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-perl | 32-40 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-perl | 31-39 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-slim | 7-9 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-slim | 7-9 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  verdict: null
+  candidate_ok: null
+- id: c041
+  question: FastAPI로 만든 사내 API를 쿠버네티스에 처음 올리려고 해. 특별한 제약은 없고 프로덕션에서 무난하게 굴러가면 좋겠어. 베이스 이미지 뭘로 시작하는 게 좋을까?
+  image: python:3.13-slim
+  statement: Alpine은 이미지 크기를 최대한 작게 만드는 것이 주된 목표일 때 유용하지만, musl libc를 사용하므로 라이브러리 요구사항이나 가정에 따라 소프트웨어가 문제를 겪을 수 있습니다.
+  citations:
+  - quote: This variant is useful when final image size being as small as possible is your primary concern.
+    evidence: python — Image Variants > `python:<version>-alpine`
+  - quote: The main caveat to note is that it does use [musl libc](https://musl.libc.org) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), so software will often run into issues depending on the depth of their libc requirements/assumptions.
+    evidence: python — Image Variants > `python:<version>-alpine`
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c042
+  question: alpine 이미지 쓰니까 pip install이 엄청 느리고 어떤 패키지는 아예 깨지던데 왜 그런 거야? 그럼 뭘 써야 해?
+  image: python:3.12
+  statement: 이미지 크기를 우선하고 대상 패키지에 적합한 사전 빌드 배포본이 있다는 점을 확인했다면 python:3.12-slim도 선택지지만, 이 이미지는 일반 이미지보다 Debian 패키지가 적어 소스 배포본 설치가 실패할 수 있습니다.
+  citations:
+  - quote: This image does not contain the common Debian packages contained in the default tag and only contains the minimal Debian packages needed to run `python`.
+    evidence: python — Image Variants > `python:<version>-slim`
+  - quote: When using this image `pip install` will work if a suitable built distribution is available for the Python distribution package being installed.
+    evidence: python — Image Variants > `python:<version>-slim`
+  - quote: '`pip install` may fail when installing a Python distribution package from a source distribution.'
+    evidence: python — Image Variants > `python:<version>-slim`
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.14-bookworm | 335-399 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.13-bookworm | 333-397 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.12-slim-bookworm | 40-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-01'
+  - 'python:3.11-slim-bookworm | 42-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-01'
+  - 'python:3.10-slim-bookworm | 41-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-01'
+  verdict: null
+  candidate_ok: null
+- id: c043
+  question: Node.js 서비스를 AWS Graviton 노드풀에만 배포할 거라 arm64에서만 돌면 돼. 크기 때문에 alpine으로 가려고 했는데 괜찮을까?
+  image: node:24-alpine
+  statement: '`node:24-slim`은 81–88 MB이고 `node:24`는 401–427 MB입니다. alpine보다 크지만, Alpine의 musl 지원 여부가 확인되지 않아 현재 증거만으로는 요구사항에 맞는 비-Alpine 대안이라고 단정할 수도 없습니다.'
+  citations:
+  - quote: This image does not contain the common packages contained in the default tag and only contains the minimal packages needed to run `node`.
+    evidence: node — Image Variants > `node:<version>-slim`
+  - quote: Unless you are working in an environment where *only* the `node` image will be deployed and you have space constraints, we highly recommend using the default image of this repository.
+    evidence: node — Image Variants > `node:<version>-slim`
+  candidates:
+  - 'node:26 | 417-451 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24 | 401-427 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22 | 356-425 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-slim | 88-94 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24-slim | 81-88 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22-slim | 70-87 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-alpine | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm | 404-429 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie | 412-449 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-trixie | 411-448 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-08-25'
+  - 'node:26-bullseye | 377-386 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:24-bullseye | 374-383 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:22-bullseye | 337-382 MB across linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'node:26-alpine3.23 | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine3.23 | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine3.23 | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm-slim | 83-89 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie-slim | 85-92 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  verdict: null
+  candidate_ok: null
+- id: c044
+  question: 정적 링크된 CLI 바이너리 하나에 ca-certificates랑 curl만 얹어서 배포하려고 해. 베이스를 최대한 작게 가져가고 싶은데 어떤 태그를 써야 해?
+  image: alpine:3.24
+  statement: alpine:3.24는 공식 README의 지원 태그 목록에 있어 지원되는 안정 브랜치 조건을 충족합니다.
+  citations:
+  - quote: '[`3.24.2`, `3.24`, `3`, `latest`]'
+    evidence: alpine — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'alpine:3.24 | 3-4 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-06-16'
+  - 'alpine:3.23 | 3-4 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-06-22'
+  - 'alpine:3.22 | 3-4 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-06-22'
+  verdict: null
+  candidate_ok: null
+- id: c045
+  question: 지도 서비스라 PostGIS를 써야 해. 이미지 크기 줄이려고 alpine 태그를 보고 있었는데 그렇게 가도 괜찮아?
+  image: postgres:18-alpine
+  statement: postgres:18-alpine가 요구 'must include the PostGIS extension'를 어긴다
+  citations:
+  - quote: When using the Alpine variants, any postgres extension not listed in [postgres-contrib](https://www.postgresql.org/docs/14/contrib.html) will need to be compiled in your own image (again, see [github.com/postgis/docker-postgis](https://github.com/postgis/docker-postgis/blob/81a0b55/14-3.2/alpine/Dockerfile) for a concrete example).
+    evidence: postgres — How to extend this image > Additional Extensions
+  candidates:
+  - 'postgres:18 | 88-177 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:17 | 87-176 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:16 | 87-175 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:15 | 85-173 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-28'
+  - 'postgres:14 | 84-172 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-27'
+  - 'postgres:18-alpine | 110-127 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-15'
+  - 'postgres:17-alpine | 107-124 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:16-alpine | 106-123 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:15-alpine | 105-122 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:14-alpine | 105-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:18-bookworm | 83-170 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:17-bookworm | 83-169 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:16-bookworm | 82-168 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:15-bookworm | 81-166 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:14-bookworm | 80-165 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:18-alpine3.23 | 109-126 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:17-alpine3.23 | 107-123 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:16-alpine3.23 | 105-122 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:15-alpine3.23 | 105-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:14-alpine3.23 | 104-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  verdict: null
+  candidate_ok: null
+- id: c046
+  question: 사내 규정이 mainline 말고 stable 브랜치만 쓰게 돼 있어. nginx도 stable로 맞춰야 하는데 어떤 태그를 쓰면 돼?
+  image: nginx:1.30
+  statement: '`nginx:1.30`을 선택하세요. 공식 태그 목록에서 `1.30`은 stable 브랜치의 태그이고, 후보 목록에도 `nginx:1.30`이 있습니다.'
+  citations:
+  - quote: "- \t[`1.30.5`, `stable`, `1.30`, `1.30.5-trixie`, `stable-trixie`, `1.30-trixie`](https://github.com/nginx/docker-nginx/blob/a16f1329e13e7273c4103f75d863ca625b75109e/stable/debian/Dockerfile)"
+    evidence: nginx — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'nginx:1.31 | 61-80 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30 | 60-80 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-otel | 69-70 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.30-otel | 68-70 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.31-perl | 73-93 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-perl | 73-93 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine | 22-29 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine | 22-29 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-otel | 45-46 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-otel | 45-46 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-perl | 32-40 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-perl | 31-39 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-slim | 7-9 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-slim | 7-9 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  verdict: null
+  candidate_ok: null
+- id: c047
+  question: Node.js 서비스를 AWS Graviton 노드풀에만 배포할 거라 arm64에서만 돌면 돼. 크기 때문에 alpine으로 가려고 했는데 괜찮을까?
+  image: node:24
+  statement: node:24가 요구 'must use a Node.js build that is officially supported on arm64, not an experimental musl build'를 만족한다
+  citations:
+  - quote: '[`24`, `24-bookworm`, `24.21`, `24.21-bookworm`, `24.21.0`, `24.21.0-bookworm`, `krypton`, `krypton-bookworm`, `lts`, `lts-bookworm`, `lts-krypton`](https://github.com/nodejs/docker-node/blob/93a7bafc324a85ac1ee461604cff87cffacb6d7a/24/bookworm/Dockerfile)'
+    evidence: node — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'node:26 | 417-451 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24 | 401-427 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22 | 356-425 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-slim | 88-94 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24-slim | 81-88 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22-slim | 70-87 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-alpine | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm | 404-429 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie | 412-449 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-trixie | 411-448 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-08-25'
+  - 'node:26-bullseye | 377-386 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:24-bullseye | 374-383 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:22-bullseye | 337-382 MB across linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'node:26-alpine3.23 | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine3.23 | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine3.23 | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm-slim | 83-89 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie-slim | 85-92 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  verdict: null
+  candidate_ok: null
+- id: c048
+  question: Express로 만든 사내 API를 쿠버네티스에 올리려고 해. 특별한 제약은 없고 프로덕션에서 오래 굴릴 거라 안정성이 제일 중요해. 베이스 이미지 뭘로 시작하는 게 좋을까?
+  image: node:24
+  statement: 기본 태그 이미지는 최소 패키지만 담은 slim보다 권장되므로, 기본 태그인 node:24를 선택했습니다. 다만 README의 권고는 공간 제약이 없는 경우에 관한 것이며, 후보 정보만으로 장기 안정성이 이 선택을 뒷받침한다고 단정할 수는 없습니다.
+  citations:
+  - quote: This image does not contain the common packages contained in the default tag and only contains the minimal packages needed to run `node`.
+    evidence: node — Image Variants > `node:<version>-slim`
+  - quote: Unless you are working in an environment where *only* the `node` image will be deployed and you have space constraints, we highly recommend using the default image of this repository.
+    evidence: node — Image Variants > `node:<version>-slim`
+  candidates:
+  - 'node:26 | 417-451 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24 | 401-427 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22 | 356-425 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-slim | 88-94 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24-slim | 81-88 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22-slim | 70-87 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-alpine | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm | 404-429 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie | 412-449 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-trixie | 411-448 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-08-25'
+  - 'node:26-bullseye | 377-386 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:24-bullseye | 374-383 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:22-bullseye | 337-382 MB across linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'node:26-alpine3.23 | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine3.23 | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine3.23 | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm-slim | 83-89 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie-slim | 85-92 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  verdict: null
+  candidate_ok: null
+- id: c049
+  question: Node.js 서비스를 AWS Graviton 노드풀에만 배포할 거라 arm64에서만 돌면 돼. 크기 때문에 alpine으로 가려고 했는데 괜찮을까?
+  image: node:24-trixie-slim
+  statement: node:24-trixie-slim가 요구 'must use a Node.js build that is officially supported on arm64, not an experimental musl build'를 만족한다
+  citations:
+  - quote: '[`24-trixie-slim`, `24.21-trixie-slim`, `24.21.0-trixie-slim`, `krypton-trixie-slim`, `lts-trixie-slim`](https://github.com/nodejs/docker-node/blob/93a7bafc324a85ac1ee461604cff87cffacb6d7a/24/trixie-slim/Dockerfile)'
+    evidence: node — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'node:26 | 417-451 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24 | 401-427 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22 | 356-425 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-slim | 88-94 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24-slim | 81-88 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22-slim | 70-87 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-alpine | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm | 404-429 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie | 412-449 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-trixie | 411-448 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-08-25'
+  - 'node:26-bullseye | 377-386 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:24-bullseye | 374-383 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:22-bullseye | 337-382 MB across linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'node:26-alpine3.23 | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine3.23 | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine3.23 | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm-slim | 83-89 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie-slim | 85-92 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  verdict: null
+  candidate_ok: null
+- id: c050
+  question: alpine 이미지 쓰니까 pip install이 엄청 느리고 어떤 패키지는 아예 깨지던데 왜 그런 거야? 그럼 뭘 써야 해?
+  image: python:3.12
+  statement: 제시된 근거만으로는 Alpine에서 pip가 느린 구체적 원인을 확정할 수 없지만, 요구사항인 manylinux 사전 빌드 wheel 설치와 소스 컴파일 금지를 고려하면 기본 Debian 기반 이미지인 python:3.12를 권합니다.
+  citations:
+  - quote: The majority of arbitrary `pip install`s should be successful without additional header/development Debian packages.
+    evidence: python — Image Variants > `python:<version>-slim`
+  - quote: This image is based on the popular [Alpine Linux project](https://alpinelinux.org), available in [the `alpine` official image](https://hub.docker.com/_/alpine).
+    evidence: python — Image Variants > `python:<version>-alpine`
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.14-bookworm | 335-399 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.13-bookworm | 333-397 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.12-slim-bookworm | 40-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-01'
+  - 'python:3.11-slim-bookworm | 42-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-01'
+  - 'python:3.10-slim-bookworm | 41-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-01'
+  verdict: null
+  candidate_ok: null
+- id: c051
+  question: 새로 시작하는 프로젝트라 파이썬 최신 안정 버전으로 가고 싶어. 베타나 RC 말고 정식 릴리스여야 하고, 태그도 버전이 드러나게 박아두고 싶어.
+  image: python:3.14
+  statement: 후보의 `python:3.14`는 버전 계열이 드러나는 태그이며, 후보 목록에 존재합니다. 더 구체적인 패치 버전 태그는 후보로 제공되지 않으므로 후보에서 선택할 수 없습니다.
+  citations:
+  - quote: '`3.14.7`, `3.14`, `3`, `latest`:'
+    evidence: python — Supported tags and respective `Dockerfile` links > Shared Tags
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c052
+  question: 새로 시작하는 프로젝트라 파이썬 최신 안정 버전으로 가고 싶어. 베타나 RC 말고 정식 릴리스여야 하고, 태그도 버전이 드러나게 박아두고 싶어.
+  image: python:3.13-slim
+  statement: python:3.13-slim가 요구 'must be a final Python release, not an alpha, beta, or release candidate'를 만족한다
+  citations:
+  - quote: '`3.13.15`, `3.13`:'
+    evidence: python — Supported tags and respective `Dockerfile` links > Shared Tags
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c053
+  question: 큐 대기열을 redis에 넣고 있는데 컨테이너 재시작하면 다 날아가. 데이터가 남게 하려면 어떻게 띄워야 해?
+  image: redis:8
+  statement: 후보 이미지 중 어느 것을 선택해도 되는지는 제공된 근거로는 판단할 수 없습니다. 다만 Redis를 `--save 60 1`로 실행하고 `/data`를 호스트 디렉터리에 마운트하면, 60초 동안 쓰기가 한 번 이상 있었을 때 DB 스냅샷을 저장해 컨테이너 재시작 뒤에도 데이터를 보존할 수 있습니다.
+  citations:
+  - quote: There are several different persistence strategies to choose from. This one will save a snapshot of the DB every 60 seconds if at least 1 write operation was performed (it will also lead to more logs, so the `loglevel` option may be desirable).
+    evidence: redis — How to use this image > Start with persistent storage
+  - quote: If persistence is enabled, data is stored in the `VOLUME /data`, which can be used with `--volumes-from some-volume-container` or `-v /docker/host/dir:/data` (see [docs.docker volumes](https://docs.docker.com/engine/tutorials/dockervolumes/)).
+    evidence: redis — How to use this image > Start with persistent storage
+  candidates:
+  - 'redis:8 | 40-55 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-27'
+  - 'redis:7 | 39-49 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'redis:6 | 34-43 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'redis:8-alpine | 18-39 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  - 'redis:7-alpine | 16-17 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  - 'redis:6-alpine | 11-12 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  verdict: null
+  candidate_ok: null
+- id: c054
+  question: 사내 규정이 mainline 말고 stable 브랜치만 쓰게 돼 있어. nginx도 stable로 맞춰야 하는데 어떤 태그를 쓰면 돼?
+  image: nginx:1.30
+  statement: 반면 `nginx:1.31`은 mainline 태그 목록에 있으므로 선택하지 않는 편이 요구사항에 맞습니다.
+  citations:
+  - quote: '[`1.31.6`, `mainline`, `1`, `1.31`, `latest`, `1.31.6-trixie`, `mainline-trixie`, `1-trixie`, `1.31-trixie`, `trixie`](https://github.com/nginx/docker-nginx/blob/a16f1329e13e7273c4103f75d863ca625b75109e/mainline/debian/Dockerfile)'
+    evidence: nginx — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'nginx:1.31 | 61-80 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30 | 60-80 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-otel | 69-70 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.30-otel | 68-70 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.31-perl | 73-93 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-perl | 73-93 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine | 22-29 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine | 22-29 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-otel | 45-46 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-otel | 45-46 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-perl | 32-40 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-perl | 31-39 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-slim | 7-9 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-slim | 7-9 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  verdict: null
+  candidate_ok: null
+- id: c055
+  question: alpine 이미지 쓰니까 pip install이 엄청 느리고 어떤 패키지는 아예 깨지던데 왜 그런 거야? 그럼 뭘 써야 해?
+  image: python:3.12
+  statement: Alpine은 glibc 대신 musl libc를 사용하며, libc 요구사항이나 가정에 따라 소프트웨어가 문제를 일으킬 수 있습니다.
+  citations:
+  - quote: The main caveat to note is that it does use [musl libc](https://musl.libc.org) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), so software will often run into issues depending on the depth of their libc requirements/assumptions.
+    evidence: python — Image Variants > `python:<version>-alpine`
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.14-bookworm | 335-399 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.13-bookworm | 333-397 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.12-slim-bookworm | 40-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-01'
+  - 'python:3.11-slim-bookworm | 42-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-01'
+  - 'python:3.10-slim-bookworm | 41-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-01'
+  verdict: null
+  candidate_ok: null
+- id: c056
+  question: 지도 서비스라 PostGIS를 써야 해. 이미지 크기 줄이려고 alpine 태그를 보고 있었는데 그렇게 가도 괜찮아?
+  image: postgres:16
+  statement: Alpine에서도 PostGIS 사용이 불가능하다고 단정할 수는 없지만, postgres-contrib에 나열되지 않은 확장은 자체 이미지에서 컴파일해야 하므로 추가 작업이 필요합니다.
+  citations:
+  - quote: When using the Alpine variants, any postgres extension not listed in [postgres-contrib](https://www.postgresql.org/docs/14/contrib.html) will need to be compiled in your own image (again, see [github.com/postgis/docker-postgis](https://github.com/postgis/docker-postgis/blob/81a0b55/14-3.2/alpine/Dockerfile) for a concrete example).
+    evidence: postgres — How to extend this image > Additional Extensions
+  candidates:
+  - 'postgres:18 | 88-177 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:17 | 87-176 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:16 | 87-175 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-26'
+  - 'postgres:15 | 85-173 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-28'
+  - 'postgres:14 | 84-172 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-27'
+  - 'postgres:18-alpine | 110-127 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-15'
+  - 'postgres:17-alpine | 107-124 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:16-alpine | 106-123 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:15-alpine | 105-122 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:14-alpine | 105-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:18-bookworm | 83-170 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:17-bookworm | 83-169 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:16-bookworm | 82-168 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:15-bookworm | 81-166 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:14-bookworm | 80-165 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'postgres:18-alpine3.23 | 109-126 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:17-alpine3.23 | 107-123 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:16-alpine3.23 | 105-122 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:15-alpine3.23 | 105-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  - 'postgres:14-alpine3.23 | 104-121 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-16'
+  verdict: null
+  candidate_ok: null
+- id: c057
+  question: Rust로 만든 바이너리 하나만 담는 Debian 기반 런타임 베이스가 필요해. glibc랑 ca-certificates 정도만 있으면 되고 이미지는 작을수록 좋아.
+  image: debian:12-slim
+  statement: 버전 태그는 안정 릴리스의 별칭이라고 README가 설명하므로, `debian:12-slim`은 testing이나 sid가 아닌 릴리스 버전 태그에 해당한다.
+  citations:
+  - quote: Stable releases are also tagged with their version (ie, `debian:11` is an alias for `debian:bullseye`, `debian:10` is an alias for `debian:buster`, etc).
+    evidence: debian — About this image
+  candidates:
+  - 'debian:13 | 46-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-25'
+  - 'debian:12 | 44-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'debian:11 | 49-55 MB across linux/386, linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'debian:13-slim | 26-34 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-25'
+  - 'debian:12-slim | 24-32 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'debian:11-slim | 26-31 MB across linux/386, linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c058
+  question: 개발은 x86 리눅스에서 하는데 배포는 Graviton arm64야. cgo 안 쓰는 순수 Go 코드인데 arm64용 바이너리를 만들려면 빌드 이미지도 arm64로 받아야 해?
+  image: golang:1.27
+  statement: 순수 Go 코드의 arm64 Linux 바이너리는 빌드 시 GOOS=linux, GOARCH=arm64를 설정해 만들 수 있습니다. 제시된 후보에는 linux/arm64를 포함하는 이미지가 있으므로 arm64 이미지를 골라야 한다는 근거는 없습니다.
+  citations:
+  - quote: 'Alternatively, you can build for multiple platforms at once:'
+    evidence: golang — How to use this image > Cross-compile your app inside the Docker container
+  candidates:
+  - 'golang:1.27 | 275-2583 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.26 | 271-2579 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'golang:1.25 | 264-2555 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-08-19'
+  - 'golang:1.27-alpine | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-trixie | 275-344 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-trixie | 271-340 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-trixie | 264-330 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  - 'golang:1.27-bookworm | 262-307 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.26-bookworm | 258-303 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-09-02'
+  - 'golang:1.25-bookworm | 251-297 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-19'
+  - 'golang:1.27-alpine3.23 | 72-75 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.26-alpine3.23 | 69-71 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'golang:1.25-alpine3.23 | 62-64 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-19'
+  verdict: null
+  candidate_ok: null
+- id: c059
+  question: 큐 대기열을 redis에 넣고 있는데 컨테이너 재시작하면 다 날아가. 데이터가 남게 하려면 어떻게 띄워야 해?
+  image: redis:8
+  statement: '`redis:8`를 선택하고 스냅샷 저장을 켠 뒤 `/data`를 호스트 디렉터리나 Docker 볼륨에 연결하세요. README는 `--save 60 1` 설정이 쓰기 작업이 한 번 이상 있으면 60초마다 DB 스냅샷을 저장하고, 영속성이 활성화되면 데이터가 `/data`에 저장된다고 설명합니다.'
+  citations:
+  - quote: There are several different persistence strategies to choose from. This one will save a snapshot of the DB every 60 seconds if at least 1 write operation was performed (it will also lead to more logs, so the `loglevel` option may be desirable).
+    evidence: redis — How to use this image > Start with persistent storage
+  - quote: If persistence is enabled, data is stored in the `VOLUME /data`, which can be used with `--volumes-from some-volume-container` or `-v /docker/host/dir:/data` (see [docs.docker volumes](https://docs.docker.com/engine/tutorials/dockervolumes/)).
+    evidence: redis — How to use this image > Start with persistent storage
+  candidates:
+  - 'redis:8 | 40-55 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-27'
+  - 'redis:7 | 39-49 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'redis:6 | 34-43 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'redis:8-alpine | 18-39 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  - 'redis:7-alpine | 16-17 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  - 'redis:6-alpine | 11-12 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  verdict: null
+  candidate_ok: null
+- id: c060
+  question: FastAPI 서비스이고 numpy를 사용해. 이미지 크기는 작았으면 좋겠지만 빌드 안정성이 더 중요해. ARM64에서도 실행해야 해.
+  image: python:3.12-slim
+  statement: Alpine은 musl libc를 사용하며 소프트웨어가 libc 요구 사항이나 가정에 따라 문제를 겪을 수 있으므로, 빌드 안정성이 우선인 이 요구에서는 더 작은 크기만으로 Alpine을 선택하기 어렵습니다.
+  citations:
+  - quote: The main caveat to note is that it does use [musl libc](https://musl.libc.org) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), so software will often run into issues depending on the depth of their libc requirements/assumptions.
+    evidence: python — Image Variants > `python:<version>-alpine`
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c061
+  question: Gradle로 컴파일하고 테스트까지 돌리는 빌드 스테이지 이미지를 고르는 중이야. 최종 런타임 스테이지는 따로 둘 거야.
+  image: eclipse-temurin:21-jre
+  statement: eclipse-temurin:21-jre가 요구 'must include a full JDK (javac) to compile and run tests'를 어긴다
+  citations:
+  - quote: This is the defacto image. If you are unsure about what your needs are, you probably want to use this one.
+    evidence: eclipse-temurin — Image Variants > `eclipse-temurin:<version>`
+  candidates:
+  - 'eclipse-temurin:26 | 147-2718 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:25 | 144-2712 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:21 | 211-2839 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:17 | 200-2814 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:11 | 188-2828 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:8 | 115-2649 MB across linux/amd64, linux/arm64, linux/ppc64le, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:26-jre | 116-2562 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:25-jre | 114-2559 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:21-jre | 111-2542 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:17-jre | 103-2533 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:11-jre | 103-2533 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:8-jre | 102-2530 MB across linux/amd64, linux/arm64, linux/ppc64le, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:26-jammy | 135-145 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:25-jammy | 132-143 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:21-jammy | 196-216 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:17-jammy | 184-203 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:11-jammy | 171-192 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:8-jammy | 98-105 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'eclipse-temurin:26-noble | 137-145 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'eclipse-temurin:25-noble | 135-143 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  verdict: null
+  candidate_ok: null
+- id: c062
+  question: better-sqlite3랑 bcrypt를 쓰는데 npm install 할 때 node-gyp이 돌면서 컴파일을 해. slim이랑 alpine에서 자꾸 빌드가 깨지는데 어떤 이미지를 써야 해?
+  image: node:24
+  statement: Alpine은 musl libc를 사용하며, README는 libc 관련 요구사항이나 가정에 따라 소프트웨어가 문제를 겪을 수 있다고 설명합니다. 따라서 Alpine을 피하려는 상황에는 Alpine 후보보다 비-Alpine 후보를 선택하는 편이 근거에 부합합니다.
+  citations:
+  - quote: The main caveat to note is that it does use [musl libc](https://musl.libc.org) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), so software will often run into issues depending on the depth of their libc requirements/assumptions.
+    evidence: node — Image Variants > `node:<version>-alpine`
+  candidates:
+  - 'node:26 | 417-451 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24 | 401-427 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22 | 356-425 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-slim | 88-94 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24-slim | 81-88 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22-slim | 70-87 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-bookworm | 404-429 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie | 412-449 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-trixie | 411-448 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-08-25'
+  - 'node:26-bullseye | 377-386 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:24-bullseye | 374-383 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:22-bullseye | 337-382 MB across linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'node:26-bookworm-slim | 83-89 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie-slim | 85-92 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-trixie-slim | 81-88 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-08-25'
+  - 'node:26-bullseye-slim | 84-86 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:24-bullseye-slim | 81-83 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:22-bullseye-slim | 72-82 MB across linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c063
+  question: torch로 추론하는 서비스야. 모델 가중치까지 넣으면 어차피 이미지가 몇 기가라 크기는 포기했어. pip install torch가 문제없이 되는 베이스면 돼.
+  image: python:3.12-bookworm
+  statement: Alpine은 musl libc를 사용하며, libc 요구사항이나 가정에 따라 소프트웨어 호환성 문제가 생길 수 있습니다. 따라서 torch 설치 성공 여부가 중요한 경우 Alpine 후보는 피하는 편이 낫습니다.
+  citations:
+  - quote: The main caveat to note is that it does use [musl libc](https://musl.libc.org) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), so software will often run into issues depending on the depth of their libc requirements/assumptions.
+    evidence: python — Image Variants > `python:<version>-alpine`
+  candidates:
+  - 'python:3.14 | 360-2527 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.13 | 358-2517 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x, windows/amd64 | pushed: 2026-09-10'
+  - 'python:3.12 | 356-501 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.11 | 354-499 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.10 | 352-497 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.14-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-slim | 41-50 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-slim | 41-51 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-slim | 44-53 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-slim | 43-52 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-alpine | 18-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-01'
+  - 'python:3.13-alpine | 18-20 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.12-alpine | 19-21 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.11-alpine | 21-24 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.10-alpine | 20-23 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-02'
+  - 'python:3.14-trixie | 360-504 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.13-trixie | 358-503 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-31'
+  - 'python:3.12-bookworm | 331-395 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.11-bookworm | 330-394 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'python:3.10-bookworm | 327-391 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  verdict: null
+  candidate_ok: null
+- id: c064
+  question: Gradle로 컴파일하고 테스트까지 돌리는 빌드 스테이지 이미지를 고르는 중이야. 최종 런타임 스테이지는 따로 둘 거야.
+  image: eclipse-temurin:21-jammy
+  statement: 공식 README는 eclipse-temurin:<version> 변형을 별도 요구가 확실하지 않을 때 사용할 기본 이미지로 설명합니다.
+  citations:
+  - quote: This is the defacto image. If you are unsure about what your needs are, you probably want to use this one.
+    evidence: eclipse-temurin — Image Variants > `eclipse-temurin:<version>`
+  candidates:
+  - 'eclipse-temurin:26 | 147-2718 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:25 | 144-2712 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:21 | 211-2839 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:17 | 200-2814 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:11 | 188-2828 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:8 | 115-2649 MB across linux/amd64, linux/arm64, linux/ppc64le, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:26-jre | 116-2562 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:25-jre | 114-2559 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:21-jre | 111-2542 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:17-jre | 103-2533 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:11-jre | 103-2533 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:8-jre | 102-2530 MB across linux/amd64, linux/arm64, linux/ppc64le, windows/amd64 | pushed: 2026-09-16'
+  - 'eclipse-temurin:26-jammy | 135-145 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:25-jammy | 132-143 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:21-jammy | 196-216 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:17-jammy | 184-203 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:11-jammy | 171-192 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'eclipse-temurin:8-jammy | 98-105 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'eclipse-temurin:26-noble | 137-145 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'eclipse-temurin:25-noble | 135-143 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  verdict: null
+  candidate_ok: null
+- id: c065
+  question: 큐 대기열을 redis에 넣고 있는데 컨테이너 재시작하면 다 날아가. 데이터가 남게 하려면 어떻게 띄워야 해?
+  image: redis:8
+  statement: 예를 들면 `docker run --name some-redis -d -v /docker/host/dir:/data redis:8 redis-server --save 60 1 --loglevel warning`처럼 실행할 수 있습니다.
+  citations:
+  - quote: $ docker run --name some-redis -d redis redis-server --save 60 1 --loglevel warning
+    evidence: redis — How to use this image > Start with persistent storage
+  - quote: If persistence is enabled, data is stored in the `VOLUME /data`, which can be used with `--volumes-from some-volume-container` or `-v /docker/host/dir:/data` (see [docs.docker volumes](https://docs.docker.com/engine/tutorials/dockervolumes/)).
+    evidence: redis — How to use this image > Start with persistent storage
+  candidates:
+  - 'redis:8 | 40-55 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-27'
+  - 'redis:7 | 39-49 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'redis:6 | 34-43 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'redis:8-alpine | 18-39 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  - 'redis:7-alpine | 16-17 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  - 'redis:6-alpine | 11-12 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  verdict: null
+  candidate_ok: null
+- id: c066
+  question: 큐 대기열을 redis에 넣고 있는데 컨테이너 재시작하면 다 날아가. 데이터가 남게 하려면 어떻게 띄워야 해?
+  image: redis:8
+  statement: redis:8가 요구 'must support persisting data to a volume so it survives container restarts'를 만족한다
+  citations:
+  - quote: If persistence is enabled, data is stored in the `VOLUME /data`, which can be used with `--volumes-from some-volume-container` or `-v /docker/host/dir:/data` (see [docs.docker volumes](https://docs.docker.com/engine/tutorials/dockervolumes/)).
+    evidence: redis — How to use this image > Start with persistent storage
+  candidates:
+  - 'redis:8 | 40-55 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-27'
+  - 'redis:7 | 39-49 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'redis:6 | 34-43 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'redis:8-alpine | 18-39 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  - 'redis:7-alpine | 16-17 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  - 'redis:6-alpine | 11-12 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-08-20'
+  verdict: null
+  candidate_ok: null
+- id: c067
+  question: 사내 규정이 mainline 말고 stable 브랜치만 쓰게 돼 있어. nginx도 stable로 맞춰야 하는데 어떤 태그를 쓰면 돼?
+  image: nginx:1.30
+  statement: '`nginx:1.31`은 공식 목록에서 mainline 브랜치로 표시되어 있어, stable만 사용해야 한다는 조건에 맞지 않습니다.'
+  citations:
+  - quote: "- \t[`1.31.6`, `mainline`, `1`, `1.31`, `latest`, `1.31.6-trixie`, `mainline-trixie`, `1-trixie`, `1.31-trixie`, `trixie`](https://github.com/nginx/docker-nginx/blob/a16f1329e13e7273c4103f75d863ca625b75109e/mainline/debian/Dockerfile)"
+    evidence: nginx — Supported tags and respective `Dockerfile` links
+  candidates:
+  - 'nginx:1.31 | 61-80 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30 | 60-80 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-otel | 69-70 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.30-otel | 68-70 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.31-perl | 73-93 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-perl | 73-93 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine | 22-29 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine | 22-29 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-otel | 45-46 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-otel | 45-46 MB across linux/amd64, linux/arm64 | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-perl | 32-40 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-perl | 31-39 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.31-alpine-slim | 7-9 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  - 'nginx:1.30-alpine-slim | 7-9 MB across linux/386, linux/amd64, linux/arm, linux/arm64, linux/ppc64le, linux/riscv64, linux/s390x | pushed: 2026-09-16'
+  verdict: null
+  candidate_ok: null
+- id: c068
+  question: Node.js 서비스를 AWS Graviton 노드풀에만 배포할 거라 arm64에서만 돌면 돼. 크기 때문에 alpine으로 가려고 했는데 괜찮을까?
+  image: node:24-alpine3.23
+  statement: 이 조건을 확인하기 전에는 Alpine을 확정하지 않는 편이 안전합니다. node:24-slim은 81–88 MB이며 linux/arm64를 지원하고, slim 이미지는 node 실행에 필요한 최소 패키지만 포함합니다.
+  citations:
+  - quote: This image does not contain the common packages contained in the default tag and only contains the minimal packages needed to run `node`.
+    evidence: node — Image Variants > `node:<version>-slim`
+  candidates:
+  - 'node:26 | 417-451 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24 | 401-427 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22 | 356-425 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-slim | 88-94 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:24-slim | 81-88 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:22-slim | 70-87 MB across linux/amd64, linux/arm, linux/arm64, linux/ppc64le | pushed: 2026-08-25'
+  - 'node:26-alpine | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm | 404-429 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie | 412-449 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-trixie | 411-448 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-08-25'
+  - 'node:26-bullseye | 377-386 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:24-bullseye | 374-383 MB across linux/amd64, linux/arm64 | pushed: 2026-08-27'
+  - 'node:22-bullseye | 337-382 MB across linux/amd64, linux/arm, linux/arm64 | pushed: 2026-08-25'
+  - 'node:26-alpine3.23 | 64-64 MB across linux/amd64, linux/arm64 | pushed: 2026-09-09'
+  - 'node:24-alpine3.23 | 59-59 MB across linux/amd64, linux/arm64, linux/s390x | pushed: 2026-09-09'
+  - 'node:22-alpine3.23 | 54-58 MB across linux/amd64, linux/arm, linux/arm64, linux/s390x | pushed: 2026-07-29'
+  - 'node:26-bookworm-slim | 83-89 MB across linux/amd64, linux/arm64, linux/ppc64le | pushed: 2026-09-09'
+  - 'node:24-trixie-slim | 85-92 MB across linux/amd64, linux/arm64, linux/ppc64le, linux/s390x | pushed: 2026-09-09'
+  verdict: null
+  candidate_ok: null
