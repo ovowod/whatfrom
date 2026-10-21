@@ -3,7 +3,12 @@
 eval과 같은 경로(label 고정 입력 → 검색 → 근거 번호 → 판정 prompt)로 prompt를 만들고,
 OpenAICompatibleProvider와 같은 요청 본문을 보낸다. provider는 finish_reason을 버리므로
 원래 응답 본문을 직접 읽는다.
+
+판정 단계 코드는 M3 뒤에 지웠다. 이 script는 측정 commit(e713344)에서 실행한다.
 """
+
+# 지워진 whatfrom.recommend.judge를 import해, ruff가 이 모듈을 외부 package로 분류한다.
+# ruff: noqa: I001
 
 import sys
 

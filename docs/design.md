@@ -247,9 +247,11 @@ class Citation(BaseModel):
     evidence: int  # 근거 번호. 넘겨준 근거 안에 있어야 한다
     quote: str  # 그 근거 본문 안에 글자 그대로 있어야 한다
 
+
 class Claim(BaseModel):
     text: str  # 고른 이유를 이루는 진술 하나
     citations: list[Citation]
+
 
 class Recommendation(BaseModel):
     image: str  # 후보 줄의 이미지 그대로
